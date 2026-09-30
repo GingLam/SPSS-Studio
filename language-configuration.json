@@ -1,0 +1,68 @@
+{
+  "comments": {
+    "blockComment": [
+      "/*",
+      "*/"
+    ]
+  },
+  "brackets": [
+    [
+      "(",
+      ")"
+    ],
+    [
+      "[",
+      "]"
+    ]
+  ],
+  "autoClosingPairs": [
+    {
+      "open": "(",
+      "close": ")"
+    },
+    {
+      "open": "[",
+      "close": "]"
+    },
+    {
+      "open": "'",
+      "close": "'",
+      "notIn": [
+        "string",
+        "comment"
+      ]
+    },
+    {
+      "open": "\"",
+      "close": "\"",
+      "notIn": [
+        "string",
+        "comment"
+      ]
+    }
+  ],
+  "surroundingPairs": [
+    [
+      "(",
+      ")"
+    ],
+    [
+      "[",
+      "]"
+    ],
+    [
+      "'",
+      "'"
+    ],
+    [
+      "\"",
+      "\""
+    ]
+  ],
+  "folding": {
+    "markers": {
+      "start": "^\\s*(?:[Bb][Ee][Gg][Ii][Nn]\\s+(?:[Dd][Aa][Tt][Aa]|[Pp][Rr][Oo][Gg][Rr][Aa][Mm]|[Gg][Pp][Ll])|[Mm][Aa][Tt][Rr][Ii][Xx]|[Dd][Oo]\\s+(?:[Ii][Ff]|[Rr][Ee][Pp][Ee][Aa][Tt])|[Ll][Oo][Oo][Pp]|[Dd][Ee][Ff][Ii][Nn][Ee])\\b",
+      "end": "^\\s*(?:[Ee][Nn][Dd]\\s+(?:[Dd][Aa][Tt][Aa]|[Pp][Rr][Oo][Gg][Rr][Aa][Mm]|[Gg][Pp][Ll]|[Mm][Aa][Tt][Rr][Ii][Xx]|[Ii][Ff]|[Rr][Ee][Pp][Ee][Aa][Tt]|[Ll][Oo][Oo][Pp])|![Ee][Nn][Dd][Dd][Ee][Ff][Ii][Nn][Ee])\\b"
+    }
+  }
+}

@@ -1,0 +1,246 @@
+{
+  "name": "spss-studio",
+  "displayName": "SPSS Studio",
+  "description": "SPSS Syntax IntelliSense, Active Dataset preview, and native HTML output through a local IBM SPSS Statistics engine.",
+  "version": "0.3.0",
+  "publisher": "jinglin",
+  "author": {
+    "name": "Jing LIN (林景)",
+    "email": "linjing@nufe.edu.cn"
+  },
+  "license": "SEE LICENSE IN LICENSE",
+  "pricing": "Free",
+  "icon": "images/plugin.png",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/GingLam/SPSS-Studio.git"
+  },
+  "homepage": "https://github.com/GingLam/SPSS-Studio#readme",
+  "bugs": {
+    "url": "https://github.com/GingLam/SPSS-Studio/issues"
+  },
+  "engines": {
+    "vscode": "^1.95.0"
+  },
+  "categories": [
+    "Programming Languages",
+    "Other"
+  ],
+  "keywords": [
+    "SPSS",
+    "IBM SPSS Statistics",
+    "statistics",
+    "syntax"
+  ],
+  "main": "./out/src/extension.js",
+  "extensionKind": [
+    "workspace"
+  ],
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": "limited",
+      "description": "SPSS Syntax highlighting remains available, but starting the SPSS engine and executing syntax are disabled."
+    }
+  },
+  "activationEvents": [
+    "onLanguage:spss",
+    "onCommand:spssStudio.undo",
+    "onCommand:spssStudio.runSelection",
+    "onCommand:spssStudio.runFile",
+    "onCommand:spssStudio.startEngine",
+    "onCommand:spssStudio.stopEngine",
+    "onCommand:spssStudio.restartEngine",
+    "onCommand:spssStudio.showStatus",
+    "onCommand:spssStudio.showOutput",
+    "onCommand:spssStudio.showData",
+    "onCommand:spssStudio.showVariables",
+    "onCommand:spssStudio.refreshDataPreview",
+    "onCommand:spssStudio.clearOutput"
+  ],
+  "contributes": {
+    "languages": [
+      {
+        "id": "spss",
+        "aliases": [
+          "SPSS",
+          "SPSS Syntax",
+          "IBM SPSS Statistics Syntax"
+        ],
+        "extensions": [
+          ".sps"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "spss",
+        "scopeName": "source.spss",
+        "path": "./syntaxes/spss.tmLanguage.json",
+        "embeddedLanguages": {
+          "meta.embedded.block.python.spss": "python"
+        }
+      }
+    ],
+    "commands": [
+      {
+        "command": "spssStudio.undo",
+        "title": "SPSS: Undo Last Edit",
+        "icon": "$(discard)"
+      },
+      {
+        "command": "spssStudio.runSelection",
+        "title": "SPSS: Run Selection / Current Command",
+        "icon": "$(run)"
+      },
+      {
+        "command": "spssStudio.runFile",
+        "title": "SPSS: Run File",
+        "icon": "$(run-all)"
+      },
+      {
+        "command": "spssStudio.startEngine",
+        "title": "SPSS: Start Engine"
+      },
+      {
+        "command": "spssStudio.stopEngine",
+        "title": "SPSS: Stop Engine"
+      },
+      {
+        "command": "spssStudio.restartEngine",
+        "title": "SPSS: Restart Engine"
+      },
+      {
+        "command": "spssStudio.showStatus",
+        "title": "SPSS: Show Status"
+      },
+      {
+        "command": "spssStudio.showOutput",
+        "title": "SPSS: Show Output"
+      },
+      {
+        "command": "spssStudio.showData",
+        "title": "SPSS: Show Data"
+      },
+      {
+        "command": "spssStudio.showVariables",
+        "title": "SPSS: Show Variables"
+      },
+      {
+        "command": "spssStudio.refreshDataPreview",
+        "title": "SPSS: Refresh Data Preview"
+      },
+      {
+        "command": "spssStudio.clearOutput",
+        "title": "SPSS: Clear Output"
+      }
+    ],
+    "menus": {
+      "editor/title": [
+        {
+          "command": "spssStudio.undo",
+          "when": "resourceLangId == spss",
+          "group": "navigation@1"
+        },
+        {
+          "command": "spssStudio.runSelection",
+          "when": "resourceLangId == spss",
+          "group": "navigation@2"
+        },
+        {
+          "command": "spssStudio.runFile",
+          "when": "resourceLangId == spss",
+          "group": "navigation@3"
+        }
+      ]
+    },
+    "keybindings": [
+      {
+        "command": "spssStudio.runSelection",
+        "key": "ctrl+enter",
+        "mac": "cmd+enter",
+        "when": "editorTextFocus && editorLangId == spss"
+      }
+    ],
+    "configuration": {
+      "title": "SPSS Studio",
+      "properties": {
+        "spssStudio.installPath": {
+          "type": "string",
+          "default": "",
+          "scope": "machine-overridable",
+          "description": "IBM SPSS Statistics installation root. Leave empty for automatic detection."
+        },
+        "spssStudio.pythonLauncherPath": {
+          "type": "string",
+          "default": "",
+          "scope": "machine-overridable",
+          "description": "IBM statisticspython3 launcher path. Leave empty for automatic detection."
+        },
+        "spssStudio.startupTimeoutSeconds": {
+          "type": "number",
+          "default": 45,
+          "minimum": 5,
+          "maximum": 300,
+          "scope": "machine-overridable",
+          "description": "Maximum time to wait for the SPSS bridge to start."
+        },
+        "spssStudio.executionTimeoutSeconds": {
+          "type": "number",
+          "default": 300,
+          "minimum": 1,
+          "maximum": 86400,
+          "scope": "machine-overridable",
+          "description": "Maximum time to wait for one SPSS execution request."
+        },
+        "spssStudio.dataPreviewPageSize": {
+          "type": "number",
+          "default": 100,
+          "enum": [25, 50, 100, 200, 500],
+          "scope": "machine-overridable",
+          "description": "Number of Active Dataset cases loaded per Data Preview page."
+        },
+        "spssStudio.autoStart": {
+          "type": "boolean",
+          "default": true,
+          "scope": "machine-overridable",
+          "description": "Start the SPSS engine automatically when syntax is first executed."
+        },
+        "spssStudio.debugLogging": {
+          "type": "boolean",
+          "default": false,
+          "scope": "machine-overridable",
+          "description": "Write additional bridge diagnostics without intentionally logging credentials."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "generate:grammar": "node tools/generate-grammar.mjs",
+    "check:grammar": "node tools/generate-grammar.mjs --check",
+    "compile": "npm run generate:grammar && tsc -p tsconfig.json",
+    "lint": "eslint .",
+    "test:unit": "npm run compile && mocha --timeout 15000 \"out/test/unit/**/*.test.js\"",
+    "test:python": "python3 -c \"import py_compile; py_compile.compile('resources/bridge/spss_bridge.py', cfile='.work/test-logs/spss_bridge.pyc', doraise=True)\" && python3 -B -m unittest discover -s test/bridge -p \"test_*.py\"",
+    "test": "npm run test:unit && npm run test:python",
+    "test:extension": "npm run compile && node out/test/runExtensionTests.js",
+    "test:extension:real": "npm run compile && node out/test/runRealExtensionTests.js",
+    "verify": "npm run check:grammar && npm run compile && npm run lint && npm test",
+    "vscode:prepublish": "npm run compile",
+    "package": "npm run verify && node tools/package.mjs"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "@types/mocha": "10.0.10",
+    "@types/node": "22.20.4",
+    "@types/vscode": "1.95.0",
+    "@vscode/test-electron": "3.1.0",
+    "@vscode/vsce": "4.0.0",
+    "eslint": "10.11.0",
+    "mocha": "12.0.2",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.70.1",
+    "vscode-oniguruma": "2.0.1",
+    "vscode-textmate": "9.3.2"
+  }
+}

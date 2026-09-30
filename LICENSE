@@ -1,0 +1,88 @@
+SPSS STUDIO PROPRIETARY SOFTWARE LICENSE
+
+Copyright (c) 2026 Jing LIN (林景). All rights reserved.
+
+1. Ownership
+
+SPSS Studio, including its source code, compiled code, documentation, and
+associated assets (collectively, the "Software"), is proprietary software
+owned by Jing LIN (林景), except for third-party components identified below.
+No ownership rights are transferred under this License.
+
+2. Permitted Use
+
+Subject to compliance with this License, the copyright owner grants each
+recipient a limited, non-exclusive, non-transferable, non-sublicensable,
+royalty-free right to download, install, and use unmodified official releases
+of the Software for personal, educational, research, and internal
+organizational purposes.
+
+3. Source Availability
+
+The source code is made publicly visible for inspection, security review, and
+verification only. A recipient may download or clone the source code solely
+for private inspection. Public availability of the source code does not make
+the Software open source and does not grant a right to modify, adapt,
+redistribute, publish, or use the source code in another work.
+
+4. Restrictions
+
+Except where applicable law expressly permits otherwise, no person or entity
+may, without prior written permission from the copyright owner:
+
+- modify, translate, adapt, or create derivative works from the Software;
+- reproduce or distribute the Software except for copies technically necessary
+  for an authorized installation, backup, or private source inspection under
+  Section 3;
+- sell, rent, lease, sublicense, publish, host, or commercially exploit the
+  Software;
+- repackage, rebundle, or republish the Software, including an official release;
+- remove or alter copyright, license, attribution, or proprietary notices; or
+- use the source code or assets to develop or assist a competing or derivative
+  extension, product, or service.
+
+5. IBM SPSS Statistics
+
+The Software requires a separately installed and validly licensed copy of IBM
+SPSS Statistics. This License grants no rights in IBM SPSS Statistics or any
+IBM trademark, software, documentation, or other intellectual property. SPSS
+Studio is independently developed and is not affiliated with, endorsed by, or
+sponsored by IBM.
+
+IBM and SPSS are trademarks of International Business Machines Corporation,
+registered in many jurisdictions worldwide.
+
+6. Third-Party Components
+
+Third-party software and services used with or referenced by the Software
+remain subject to their respective license terms. This License does not
+restrict rights independently granted under those terms and does not grant any
+additional rights in third-party materials.
+
+7. No Warranty
+
+THE SOFTWARE IS PROVIDED "AS IS" AND "AS AVAILABLE," WITHOUT WARRANTIES OF
+ANY KIND, EXPRESS OR IMPLIED, INCLUDING WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE, ACCURACY, NON-INFRINGEMENT, OR UNINTERRUPTED
+OR ERROR-FREE OPERATION, TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW.
+
+8. Limitation of Liability
+
+TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, THE COPYRIGHT OWNER WILL NOT
+BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR
+PUNITIVE DAMAGES, OR FOR LOSS OF DATA, OUTPUT, REVENUE, OR PROFITS, ARISING
+FROM OR RELATED TO THE SOFTWARE OR ITS USE, EVEN IF ADVISED OF THE POSSIBILITY
+OF SUCH DAMAGES.
+
+9. Termination
+
+The rights granted under this License terminate automatically upon breach of
+its terms. Upon termination, use of the Software must cease and copies must be
+removed, except where retention is required by applicable law.
+
+10. Additional Permission
+
+Requests for permissions not granted by this License may be sent to:
+linjing@nufe.edu.cn.
+
+All rights not expressly granted are reserved by Jing LIN (林景).

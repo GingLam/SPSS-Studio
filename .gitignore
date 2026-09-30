@@ -1,0 +1,11 @@
+node_modules/
+out/
+.vscode-test/
+dist/
+.work/
+docs/superpowers/
+TEST-REPORT.md
+*.log
+.DS_Store
+__pycache__/
+*.pyc

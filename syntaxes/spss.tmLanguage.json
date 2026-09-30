@@ -1,0 +1,834 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "IBM SPSS Statistics Syntax",
+  "scopeName": "source.spss",
+  "fileTypes": [
+    "sps"
+  ],
+  "patterns": [
+    {
+      "include": "#comment-command"
+    },
+    {
+      "include": "#begin-data"
+    },
+    {
+      "include": "#begin-python-program"
+    },
+    {
+      "include": "#begin-program"
+    },
+    {
+      "include": "#begin-gpl"
+    },
+    {
+      "include": "#begin-expr"
+    },
+    {
+      "include": "#matrix-block"
+    },
+    {
+      "include": "#input-program-block"
+    },
+    {
+      "include": "#file-type-block"
+    },
+    {
+      "include": "#macro-definition"
+    },
+    {
+      "include": "#inline-comment"
+    },
+    {
+      "include": "#single-string"
+    },
+    {
+      "include": "#double-string"
+    },
+    {
+      "include": "#known-control-command"
+    },
+    {
+      "include": "#known-command"
+    },
+    {
+      "include": "#generic-command"
+    },
+    {
+      "include": "#subcommand"
+    },
+    {
+      "include": "#inline-comment"
+    },
+    {
+      "include": "#single-string"
+    },
+    {
+      "include": "#double-string"
+    },
+    {
+      "include": "#macro-directive"
+    },
+    {
+      "include": "#macro-variable"
+    },
+    {
+      "include": "#system-variable"
+    },
+    {
+      "include": "#scratch-variable"
+    },
+    {
+      "include": "#known-function"
+    },
+    {
+      "include": "#function-fallback"
+    },
+    {
+      "include": "#format"
+    },
+    {
+      "include": "#missing"
+    },
+    {
+      "include": "#logical-keyword"
+    },
+    {
+      "include": "#relational-keyword"
+    },
+    {
+      "include": "#structural-keyword"
+    },
+    {
+      "include": "#operator"
+    },
+    {
+      "include": "#number"
+    },
+    {
+      "include": "#punctuation"
+    },
+    {
+      "include": "#ordinary-variable"
+    }
+  ],
+  "repository": {
+    "comment-command": {
+      "name": "comment.line.command.spss",
+      "begin": "(?i)^\\s*(?:\\*|COMMENT\\b)",
+      "end": "\\.(?=\\s*$)",
+      "endCaptures": {
+        "0": {
+          "name": "punctuation.definition.comment.end.spss"
+        }
+      }
+    },
+    "begin-data": {
+      "name": "meta.block.data.spss",
+      "begin": "(?i)^(\\s*)(BEGIN\\s+DATA)(?:\\.)?\\s*$",
+      "beginCaptures": {
+        "2": {
+          "name": "keyword.control.spss"
+        }
+      },
+      "end": "(?i)^(\\s*)(END\\s+DATA)(\\.)(?=\\s*$)",
+      "endCaptures": {
+        "2": {
+          "name": "keyword.control.spss"
+        },
+        "3": {
+          "name": "punctuation.terminator.statement.spss"
+        }
+      },
+      "contentName": "meta.block.data.content.spss"
+    },
+    "begin-python-program": {
+      "name": "meta.block.program.spss",
+      "begin": "(?i)^(\\s*)(BEGIN\\s+PROGRAM\\s+PYTHON3)(\\.)(?=\\s*$)",
+      "beginCaptures": {
+        "2": {
+          "name": "keyword.control.spss"
+        },
+        "3": {
+          "name": "punctuation.terminator.statement.spss"
+        }
+      },
+      "end": "(?i)^(\\s*)(END\\s+PROGRAM)(\\.)(?=\\s*$)",
+      "endCaptures": {
+        "2": {
+          "name": "keyword.control.spss"
+        },
+        "3": {
+          "name": "punctuation.terminator.statement.spss"
+        }
+      },
+      "contentName": "meta.embedded.block.python.spss",
+      "patterns": [
+        {
+          "include": "source.python"
+        }
+      ]
+    },
+    "begin-program": {
+      "name": "meta.block.program.spss",
+      "begin": "(?i)^(\\s*)(BEGIN\\s+PROGRAM(?:\\s+[A-Z][A-Z0-9_]*)?)(\\.)(?=\\s*$)",
+      "beginCaptures": {
+        "2": {
+          "name": "keyword.control.spss"
+        }
+      },
+      "end": "(?i)^(\\s*)(END\\s+PROGRAM)(\\.)(?=\\s*$)",
+      "endCaptures": {
+        "2": {
+          "name": "keyword.control.spss"
+        }
+      },
+      "contentName": "meta.block.program.content.spss"
+    },
+    "begin-gpl": {
+      "name": "meta.block.gpl.spss",
+      "begin": "(?i)^(\\s*)(BEGIN\\s+GPL)(\\.)(?=\\s*$)",
+      "beginCaptures": {
+        "2": {
+          "name": "keyword.control.spss"
+        }
+      },
+      "end": "(?i)^(\\s*)(END\\s+GPL)(\\.)(?=\\s*$)",
+      "endCaptures": {
+        "2": {
+          "name": "keyword.control.spss"
+        }
+      },
+      "contentName": "meta.block.gpl.content.spss"
+    },
+    "begin-expr": {
+      "name": "meta.block.expression.spss",
+      "begin": "(?i)^(\\s*)(BEGIN\\s+EXPR)(\\.)(?=\\s*$)",
+      "beginCaptures": {
+        "2": {
+          "name": "keyword.control.spss"
+        }
+      },
+      "end": "(?i)^(\\s*)(END\\s+EXPR)(\\.)(?=\\s*$)",
+      "endCaptures": {
+        "2": {
+          "name": "keyword.control.spss"
+        }
+      },
+      "patterns": [
+        {
+          "include": "#known-control-command"
+        },
+        {
+          "include": "#known-command"
+        },
+        {
+          "include": "#generic-command"
+        },
+        {
+          "include": "#subcommand"
+        },
+        {
+          "include": "#inline-comment"
+        },
+        {
+          "include": "#single-string"
+        },
+        {
+          "include": "#double-string"
+        },
+        {
+          "include": "#macro-directive"
+        },
+        {
+          "include": "#macro-variable"
+        },
+        {
+          "include": "#system-variable"
+        },
+        {
+          "include": "#scratch-variable"
+        },
+        {
+          "include": "#known-function"
+        },
+        {
+          "include": "#function-fallback"
+        },
+        {
+          "include": "#format"
+        },
+        {
+          "include": "#missing"
+        },
+        {
+          "include": "#logical-keyword"
+        },
+        {
+          "include": "#relational-keyword"
+        },
+        {
+          "include": "#structural-keyword"
+        },
+        {
+          "include": "#operator"
+        },
+        {
+          "include": "#number"
+        },
+        {
+          "include": "#punctuation"
+        },
+        {
+          "include": "#ordinary-variable"
+        }
+      ]
+    },
+    "matrix-block": {
+      "name": "meta.block.matrix.spss",
+      "begin": "(?i)^(\\s*)(MATRIX)(?=\\s|\\.|$)",
+      "beginCaptures": {
+        "2": {
+          "name": "keyword.control.spss"
+        }
+      },
+      "end": "(?i)^(\\s*)(END\\s+MATRIX)(\\.)(?=\\s*$)",
+      "endCaptures": {
+        "2": {
+          "name": "keyword.control.spss"
+        }
+      },
+      "patterns": [
+        {
+          "include": "#known-control-command"
+        },
+        {
+          "include": "#known-command"
+        },
+        {
+          "include": "#generic-command"
+        },
+        {
+          "include": "#subcommand"
+        },
+        {
+          "include": "#inline-comment"
+        },
+        {
+          "include": "#single-string"
+        },
+        {
+          "include": "#double-string"
+        },
+        {
+          "include": "#macro-directive"
+        },
+        {
+          "include": "#macro-variable"
+        },
+        {
+          "include": "#system-variable"
+        },
+        {
+          "include": "#scratch-variable"
+        },
+        {
+          "include": "#known-function"
+        },
+        {
+          "include": "#function-fallback"
+        },
+        {
+          "include": "#format"
+        },
+        {
+          "include": "#missing"
+        },
+        {
+          "include": "#logical-keyword"
+        },
+        {
+          "include": "#relational-keyword"
+        },
+        {
+          "include": "#structural-keyword"
+        },
+        {
+          "include": "#operator"
+        },
+        {
+          "include": "#number"
+        },
+        {
+          "include": "#punctuation"
+        },
+        {
+          "include": "#ordinary-variable"
+        }
+      ]
+    },
+    "input-program-block": {
+      "name": "meta.block.program.spss",
+      "begin": "(?i)^(\\s*)(INPUT\\s+PROGRAM)(\\.)(?=\\s*$)",
+      "beginCaptures": {
+        "2": {
+          "name": "keyword.control.spss"
+        }
+      },
+      "end": "(?i)^(\\s*)(END\\s+INPUT\\s+PROGRAM)(\\.)(?=\\s*$)",
+      "endCaptures": {
+        "2": {
+          "name": "keyword.control.spss"
+        }
+      },
+      "patterns": [
+        {
+          "include": "#known-control-command"
+        },
+        {
+          "include": "#known-command"
+        },
+        {
+          "include": "#generic-command"
+        },
+        {
+          "include": "#subcommand"
+        },
+        {
+          "include": "#inline-comment"
+        },
+        {
+          "include": "#single-string"
+        },
+        {
+          "include": "#double-string"
+        },
+        {
+          "include": "#macro-directive"
+        },
+        {
+          "include": "#macro-variable"
+        },
+        {
+          "include": "#system-variable"
+        },
+        {
+          "include": "#scratch-variable"
+        },
+        {
+          "include": "#known-function"
+        },
+        {
+          "include": "#function-fallback"
+        },
+        {
+          "include": "#format"
+        },
+        {
+          "include": "#missing"
+        },
+        {
+          "include": "#logical-keyword"
+        },
+        {
+          "include": "#relational-keyword"
+        },
+        {
+          "include": "#structural-keyword"
+        },
+        {
+          "include": "#operator"
+        },
+        {
+          "include": "#number"
+        },
+        {
+          "include": "#punctuation"
+        },
+        {
+          "include": "#ordinary-variable"
+        }
+      ]
+    },
+    "file-type-block": {
+      "name": "meta.block.file-type.spss",
+      "begin": "(?i)^(\\s*)(FILE\\s+TYPE)(?=\\s|\\.|$)",
+      "beginCaptures": {
+        "2": {
+          "name": "keyword.control.spss"
+        }
+      },
+      "end": "(?i)^(\\s*)(END\\s+FILE\\s+TYPE)(\\.)(?=\\s*$)",
+      "endCaptures": {
+        "2": {
+          "name": "keyword.control.spss"
+        }
+      },
+      "patterns": [
+        {
+          "include": "#known-control-command"
+        },
+        {
+          "include": "#known-command"
+        },
+        {
+          "include": "#generic-command"
+        },
+        {
+          "include": "#subcommand"
+        },
+        {
+          "include": "#inline-comment"
+        },
+        {
+          "include": "#single-string"
+        },
+        {
+          "include": "#double-string"
+        },
+        {
+          "include": "#macro-directive"
+        },
+        {
+          "include": "#macro-variable"
+        },
+        {
+          "include": "#system-variable"
+        },
+        {
+          "include": "#scratch-variable"
+        },
+        {
+          "include": "#known-function"
+        },
+        {
+          "include": "#function-fallback"
+        },
+        {
+          "include": "#format"
+        },
+        {
+          "include": "#missing"
+        },
+        {
+          "include": "#logical-keyword"
+        },
+        {
+          "include": "#relational-keyword"
+        },
+        {
+          "include": "#structural-keyword"
+        },
+        {
+          "include": "#operator"
+        },
+        {
+          "include": "#number"
+        },
+        {
+          "include": "#punctuation"
+        },
+        {
+          "include": "#ordinary-variable"
+        }
+      ]
+    },
+    "macro-definition": {
+      "name": "meta.block.macro.spss",
+      "begin": "(?i)^(\\s*)(DEFINE)\\b",
+      "beginCaptures": {
+        "2": {
+          "name": "keyword.control.spss"
+        }
+      },
+      "end": "(?i)^(\\s*)(!ENDDEFINE)(\\.)(?=\\s*$)",
+      "endCaptures": {
+        "2": {
+          "name": "keyword.control.macro.spss"
+        },
+        "3": {
+          "name": "punctuation.terminator.statement.spss"
+        }
+      },
+      "patterns": [
+        {
+          "include": "#comment-command"
+        },
+        {
+          "include": "#inline-comment"
+        },
+        {
+          "include": "#single-string"
+        },
+        {
+          "include": "#double-string"
+        },
+        {
+          "include": "#macro-directive"
+        },
+        {
+          "include": "#known-control-command"
+        },
+        {
+          "include": "#known-command"
+        },
+        {
+          "include": "#subcommand"
+        },
+        {
+          "include": "#inline-comment"
+        },
+        {
+          "include": "#single-string"
+        },
+        {
+          "include": "#double-string"
+        },
+        {
+          "include": "#macro-directive"
+        },
+        {
+          "include": "#macro-variable"
+        },
+        {
+          "include": "#system-variable"
+        },
+        {
+          "include": "#scratch-variable"
+        },
+        {
+          "include": "#known-function"
+        },
+        {
+          "include": "#function-fallback"
+        },
+        {
+          "include": "#format"
+        },
+        {
+          "include": "#missing"
+        },
+        {
+          "include": "#logical-keyword"
+        },
+        {
+          "include": "#relational-keyword"
+        },
+        {
+          "include": "#structural-keyword"
+        },
+        {
+          "include": "#operator"
+        },
+        {
+          "include": "#number"
+        },
+        {
+          "include": "#punctuation"
+        },
+        {
+          "include": "#ordinary-variable"
+        }
+      ]
+    },
+    "inline-comment": {
+      "name": "comment.block.spss",
+      "begin": "/\\*",
+      "beginCaptures": {
+        "0": {
+          "name": "punctuation.definition.comment.begin.spss"
+        }
+      },
+      "end": "\\*/",
+      "endCaptures": {
+        "0": {
+          "name": "punctuation.definition.comment.end.spss"
+        }
+      }
+    },
+    "single-string": {
+      "name": "string.quoted.single.spss",
+      "begin": "'",
+      "beginCaptures": {
+        "0": {
+          "name": "punctuation.definition.string.begin.spss"
+        }
+      },
+      "end": "'(?!')",
+      "endCaptures": {
+        "0": {
+          "name": "punctuation.definition.string.end.spss"
+        }
+      },
+      "patterns": [
+        {
+          "match": "''",
+          "name": "constant.character.escape.spss"
+        }
+      ]
+    },
+    "double-string": {
+      "name": "string.quoted.double.spss",
+      "begin": "\"",
+      "beginCaptures": {
+        "0": {
+          "name": "punctuation.definition.string.begin.spss"
+        }
+      },
+      "end": "\"(?!\")",
+      "endCaptures": {
+        "0": {
+          "name": "punctuation.definition.string.end.spss"
+        }
+      },
+      "patterns": [
+        {
+          "match": "\"\"",
+          "name": "constant.character.escape.spss"
+        }
+      ]
+    },
+    "known-control-command": {
+      "match": "(?i)^(\\s*)(END\\s+INPUT\\s+PROGRAM|BEGIN\\s+PROGRAM|END\\s+FILE\\s+TYPE|INPUT\\s+PROGRAM|SIMPREP\\s+BEGIN|END\\s+PROGRAM|SIMPREP\\s+END|!ENDDEFINE|BEGIN\\s+DATA|BEGIN\\s+EXPR|END\\s+MATRIX|END\\s+REPEAT|BEGIN\\s+GPL|DO\\s+REPEAT|FILE\\s+TYPE|TMS\\s+BEGIN|END\\s+DATA|END\\s+EXPR|END\\s+LOOP|ELSE\\s+IF|END\\s+GPL|TMS\\s+END|DEFINE|END\\s+IF|MATRIX|DO\\s+IF|ELSE|LOOP)(?=\\s|\\.|$)",
+      "captures": {
+        "2": {
+          "name": "keyword.control.spss"
+        }
+      }
+    },
+    "known-command": {
+      "match": "(?i)^(\\s*)(SPATIAL\\s+TEMPORAL\\s+PREDICTION|SPATIAL\\s+ASSOCIATION\\s+RULES|BAYES\\s+ONESAMPLE\\s+BINOMIAL|BAYES\\s+ONESAMPLE\\s+POISSON|MULTIPLE\\s+CORRESPONDENCE|BAYES\\s+ONESAMPLE\\s+NORMAL|CLEAR\\s+TRANSFORMATIONS|REPOSITORY\\s+ATTRIBUTES|SAVE\\s+DATA\\s+COLLECTION|LOGISTIC\\s+REGRESSION|MULTIPLE\\s+IMPUTATION|CLEAR\\s+TIME\\s+PROGRAM|DATAFILE\\s+ATTRIBUTE|REPOSITORY\\s+CONNECT|VARIABLE\\s+ALIGNMENT|VARIABLE\\s+ATTRIBUTE|BAYES\\s+CORRELATION|BAYES\\s+INDEPENDENT|ADD\\s+VALUE\\s+LABELS|APPLY\\s+DICTIONARY|BAYES\\s+REGRESSION|COMPARE\\s+DATASETS|DATASET\\s+ACTIVATE|DELETE\\s+VARIABLES|PROCEDURE\\s+OUTPUT|RATIO\\s+STATISTICS|RENAME\\s+VARIABLES|BAYES\\s+LOGLINEAR|DATASET\\s+DECLARE|DATASET\\s+DISPLAY|KEYED\\s+DATA\\s+LIST|OPTIMAL\\s+BINNING|OUTPUT\\s+ACTIVATE|REPOSITORY\\s+COPY|SPATIAL\\s+MAPSPEC|TWOSTEP\\s+CLUSTER|VARIABLE\\s+LABELS|CORRESPONDENCE|CSDESCRIPTIVES|DROP\\s+DOCUMENTS|MISSING\\s+VALUES|OUTPUT\\s+DISPLAY|REPEATING\\s+DATA|SAVE\\s+TRANSLATE|SORT\\s+VARIABLES|VARIABLE\\s+LEVEL|VARIABLE\\s+WIDTH|BAYES\\s+RELATED|DATASET\\s+CLOSE|DETECTANOMALY|GET\\s+TRANSLATE|MULT\\s+RESPONSE|OUTPUT\\s+EXPORT|OUTPUT\\s+MODIFY|PRINT\\s+FORMATS|QUICK\\s+CLUSTER|RESPONSE\\s+RATE|SAVE\\s+CODEPAGE|VARIABLE\\s+ROLE|WRITE\\s+FORMATS|ADD\\s+DOCUMENT|CORRELATIONS|DATASET\\s+COPY|DATASET\\s+NAME|DESCRIPTIVES|DISCRIMINANT|MODEL\\s+HANDLE|OUTPUT\\s+CLOSE|PARTIAL\\s+CORR|SHIFT\\s+VALUES|SYSFILE\\s+INFO|TCM\\s+ANALYSIS|TIME\\s+PROGRAM|VALIDATEDATA|VALUE\\s+LABELS|BAYES\\s+ANOVA|CASESTOVARS|FILE\\s+HANDLE|FREQUENCIES|GENLINMIXED|GET\\s+CAPTURE|HILOGLINEAR|MATCH\\s+FILES|MATRIX\\s+DATA|MODEL\\s+CLOSE|NONPAR\\s+CORR|OUTPUT\\s+NAME|OUTPUT\\s+OPEN|OUTPUT\\s+SAVE|PERMISSIONS|PRINT\\s+EJECT|PRINT\\s+SPACE|PROXIMITIES|RECORD\\s+TYPE|RELIABILITY|VARSTOCASES|ALTER\\s+TYPE|AUTORECODE|CSLOGISTIC|CSTABULATE|DMLOGISTIC|FILE\\s+LABEL|MODEL\\s+LIST|MODEL\\s+NAME|N\\s+OF\\s+CASES|NAIVEBAYES|NPAR\\s+TESTS|OLAP\\s+CUBES|OUTPUT\\s+NEW|READ\\s+MODEL|REGRESSION|SAVE\\s+MODEL|SELECTPRED|SORT\\s+CASES|SPLIT\\s+FILE|TMS\\s+IMPORT|ADD\\s+FILES|AGGREGATE|BOOTSTRAP|CROSSTABS|CSORDINAL|DATA\\s+LIST|DMCLUSTER|EXTENSION|GET\\s+STATA|GETCOGNOS|LOGLINEAR|ORTHOPLAN|PLANCARDS|SELECT\\s+IF|STAR\\s+JOIN|SUMMARIZE|TCM\\s+APPLY|TCM\\s+MODEL|TEMPORARY|TMS\\s+MERGE|CASEPLOT|CODEBOOK|CONJOINT|CSCOXREG|CSSELECT|CURVEFIT|DMTABLES|DOCUMENT|END\\s+CASE|END\\s+FILE|EXSMOOTH|GET\\s+DATA|MCONVERT|NEW\\s+FILE|PREFSCAL|PRESERVE|PRINCALS|PROXSCAL|REFORMAT|SUBTITLE|SURVIVAL|TDISPLAY|UNIANOVA|CLUSTER|COMMENT|COMPUTE|CTABLES|DISPLAY|EXAMINE|EXECUTE|FORMATS|GET\\s+SAS|INCLUDE|NPTESTS|NUMERIC|OMSINFO|OVERALS|PREDICT|RESTORE|SAVETM1|SIMPLAN|SPCHART|SPECTRA|TSAPPLY|TSMODEL|VARCOMP|ALSCAL|ANACOR|CATPCA|CATREG|COXREG|CREATE|CSPLAN|DMTREE|EXPORT|FACTOR|FILTER|FINISH|GENLIN|GENLOG|GETTM1|GGRAPH|HOMALS|IGRAPH|IMPORT|INSERT|LINEAR|MANOVA|MRSETS|NOMREG|OMSEND|OMSLOG|ONEWAY|PROBIT|RECODE|REPORT|REREAD|SAMPLE|SCRIPT|SEASON|SIMRUN|STRING|T-TEST|TSPLOT|UPDATE|VECTOR|VERIFY|WEIGHT|XGRAPH|ANOVA|ARIMA|BREAK|CACHE|COUNT|CSGLM|DMROC|ERASE|GRAPH|LEAVE|MEANS|MIXED|POINT|PPLOT|PRINT|TITLE|TSHOW|WRITE|XSAVE|2SLS|AREG|DATE|ECHO|FLIP|HOST|INFO|LIST|PACF|PLUM|RANK|SAVE|SHOW|TREE|TSET|ACF|ADP|AIM|CCF|FIT|GET|GLM|KNN|MLP|MVA|NLR|OMS|PLS|RBF|RMV|ROC|SET|USE|WLS|CD|IF|KM)(?=\\s|\\.|$)",
+      "captures": {
+        "2": {
+          "name": "keyword.other.command.spss"
+        }
+      }
+    },
+    "generic-command": {
+      "match": "(?i)^(\\s*)([A-Z@][A-Z0-9_@#$-]*(?:\\s+[A-Z][A-Z0-9_@#$-]*)?)(?=\\s*(?:/|\\.|$))",
+      "captures": {
+        "2": {
+          "name": "keyword.other.command.generic.spss"
+        }
+      }
+    },
+    "subcommand": {
+      "match": "(?i)(^|\\s)(/)(\\s*)([A-Z][A-Z0-9_-]*)",
+      "captures": {
+        "2": {
+          "name": "punctuation.definition.subcommand.spss"
+        },
+        "4": {
+          "name": "keyword.other.subcommand.spss"
+        }
+      }
+    },
+    "macro-directive": {
+      "match": "(?i)(?<![A-Z0-9_])(!POSITIONAL|!ENDDEFINE|!OFFEXPAND|!NOEXPAND|!ONEXPAND|!CHAREND|!DEFAULT|!ENCLOSE|!UNQUOTE|!BLANKS|!CMDEND|!CONCAT|!LENGTH|!SUBSTR|!TOKENS|!UPCASE|!BREAK|!DOEND|!IFEND|!INDEX|!QUOTE|!ELSE|!EVAL|!HEAD|!LOOP|!NULL|!TAIL|!THEN|!AND|!LET|!NOT|!POS|!BY|!DO|!EQ|!GE|!GT|!IF|!IN|!LE|!LT|!NE|!OR|!TO|!I)(?![A-Z0-9_])",
+      "captures": {
+        "1": {
+          "name": "keyword.control.macro.spss"
+        }
+      }
+    },
+    "macro-variable": {
+      "match": "(?i)![A-Z][A-Z0-9_]*",
+      "name": "variable.other.macro.spss"
+    },
+    "system-variable": {
+      "match": "(?i)\\$[A-Z][A-Z0-9_]*",
+      "name": "variable.language.system.spss"
+    },
+    "scratch-variable": {
+      "match": "(?i)#[A-Z@][A-Z0-9_@#$]*(?:\\.[A-Z0-9_@#$]+)*",
+      "name": "variable.other.scratch.spss"
+    },
+    "known-function": {
+      "match": "(?i)(?<![A-Z0-9_@#$])(NCDF\\.BERNOULLI|NPDF\\.BERNOULLI|CDF\\.BERNOULLI|CTIME\\.MINUTES|CTIME\\.SECONDS|IDF\\.BERNOULLI|NCDF\\.LOGISTIC|NPDF\\.LOGISTIC|PDF\\.BERNOULLI|SIG\\.BERNOULLI|XDATE\\.QUARTER|CDF\\.LOGISTIC|IDF\\.LOGISTIC|NCDF\\.HALFNRM|NCDF\\.LAPLACE|NCDF\\.LNORMAL|NCDF\\.POISSON|NCDF\\.UNIFORM|NCDF\\.WEIBULL|NPDF\\.HALFNRM|NPDF\\.LAPLACE|NPDF\\.LNORMAL|NPDF\\.POISSON|NPDF\\.UNIFORM|NPDF\\.WEIBULL|PDF\\.LOGISTIC|RV\\.BERNOULLI|SIG\\.LOGISTIC|XDATE\\.MINUTE|XDATE\\.SECOND|CDF\\.HALFNRM|CDF\\.LAPLACE|CDF\\.LNORMAL|CDF\\.POISSON|CDF\\.UNIFORM|CDF\\.WEIBULL|CHAR\\.LENGTH|CHAR\\.RINDEX|CHAR\\.SUBSTR|CTIME\\.HOURS|IDF\\.HALFNRM|IDF\\.LAPLACE|IDF\\.LNORMAL|IDF\\.POISSON|IDF\\.UNIFORM|IDF\\.WEIBULL|NCDF\\.CAUCHY|NCDF\\.IGAUSS|NCDF\\.NEGBIN|NCDF\\.NORMAL|NCDF\\.PARETO|NPDF\\.CAUCHY|NPDF\\.IGAUSS|NPDF\\.NEGBIN|NPDF\\.NORMAL|NPDF\\.PARETO|PDF\\.HALFNRM|PDF\\.LAPLACE|PDF\\.LNORMAL|PDF\\.POISSON|PDF\\.UNIFORM|PDF\\.WEIBULL|RV\\.LOGISTIC|SIG\\.HALFNRM|SIG\\.LAPLACE|SIG\\.LNORMAL|SIG\\.POISSON|SIG\\.UNIFORM|SIG\\.WEIBULL|XDATE\\.MONTH|XDATE\\.WKDAY|CDF\\.CAUCHY|CDF\\.IGAUSS|CDF\\.NEGBIN|CDF\\.NORMAL|CDF\\.PARETO|CHAR\\.INDEX|CHAR\\.MBLEN|CTIME\\.DAYS|DATE\\.YRDAY|IDF\\.CAUCHY|IDF\\.IGAUSS|IDF\\.NEGBIN|IDF\\.NORMAL|IDF\\.PARETO|NCDF\\.BINOM|NCDF\\.BVNOR|NCDF\\.CHISQ|NCDF\\.GAMMA|NCDF\\.HYPER|NPDF\\.BINOM|NPDF\\.BVNOR|NPDF\\.CHISQ|NPDF\\.GAMMA|NPDF\\.HYPER|PDF\\.CAUCHY|PDF\\.IGAUSS|PDF\\.NEGBIN|PDF\\.NORMAL|PDF\\.PARETO|RV\\.HALFNRM|RV\\.LAPLACE|RV\\.LNORMAL|RV\\.POISSON|RV\\.UNIFORM|RV\\.WEIBULL|SIG\\.CAUCHY|SIG\\.IGAUSS|SIG\\.NEGBIN|SIG\\.NORMAL|SIG\\.PARETO|VALUELABEL|XDATE\\.DATE|XDATE\\.HOUR|XDATE\\.JDAY|XDATE\\.MDAY|XDATE\\.TDAY|XDATE\\.TIME|XDATE\\.WEEK|XDATE\\.YEAR|CDF\\.BINOM|CDF\\.BVNOR|CDF\\.CHISQ|CDF\\.GAMMA|CDF\\.HYPER|CHAR\\.LPAD|CHAR\\.RPAD|DATE\\.MOYR|DATE\\.WKYR|IDF\\.BINOM|IDF\\.BVNOR|IDF\\.CHISQ|IDF\\.GAMMA|IDF\\.HYPER|NCDF\\.BETA|NCDF\\.GEOM|NORMALIZE|NPDF\\.BETA|NPDF\\.GEOM|PDF\\.BINOM|PDF\\.BVNOR|PDF\\.CHISQ|PDF\\.GAMMA|PDF\\.HYPER|RV\\.CAUCHY|RV\\.IGAUSS|RV\\.NEGBIN|RV\\.NORMAL|RV\\.PARETO|SIG\\.BINOM|SIG\\.BVNOR|SIG\\.CHISQ|SIG\\.GAMMA|SIG\\.HYPER|TIME\\.DAYS|CDF\\.BETA|CDF\\.GEOM|DATE\\.DMY|DATE\\.MDY|DATE\\.QYR|IDF\\.BETA|IDF\\.GEOM|NCDF\\.EXP|NPDF\\.EXP|PDF\\.BETA|PDF\\.GEOM|RV\\.BINOM|RV\\.BVNOR|RV\\.CHISQ|RV\\.GAMMA|RV\\.HYPER|SIG\\.BETA|SIG\\.GEOM|TIME\\.HMS|VARIANCE|CDF\\.EXP|IDF\\.EXP|LNGAMMA|MISSING|PDF\\.EXP|REPLACE|RV\\.BETA|RV\\.GEOM|SIG\\.EXP|CONCAT|LENGTH|MEDIAN|NCDF\\.F|NCDF\\.T|NPDF\\.F|NPDF\\.T|NUMBER|NVALID|RINDEX|RV\\.EXP|STRING|STRUNC|SUBSTR|SYSMIS|UPCASE|ARSIN|ARTAN|CDF\\.F|CDF\\.T|CFVAR|IDF\\.F|IDF\\.T|INDEX|LOWER|LTRIM|NMISS|NTRIM|PDF\\.F|PDF\\.T|RANGE|SIG\\.F|SIG\\.T|TRUNC|VALUE|LG10|LPAD|MEAN|RPAD|RV\\.F|RV\\.T|SQRT|ABS|ANY|COS|EXP|LAG|MAX|MIN|MOD|RND|SIN|SUM|LN|SD(?:\\.(\\d+))?)(?=\\s*\\()",
+      "captures": {
+        "1": {
+          "name": "support.function.spss"
+        },
+        "2": {
+          "name": "constant.numeric.function-modifier.spss"
+        }
+      }
+    },
+    "function-fallback": {
+      "match": "(?i)(?<![A-Z0-9_@#$])([A-Z@#$][A-Z0-9_@#$]*(?:\\.(?:[A-Z][A-Z0-9_@#$]*|\\d+))*)(?=\\s*\\()",
+      "captures": {
+        "1": {
+          "name": "support.function.spss"
+        }
+      }
+    },
+    "format": {
+      "match": "(?i)(?<![A-Z0-9_@#$])(?:DATETIME|DOLLAR|PIBHEX|YMDHMS|ADATE|COMMA|DTIME|EDATE|JDATE|MONTH|MTIME|RBHEX|SDATE|WKDAY|AHEX|DATE|MOYR|TIME|WKYR|DOT|PCT|PIB|QYR|IB|PK|RB|A|E|F|N|P|Z)\\d+(?:\\.\\d+)?(?![A-Z0-9_@#$])",
+      "name": "support.type.format.spss"
+    },
+    "missing": {
+      "patterns": [
+        {
+          "match": "(?i)(?<![A-Z0-9_@#$])(?:SYSMIS|MISSING|LO|HI|THRU)(?![A-Z0-9_@#$])",
+          "name": "constant.language.missing.spss"
+        },
+        {
+          "match": "(?<![A-Z0-9_@#$])\\.(?![A-Z0-9_@#$]|\\s*$)",
+          "name": "constant.language.missing.spss"
+        }
+      ]
+    },
+    "logical-keyword": {
+      "match": "(?i)(?<![A-Z0-9_@#$])(?:AND|OR|NOT)(?![A-Z0-9_@#$])",
+      "name": "keyword.operator.logical.spss"
+    },
+    "relational-keyword": {
+      "match": "(?i)(?<![A-Z0-9_@#$])(?:EQ|NE|LT|LE|GT|GE)(?![A-Z0-9_@#$])",
+      "name": "keyword.operator.relational.spss"
+    },
+    "structural-keyword": {
+      "match": "(?i)(?<![A-Z0-9_@#$])(?:DESCENDING|ASCENDING|MISSING|SYSMIS|FIRST|COPY|ELSE|INTO|LAST|THRU|WITH|ALL|OFF|BY|HI|LO|ON|TO)(?![A-Z0-9_@#$])",
+      "name": "keyword.other.spss"
+    },
+    "operator": {
+      "patterns": [
+        {
+          "match": "<=|>=|~=|<>|=|<|>",
+          "name": "keyword.operator.relational.spss"
+        },
+        {
+          "match": "[&|~]",
+          "name": "keyword.operator.logical.spss"
+        },
+        {
+          "match": "\\*\\*|[+*/-]",
+          "name": "keyword.operator.arithmetic.spss"
+        }
+      ]
+    },
+    "number": {
+      "match": "(?<![A-Z0-9_@#$])(?:\\d+\\.\\d*|\\.\\d+|\\d+)(?:[Ee][+-]?\\d+)?(?![A-Z0-9_@#$])",
+      "name": "constant.numeric.spss"
+    },
+    "punctuation": {
+      "patterns": [
+        {
+          "match": "\\.(?=\\s*$)",
+          "name": "punctuation.terminator.statement.spss"
+        },
+        {
+          "match": "[(),]",
+          "name": "punctuation.separator.spss"
+        },
+        {
+          "match": "[\\[\\]]",
+          "name": "punctuation.section.brackets.spss"
+        }
+      ]
+    },
+    "ordinary-variable": {
+      "match": "(?i)(?<![A-Z0-9_@#$])[A-Z@][A-Z0-9_@#$]*(?:\\.[A-Z0-9_@#$]+)*(?![A-Z0-9_@#$])",
+      "name": "variable.other.spss"
+    }
+  }
+}
