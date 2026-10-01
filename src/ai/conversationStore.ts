@@ -101,6 +101,14 @@ export class ConversationStore {
     });
   }
 
+  public deactivate(): Promise<void> {
+    return this.enqueue(async () => {
+      const data = structuredClone(await this.ensureLoaded());
+      this.data = { schemaVersion: CONVERSATION_SCHEMA_VERSION, conversations: data.conversations };
+      await this.persist(this.data);
+    });
+  }
+
   public rename(conversationId: string, title: string): Promise<void> {
     return this.enqueue(async () => {
       const normalized = title.replace(/\s+/gu, ' ').trim();
