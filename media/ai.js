@@ -37,7 +37,6 @@
     stop: document.getElementById('stop'),
     tabChat: document.getElementById('tab-chat'),
     tabHistory: document.getElementById('tab-history'),
-    tabProfiles: document.getElementById('tab-profiles'),
     tabs: document.getElementById('tabs'),
   };
 
@@ -92,10 +91,14 @@
       const active = candidate === page;
       const tab = document.getElementById(`tab-${candidate}`);
       const section = document.getElementById(`page-${candidate}`);
-      tab.classList.toggle('active', active);
-      tab.setAttribute('aria-selected', String(active));
+      if (tab) {
+        tab.classList.toggle('active', active);
+        tab.setAttribute('aria-selected', String(active));
+      }
       section.hidden = !active;
     }
+    elements.manageProfiles.classList.toggle('active', page === 'profiles');
+    elements.manageProfiles.setAttribute('aria-pressed', String(page === 'profiles'));
     persistUiState();
   }
 
@@ -106,7 +109,6 @@
     elements.manageProfiles.textContent = strings.configureModels;
     elements.tabChat.textContent = strings.currentChat;
     elements.tabHistory.textContent = strings.history;
-    elements.tabProfiles.textContent = strings.modelProfiles;
     elements.question.placeholder = strings.questionPlaceholder;
     elements.stop.textContent = strings.stop;
     elements.send.textContent = strings.send;
@@ -170,14 +172,15 @@
   function createMessage(role, profileName) {
     const article = document.createElement('article');
     article.className = `message ${role}`;
-    const label = document.createElement('div');
-    label.className = 'message-label';
-    label.textContent = role === 'user'
-      ? strings.user
-      : profileName || strings.title;
     const body = document.createElement('div');
     body.className = 'message-body';
-    article.append(label, body);
+    if (role === 'assistant') {
+      const label = document.createElement('div');
+      label.className = 'message-label';
+      label.textContent = profileName || strings.title;
+      article.append(label);
+    }
+    article.append(body);
     elements.messages.append(article);
     elements.messages.scrollTop = elements.messages.scrollHeight;
     return body;
@@ -189,6 +192,152 @@
     window.setTimeout(() => {
       button.textContent = original;
     }, 1_200);
+  }
+
+  const SPSS_KEYWORDS = new Set(`
+    ADD AGGREGATE ALL ALTER AND ANOVA APPLY AUTORECODE BEGIN BOOTSTRAP BY CACHE
+    CASESTOVARS CLEAR CLOSE COMMENT COMPUTE CORRELATIONS COUNT CROSSTABS DATA DATASET
+    DELETE DESCRIPTIVES DISPLAY DO ELSE END EQ EXECUTE EXAMINE FILE FILTER FORMATS
+    FREQUENCIES GE GET GLM GT HI IF INCLUDE INTO LE LIST LO LOGISTIC LOOP LT MATCH
+    MEANS MISSING MIXED NE NOMREG NOT NPAR NUMERIC OFF OMS OMSEND ONEWAY OR OUTPUT
+    PRINT RECODE REGRESSION RENAME REPEAT SAVE SELECT SORT SPLIT STRING SYSMIS TEMPORARY
+    TEST THEN THRU TITLE TO T-TEST UNIANOVA VALUE VARIABLE VARIABLES VARSTOCASES WEIGHT WITH
+    METHOD CRITERIA PRINT SAVE PLOT STATISTICS CONTRAST CATEGORICAL MISSING ORIGIN
+  `.trim().split(/\s+/u));
+
+  function isSpssLanguage(language) {
+    return ['spss', 'sps', 'spss-syntax', 'ibm-spss', 'ibm spss']
+      .includes(String(language || '').trim().toLowerCase());
+  }
+
+  function pushSyntaxToken(tokens, type, content) {
+    if (!content) {
+      return;
+    }
+    const previous = tokens[tokens.length - 1];
+    if (previous?.type === type) {
+      previous.content += content;
+    } else {
+      tokens.push({ type, content });
+    }
+  }
+
+  function tokenizeSpssSyntax(source) {
+    const tokens = [];
+    let inBlockComment = false;
+    for (const lineWithEnding of source.match(/.*(?:\n|$)/gu) || []) {
+      if (!lineWithEnding) {
+        continue;
+      }
+      const line = lineWithEnding.endsWith('\n') ? lineWithEnding.slice(0, -1) : lineWithEnding;
+      const ending = lineWithEnding.endsWith('\n') ? '\n' : '';
+      if (!inBlockComment && /^\s*(?:\*|COMMENT\b)/iu.test(line)) {
+        pushSyntaxToken(tokens, 'comment', line);
+        pushSyntaxToken(tokens, 'plain', ending);
+        continue;
+      }
+
+      let cursor = 0;
+      let firstWord = true;
+      let afterSlash = false;
+      while (cursor < line.length) {
+        if (inBlockComment) {
+          const end = line.indexOf('*/', cursor);
+          if (end < 0) {
+            pushSyntaxToken(tokens, 'comment', line.slice(cursor));
+            cursor = line.length;
+          } else {
+            pushSyntaxToken(tokens, 'comment', line.slice(cursor, end + 2));
+            cursor = end + 2;
+            inBlockComment = false;
+          }
+          continue;
+        }
+        if (line.startsWith('/*', cursor)) {
+          inBlockComment = true;
+          continue;
+        }
+
+        const remainder = line.slice(cursor);
+        const whitespace = remainder.match(/^\s+/u);
+        if (whitespace) {
+          pushSyntaxToken(tokens, 'plain', whitespace[0]);
+          cursor += whitespace[0].length;
+          continue;
+        }
+        const quote = remainder[0];
+        if (quote === "'" || quote === '"') {
+          let end = 1;
+          while (end < remainder.length) {
+            if (remainder[end] === quote) {
+              if (remainder[end + 1] === quote) {
+                end += 2;
+                continue;
+              }
+              end += 1;
+              break;
+            }
+            end += 1;
+          }
+          pushSyntaxToken(tokens, 'string', remainder.slice(0, end));
+          cursor += end;
+          continue;
+        }
+
+        const number = remainder.match(/^(?:\d+\.\d*|\.\d+|\d+)(?:e[+-]?\d+)?/iu);
+        if (number) {
+          pushSyntaxToken(tokens, 'number', number[0]);
+          cursor += number[0].length;
+          firstWord = false;
+          afterSlash = false;
+          continue;
+        }
+        const word = remainder.match(/^[A-Z@#$!][A-Z0-9_@#$!-]*(?:\.[A-Z0-9_@#$-]+)*/iu);
+        if (word) {
+          const value = word[0];
+          const upper = value.toUpperCase();
+          const nextCharacter = remainder.slice(value.length).trimStart()[0];
+          let type = 'variable';
+          if (value.startsWith('!') || firstWord || afterSlash || SPSS_KEYWORDS.has(upper)) {
+            type = 'keyword';
+          } else if (nextCharacter === '(') {
+            type = 'function';
+          } else if (value.startsWith('$') || value.startsWith('#')) {
+            type = 'system-variable';
+          }
+          pushSyntaxToken(tokens, type, value);
+          cursor += value.length;
+          firstWord = false;
+          afterSlash = false;
+          continue;
+        }
+
+        const operator = remainder.match(/^(?:<=|>=|~=|<>|\*\*|[=<>+*/&|~-])/u);
+        if (operator) {
+          pushSyntaxToken(tokens, 'operator', operator[0]);
+          cursor += operator[0].length;
+          afterSlash = operator[0] === '/';
+          continue;
+        }
+        pushSyntaxToken(tokens, 'punctuation', remainder[0]);
+        cursor += 1;
+      }
+      pushSyntaxToken(tokens, 'plain', ending);
+    }
+    return tokens;
+  }
+
+  function renderSpssCode(target, source) {
+    for (const token of tokenizeSpssSyntax(source)) {
+      if (token.type === 'plain') {
+        target.append(document.createTextNode(token.content));
+        continue;
+      }
+      const span = document.createElement('span');
+      span.className = `syntax-token ${token.type}`;
+      span.textContent = token.content;
+      target.append(span);
+    }
   }
 
   function renderSegments(target, segments) {
@@ -226,7 +375,11 @@
       actions.append(insert, copy);
       header.append(language, actions);
       const code = document.createElement('code');
-      code.textContent = segment.content;
+      if (isSpssLanguage(segment.language)) {
+        renderSpssCode(code, segment.content);
+      } else {
+        code.textContent = segment.content;
+      }
       const pre = document.createElement('pre');
       pre.append(code);
       block.append(header, pre);

@@ -129,6 +129,12 @@ textarea:disabled {
   border-bottom-color: var(--vscode-focusBorder);
 }
 
+#manage-profiles.active {
+  color: var(--vscode-button-foreground);
+  background: var(--vscode-button-hoverBackground);
+  border-color: var(--vscode-focusBorder);
+}
+
 .banner {
   grid-row: 2;
   padding: 7px 10px;
@@ -220,8 +226,10 @@ textarea:disabled {
 
 .message.user .message-body {
   margin-left: 8%;
-  background: var(--vscode-textBlockQuote-background);
-  border-left: 3px solid var(--vscode-textBlockQuote-border, var(--vscode-focusBorder));
+  color: var(--vscode-list-activeSelectionForeground, var(--vscode-foreground));
+  background: var(--vscode-list-activeSelectionBackground, var(--vscode-inputOption-activeBackground));
+  border-color: var(--vscode-list-activeSelectionBackground, var(--vscode-focusBorder));
+  border-left: 3px solid var(--vscode-focusBorder);
 }
 
 .message.assistant .message-body {
@@ -241,31 +249,44 @@ textarea:disabled {
 
 .code-block {
   overflow: hidden;
-  background: var(--vscode-textCodeBlock-background);
-  border: 1px solid var(--vscode-panel-border);
-  border-radius: 4px;
+  color: var(--vscode-editor-foreground);
+  background: var(--vscode-editor-background);
+  border: 1px solid var(--vscode-focusBorder);
+  border-radius: 5px;
+  box-shadow: 0 1px 3px var(--vscode-widget-shadow);
 }
 
 .code-header {
   justify-content: space-between;
   min-height: 32px;
   padding: 3px 5px 3px 9px;
-  color: var(--vscode-descriptionForeground);
-  background: var(--vscode-editorGroupHeader-tabsBackground);
-  border-bottom: 1px solid var(--vscode-panel-border);
+  color: var(--vscode-foreground);
+  background: var(--vscode-sideBar-background, var(--vscode-editorGroupHeader-tabsBackground));
+  border-bottom: 1px solid var(--vscode-focusBorder);
+  font-weight: 600;
 }
 
-.code-actions button,
 .history-actions button,
 .profile-actions button:not(:first-child) {
   color: var(--vscode-button-secondaryForeground);
   background: var(--vscode-button-secondaryBackground);
 }
 
-.code-actions button:hover,
 .history-actions button:hover,
 .profile-actions button:not(:first-child):hover {
   background: var(--vscode-button-secondaryHoverBackground);
+}
+
+.code-actions button {
+  min-width: 48px;
+  color: var(--vscode-button-foreground);
+  background: var(--vscode-button-background);
+  border-color: var(--vscode-button-border, transparent);
+  font-weight: 600;
+}
+
+.code-actions button:hover:not(:disabled) {
+  background: var(--vscode-button-hoverBackground);
 }
 
 .code-block pre {
@@ -278,6 +299,42 @@ textarea:disabled {
 .code-block code {
   font-family: var(--vscode-editor-font-family);
   font-size: var(--vscode-editor-font-size);
+}
+
+.syntax-token.keyword {
+  color: var(--vscode-symbolIcon-keywordForeground, #c586c0);
+  font-weight: 600;
+}
+
+.syntax-token.function {
+  color: var(--vscode-symbolIcon-functionForeground, #dcdcaa);
+}
+
+.syntax-token.string {
+  color: var(--vscode-symbolIcon-stringForeground, #ce9178);
+}
+
+.syntax-token.number {
+  color: var(--vscode-symbolIcon-numberForeground, #b5cea8);
+}
+
+.syntax-token.variable,
+.syntax-token.system-variable {
+  color: var(--vscode-symbolIcon-variableForeground, var(--vscode-editor-foreground));
+}
+
+.syntax-token.system-variable {
+  font-style: italic;
+}
+
+.syntax-token.comment {
+  color: var(--vscode-descriptionForeground);
+  font-style: italic;
+}
+
+.syntax-token.operator,
+.syntax-token.punctuation {
+  color: var(--vscode-symbolIcon-operatorForeground, var(--vscode-editor-foreground));
 }
 
 .splitter {

@@ -2,11 +2,13 @@
 
 ## 0.5.0 — 2026-10-01
 
-- Rebuilt SPSS AI as one lightweight Webview with Current Chat, Chat History, and Model Profiles pages.
+- Rebuilt SPSS AI as one lightweight Webview with Current Chat and Chat History navigation plus model management opened from a dedicated Manage Models button.
 - Added multiple named model profiles with independent SecretStorage API keys, an active-model selector, duplication, deletion, automatic names, and migration from the 0.4.0 configuration.
 - Added local history shared across all `.sps` files and workspaces in one VS Code profile, capped at 100 conversations with reopen, rename, individual delete, and double-confirmed clear-all actions.
 - Added a mouse- and keyboard-adjustable boundary between the visually distinct transcript and question composer.
-- Compacted the SPSS AI header by placing its three internal pages beside the active-model controls and removing redundant titles.
+- Compacted the SPSS AI header by placing navigation beside the active-model controls and removing redundant titles and the duplicate Model Profiles tab.
+- Restyled chat roles without a redundant user label, using a stronger user-message background while retaining the assistant model label.
+- Added theme-aware SPSS highlighting, a distinct code-block surface, and high-contrast Insert and Copy buttons to fenced `spss` and `sps` responses.
 - Added English and Simplified Chinese SPSS AI controls following the VS Code display language.
 - Added a production-only VSIX allowlist and archive verification that exclude API keys, conversations, tests, Git data, and development artifacts.
 

@@ -75,7 +75,7 @@ describe('SPSS AI Webview contract', () => {
     assert.doesNotMatch(provider, /unsafe-inline/u);
   });
 
-  it('renders three internal pages and an accessible adjustable composer boundary', () => {
+  it('keeps model profiles behind Manage Models and exposes an adjustable composer boundary', () => {
     const provider = fs.readFileSync(
       path.resolve(__dirname, '../../../src/views/spssAiViewProvider.ts'),
       'utf8',
@@ -84,7 +84,10 @@ describe('SPSS AI Webview contract', () => {
     const style = fs.readFileSync(path.resolve(__dirname, '../../../media/ai.css'), 'utf8');
     assert.match(provider, /data-page="chat"/u);
     assert.match(provider, /data-page="history"/u);
-    assert.match(provider, /data-page="profiles"/u);
+    assert.doesNotMatch(provider, /data-page="profiles"/u);
+    assert.match(provider, /id="manage-profiles"/u);
+    assert.match(provider, /id="page-profiles"/u);
+    assert.match(script, /manageProfiles\.addEventListener\('click', \(\) => showPage\('profiles'\)\)/u);
     assert.match(provider, /role="separator"/u);
     assert.match(provider, /aria-orientation="horizontal"/u);
     assert.match(script, /ArrowUp/u);
@@ -92,6 +95,23 @@ describe('SPSS AI Webview contract', () => {
     assert.match(script, /setPointerCapture/u);
     assert.match(style, /--composer-height/u);
     assert.match(style, /cursor: ns-resize/u);
+  });
+
+  it('distinguishes chat roles and highlights SPSS code without unsafe HTML rendering', () => {
+    const script = fs.readFileSync(path.resolve(__dirname, '../../../media/ai.js'), 'utf8');
+    const style = fs.readFileSync(path.resolve(__dirname, '../../../media/ai.css'), 'utf8');
+
+    assert.match(script, /if \(role === 'assistant'\)/u);
+    assert.doesNotMatch(script, /role === 'user'\s*\?\s*strings\.user/u);
+    assert.match(script, /function renderSpssCode/u);
+    assert.match(script, /className = `syntax-token \$\{token\.type\}`/u);
+    assert.match(script, /isSpssLanguage\(segment\.language\)/u);
+    assert.match(style, /--vscode-inputOption-activeBackground/u);
+    assert.match(style, /\.code-block[\s\S]*--vscode-editor-background/u);
+    assert.match(style, /\.syntax-token\.keyword/u);
+    assert.match(style, /\.syntax-token\.comment/u);
+    assert.match(style, /\.code-actions button/u);
+    assert.match(style, /--vscode-button-background/u);
   });
 
   it('keeps AI navigation in one compact header without redundant titles', () => {

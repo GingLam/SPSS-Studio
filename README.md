@@ -73,16 +73,16 @@ The variable strip is a VS Code inlay hint. It uses the existing metadata cache,
 
 ## SPSS AI
 
-The **SPSS AI** view appears in the bottom panel while the native `.sps` editor remains above it. It is a question-and-answer tool for SPSS Syntax and does not control the SPSS engine. Its single Webview contains three internal pages: **Current Chat**, **Chat History**, and **Model Profiles**. The boundary between the transcript and question box can be dragged with the mouse or adjusted from the keyboard.
+The **SPSS AI** view appears in the bottom panel while the native `.sps` editor remains above it. It is a question-and-answer tool for SPSS Syntax and does not control the SPSS engine. Its compact header exposes **Current Chat** and **Chat History**; use **Manage Models** to open the model-profile editor without duplicating it as a third navigation tab. The boundary between the transcript and question box can be dragged with the mouse or adjusted from the keyboard.
 
-Configure it from **Model Profiles** or run **SPSS: Manage AI Model Profiles**:
+Configure it from **Manage Models** or run **SPSS: Manage AI Model Profiles**:
 
 1. Create a profile and choose DeepSeek, Zhipu GLM, Qwen, Doubao, or Custom OpenAI-compatible.
 2. Confirm the prefilled Base URL.
 3. Enter the model identifier supplied by the provider.
 4. Enter an API Key and save. A blank profile name is filled automatically from the provider and model.
 
-Profiles can be renamed, duplicated, deleted, and switched from the panel header. Multiple models—and multiple accounts for the same provider—can coexist. Reopening **Model Profiles** always shows the saved non-secret values. The API Key field intentionally stays blank; the status below it indicates whether a key is saved. Switching profiles changes only later requests, while historical answers retain the profile name used to generate them.
+Profiles can be renamed, duplicated, deleted, and switched from the panel header. Multiple models—and multiple accounts for the same provider—can coexist. Reopening **Manage Models** always shows the saved non-secret values. The API Key field intentionally stays blank; the status below it indicates whether a key is saved. Switching profiles changes only later requests, while historical answers retain the profile name used to generate them.
 
 Provider model catalogs change independently of the extension, so the model field is intentionally editable. The four built-in presets use these official OpenAI-compatible Base URLs:
 
@@ -93,7 +93,7 @@ Provider model catalogs change independently of the extension, so the model fiel
 | Qwen / Alibaba Cloud Model Studio | `https://dashscope.aliyuncs.com/compatible-mode/v1` |
 | Doubao / Volcano Engine Ark | `https://ark.cn-beijing.volces.com/api/v3` |
 
-Every fenced code block in an assistant response has two actions:
+Every fenced code block in an assistant response has high-contrast **Insert** and **Copy** actions. Blocks marked `spss` or `sps` also use theme-aware SPSS Syntax highlighting:
 
 - **Insert** places the code, without fence markers or the language identifier, at the most recently used `.sps` selection.
 - **Copy** writes the same code to the system clipboard.
