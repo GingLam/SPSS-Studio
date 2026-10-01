@@ -3,8 +3,17 @@ import {
   MODEL_PROFILE_INDEX_KEY,
   profileSecretKey,
 } from '../../src/ai/modelProfile';
+import {
+  migrateLegacyProviderConfiguration,
+  MODEL_PROFILE_MIGRATION_KEY,
+} from '../../src/ai/modelProfileMigration';
 import { ModelProfileStore } from '../../src/ai/modelProfileStore';
-import type { KeyValueStore, SecretValueStore } from '../../src/ai/providerConfigurationStore';
+import {
+  LEGACY_PROVIDER_CONFIGURATION_KEY,
+  legacyProviderSecretKey,
+  type KeyValueStore,
+  type SecretValueStore,
+} from '../../src/ai/providerConfigurationStore';
 
 class MemoryValues implements KeyValueStore {
   public readonly values = new Map<string, unknown>();
@@ -146,5 +155,71 @@ describe('AI model profile storage', () => {
     const { store, values } = createStore();
     values.values.set(MODEL_PROFILE_INDEX_KEY, { schemaVersion: 2, profiles: [{ id: '../secret' }] });
     await assert.rejects(store.state(), /invalid|incomplete/iu);
+  });
+});
+
+describe('legacy AI provider migration', () => {
+  it('copies the 0.4.0 configuration and secret exactly once', async () => {
+    const { store, values, secrets } = createStore();
+    values.values.set(LEGACY_PROVIDER_CONFIGURATION_KEY, {
+      providerId: 'deepseek',
+      baseUrl: 'https://api.deepseek.com',
+      model: 'deepseek-chat',
+    });
+    secrets.values.set(legacyProviderSecretKey('deepseek'), 'legacy-key');
+
+    assert.equal(await migrateLegacyProviderConfiguration(values, secrets, store), 'migrated');
+    assert.equal(await migrateLegacyProviderConfiguration(values, secrets, store), 'already-complete');
+    const state = await store.state();
+    assert.equal(state.profiles.length, 1);
+    assert.equal((await store.resolve(state.profiles[0]?.id)).apiKey, 'legacy-key');
+    assert.equal(values.values.get(MODEL_PROFILE_MIGRATION_KEY), true);
+    assert.equal(await secrets.get(legacyProviderSecretKey('deepseek')), 'legacy-key');
+  });
+
+  it('marks missing or invalid legacy state without creating a profile', async () => {
+    const missing = createStore();
+    assert.equal(
+      await migrateLegacyProviderConfiguration(missing.values, missing.secrets, missing.store),
+      'nothing-to-migrate',
+    );
+    assert.equal((await missing.store.state()).profiles.length, 0);
+
+    const invalid = createStore();
+    invalid.values.values.set(LEGACY_PROVIDER_CONFIGURATION_KEY, { providerId: 'unknown' });
+    assert.equal(
+      await migrateLegacyProviderConfiguration(invalid.values, invalid.secrets, invalid.store),
+      'invalid-legacy-configuration',
+    );
+    assert.equal((await invalid.store.state()).profiles.length, 0);
+  });
+
+  it('reuses a partially created profile when secret migration is retried', async () => {
+    const { store, values, secrets } = createStore();
+    values.values.set(LEGACY_PROVIDER_CONFIGURATION_KEY, {
+      providerId: 'qwen',
+      baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
+      model: 'qwen-plus',
+    });
+    secrets.values.set(legacyProviderSecretKey('qwen'), 'qwen-key');
+    const originalStore = secrets.store.bind(secrets);
+    let shouldFail = true;
+    secrets.store = (key: string, value: string): Promise<void> => {
+      if (shouldFail && key.startsWith('spssStudio.ai.profile.')) {
+        shouldFail = false;
+        return Promise.reject(new Error('secret storage unavailable'));
+      }
+      return originalStore(key, value);
+    };
+
+    await assert.rejects(
+      migrateLegacyProviderConfiguration(values, secrets, store),
+      /secret storage unavailable/u,
+    );
+    assert.equal(values.values.get(MODEL_PROFILE_MIGRATION_KEY), undefined);
+    assert.equal((await store.state()).profiles.length, 1);
+
+    assert.equal(await migrateLegacyProviderConfiguration(values, secrets, store), 'migrated');
+    assert.equal((await store.state()).profiles.length, 1);
   });
 });

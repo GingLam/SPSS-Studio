@@ -5,8 +5,8 @@ import {
   type AiProviderId,
 } from './providerPresets';
 
-const CONFIGURATION_KEY = 'spssStudio.ai.providerConfiguration';
-const SECRET_PREFIX = 'spssStudio.ai.apiKey.';
+export const LEGACY_PROVIDER_CONFIGURATION_KEY = 'spssStudio.ai.providerConfiguration';
+export const LEGACY_PROVIDER_SECRET_PREFIX = 'spssStudio.ai.apiKey.';
 
 export interface KeyValueStore {
   get(key: string): unknown;
@@ -48,7 +48,7 @@ export class ProviderConfigurationStore {
 
   public async save(configuration: AiProviderConfiguration, apiKey?: string): Promise<void> {
     const validated = validateProviderConfiguration(configuration);
-    await this.values.update(CONFIGURATION_KEY, validated);
+    await this.values.update(LEGACY_PROVIDER_CONFIGURATION_KEY, validated);
     const suppliedKey = apiKey?.trim();
     if (suppliedKey) {
       await this.secrets.store(this.secretKey(validated.providerId), suppliedKey);
@@ -73,7 +73,7 @@ export class ProviderConfigurationStore {
   }
 
   private readStored(): AiProviderConfiguration | undefined {
-    const value = this.values.get(CONFIGURATION_KEY);
+    const value = this.values.get(LEGACY_PROVIDER_CONFIGURATION_KEY);
     if (typeof value !== 'object' || value === null) {
       return undefined;
     }
@@ -102,6 +102,10 @@ export class ProviderConfigurationStore {
   }
 
   private secretKey(providerId: AiProviderId): string {
-    return `${SECRET_PREFIX}${providerId}`;
+    return legacyProviderSecretKey(providerId);
   }
+}
+
+export function legacyProviderSecretKey(providerId: AiProviderId): string {
+  return `${LEGACY_PROVIDER_SECRET_PREFIX}${providerId}`;
 }
