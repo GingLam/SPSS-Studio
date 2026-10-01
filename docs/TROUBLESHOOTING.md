@@ -58,7 +58,9 @@ The editor strip uses the same Active Dataset cache as completion. First run syn
 
 ## SPSS AI says that it is not configured
 
-Run **SPSS: Configure AI Provider**. Select a preset, enter the model identifier exactly as supplied by the provider, and save an API Key. The model name is not discovered automatically because providers change model catalogs and account-specific endpoint identifiers independently of the extension.
+Open **Model Profiles** or run **SPSS: Manage AI Model Profiles**. Create or select a profile, enter the model identifier exactly as supplied by the provider, and save an API Key. The model name is not discovered automatically because providers change model catalogs and account-specific endpoint identifiers independently of the extension.
+
+The API Key field is blank whenever the page opens even when a key is saved. This is intentional: SPSS Studio never sends a stored key back into the Webview. Read the status below the field. Leave the field blank to preserve the saved key, or enter a replacement and save.
 
 The Base URL is the protocol root, not a full `/chat/completions` URL. The extension appends `/chat/completions` itself.
 
@@ -72,7 +74,7 @@ Use the **Official docs** button in the configuration panel and verify the curre
 
 ## SPSS AI reports an incompatible stream or empty response
 
-Version 0.4.0 requires streamed OpenAI-compatible Chat Completions. Provider-specific native protocols, Responses-only endpoints, tools, and nonstandard event formats are not silently translated. Choose the provider's OpenAI-compatible endpoint or use a compatible gateway.
+Version 0.5.0 requires streamed OpenAI-compatible Chat Completions. Provider-specific native protocols, Responses-only endpoints, tools, and nonstandard event formats are not silently translated. Choose the provider's OpenAI-compatible endpoint or use a compatible gateway.
 
 Only HTTPS endpoints are accepted. Plain HTTP is limited to `localhost`, `127.0.0.1`, and `::1` for local model servers. Redirects are intentionally rejected to avoid forwarding the bearer credential to another origin.
 
@@ -80,10 +82,16 @@ Only HTTPS endpoints are accepted. Plain HTTP is limited to `localhost`, `127.0.
 
 Insert and Copy transfer the code block exactly without its fence markers or language identifier. They do not validate, save, or execute it. Model output can contain unsupported commands, version-specific options, or ordinary mistakes; inspect the syntax and compare uncertain details with IBM documentation before running it.
 
+## SPSS AI history is missing or should be removed
+
+History is shared across all `.sps` files and workspaces in the same local VS Code profile. It is not stored beside a syntax file and does not follow the project through Git. Different VS Code profiles or machines therefore have separate histories.
+
+Use **Chat History** to open, rename, or delete one conversation. **Clear all history** asks twice before removing every saved conversation. The history is local plaintext and may contain whatever the user typed or the model returned; do not place sensitive material in the AI chat.
+
 ## Current command is not selected as expected
 
 Place the cursor inside the command, not on a blank line or command comment. Explicit selection is the escape hatch: select exactly the intended syntax and run **SPSS: Run Selection / Current Command**.
 
 ## Windows status
 
-Windows discovery, Registry parsing, paths with spaces, batch launch, bundled-Python fallback, JSONL transport, completion, paging bounds, AI protocol handling, and Webview-independent logic are unit tested. Version 0.4.0 does not claim Windows + SPSS real-machine verification.
+Windows discovery, Registry parsing, paths with spaces, batch launch, bundled-Python fallback, JSONL transport, completion, paging bounds, AI protocol handling, and Webview-independent logic are unit tested. Version 0.5.0 does not claim Windows + SPSS real-machine verification.

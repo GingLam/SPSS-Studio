@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.5.0 — 2026-10-01
+
+- Rebuilt SPSS AI as one lightweight Webview with Current Chat, Chat History, and Model Profiles pages.
+- Added multiple named model profiles with independent SecretStorage API keys, an active-model selector, duplication, deletion, automatic names, and migration from the 0.4.0 configuration.
+- Added local history shared across all `.sps` files and workspaces in one VS Code profile, capped at 100 conversations with reopen, rename, individual delete, and double-confirmed clear-all actions.
+- Added a mouse- and keyboard-adjustable boundary between the visually distinct transcript and question composer.
+- Added English and Simplified Chinese SPSS AI controls following the VS Code display language.
+- Added a production-only VSIX allowlist and archive verification that exclude API keys, conversations, tests, Git data, and development artifacts.
+
 ## 0.4.0 — 2026-10-01
 
 - Added clickable Active Dataset variable names at the first SPSS editor position, with Label tooltips and native undoable insertion.

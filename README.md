@@ -19,7 +19,7 @@ Contact：[linjing@nufe.edu.cn](mailto:linjing@nufe.edu.cn)
 - Native OMS HTML output with run history, safe standalone HTML export, and browser-based printing.
 - Read-only Data and Variables views for the current Active Dataset.
 - Clickable Active Dataset variable names at the start of the editor, with label tooltips and a searchable complete-variable picker.
-- A lightweight bottom-panel SPSS AI question-and-answer view with DeepSeek, Zhipu GLM, Qwen, Doubao, and custom OpenAI-compatible configuration.
+- A lightweight bottom-panel SPSS AI question-and-answer workspace with multiple DeepSeek, Zhipu GLM, Qwen, Doubao, and custom OpenAI-compatible model profiles.
 - Insert and Copy controls on every AI response code block; generated code is never run automatically.
 - Automatic IBM SPSS Statistics discovery on macOS and Windows, with manual path overrides.
 
@@ -73,14 +73,16 @@ The variable strip is a VS Code inlay hint. It uses the existing metadata cache,
 
 ## SPSS AI
 
-The **SPSS AI** view appears in the bottom panel while the native `.sps` editor remains above it. It is a question-and-answer tool for SPSS Syntax and does not control the SPSS engine.
+The **SPSS AI** view appears in the bottom panel while the native `.sps` editor remains above it. It is a question-and-answer tool for SPSS Syntax and does not control the SPSS engine. Its single Webview contains three internal pages: **Current Chat**, **Chat History**, and **Model Profiles**. The boundary between the transcript and question box can be dragged with the mouse or adjusted from the keyboard.
 
-Configure it from the panel or run **SPSS: Configure AI Provider**:
+Configure it from **Model Profiles** or run **SPSS: Manage AI Model Profiles**:
 
-1. Choose DeepSeek, Zhipu GLM, Qwen, Doubao, or Custom OpenAI-compatible.
+1. Create a profile and choose DeepSeek, Zhipu GLM, Qwen, Doubao, or Custom OpenAI-compatible.
 2. Confirm the prefilled Base URL.
 3. Enter the model identifier supplied by the provider.
-4. Enter an API Key and save.
+4. Enter an API Key and save. A blank profile name is filled automatically from the provider and model.
+
+Profiles can be renamed, duplicated, deleted, and switched from the panel header. Multiple models—and multiple accounts for the same provider—can coexist. Reopening **Model Profiles** always shows the saved non-secret values. The API Key field intentionally stays blank; the status below it indicates whether a key is saved. Switching profiles changes only later requests, while historical answers retain the profile name used to generate them.
 
 Provider model catalogs change independently of the extension, so the model field is intentionally editable. The four built-in presets use these official OpenAI-compatible Base URLs:
 
@@ -98,7 +100,9 @@ Every fenced code block in an assistant response has two actions:
 
 Insert performs one ordinary, undoable text edit. It does not save or execute the syntax.
 
-The API Key is stored in VS Code `SecretStorage`, not in `settings.json`, logs, chat history, or the repository. Each request contains a fixed SPSS-assistant system instruction, the text typed in the AI question box, and the bounded text history of that AI session. SPSS Studio does **not** attach the SPS file, editor selection, variables, cases, Output, filenames, or workspace paths. Chat history exists only in extension memory and is cleared when VS Code reloads.
+The API Key is stored in VS Code `SecretStorage`, not in `settings.json`, logs, chat history, the repository, or the VSIX. Each request contains a fixed SPSS-assistant system instruction, the text typed in the AI question box, and bounded text from the active conversation. SPSS Studio does **not** attach the SPS file, editor selection, variables, cases, Output, filenames, or workspace paths.
+
+Up to 100 conversations are saved as plain text in this extension's private local global-storage directory. The same history is available for all `.sps` files and workspaces in the same local VS Code profile; no file or folder is created beside an `.sps` document. History is not placed in Settings Sync and is not packaged in the VSIX. **New Chat** starts a blank conversation without deleting older history. Individual conversations can be opened, renamed, or deleted; clearing all history requires two confirmations.
 
 Model output is untrusted and can be wrong. Inspect generated syntax before running it. SPSS Studio does not provide model-provider billing, retention, or correctness guarantees.
 
@@ -116,7 +120,7 @@ Model output is untrusted and can be wrong. Inspect generated syntax before runn
 - **SPSS: Show Variables**
 - **SPSS: Search Active Dataset Variables**
 - **SPSS: Show AI Assistant**
-- **SPSS: Configure AI Provider**
+- **SPSS: Manage AI Model Profiles**
 - **SPSS: Refresh Data Preview**
 - **SPSS: Clear Output**
 

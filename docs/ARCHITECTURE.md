@@ -118,7 +118,8 @@ The separate `SpssAiViewProvider` is a contributed Webview View in the bottom pa
 ```text
 AI question box
   -> validated Webview message
-  -> bounded in-memory user/assistant text history
+  -> active conversation in the extension's private global storage
+  -> bounded user/assistant request text
   -> fixed SPSS helper system instruction
   -> OpenAiCompatibleClient
   -> user-configured /chat/completions endpoint
@@ -126,11 +127,15 @@ AI question box
   -> escaped prose and fenced-code segments
 ```
 
-Provider selection, Base URL, and model identifier are stored in extension `globalState`. Provider-specific API keys are stored only in `ExtensionContext.secrets`; they are not returned to the Webview after saving. Built-in presets cover DeepSeek, Zhipu GLM, Qwen, and Doubao, while the transport remains one provider-neutral Chat Completions implementation.
+`SpssAiViewProvider` owns one modular Webview with Current Chat, Chat History, and Model Profiles pages. A ready handshake prevents the extension host from posting initial state before the Webview listener exists. The transcript/composer boundary is pointer- and keyboard-adjustable; only its numeric height and the Webview's selected page/profile UI state are persisted as presentation state.
+
+Named model profiles store provider selection, Base URL, model identifier, and active-profile identity in extension `globalState`. Each profile has an independent API Key stored only in `ExtensionContext.secrets`; keys are never returned to the Webview after saving. The blank key field means “preserve the saved key.” Built-in presets cover DeepSeek, Zhipu GLM, Qwen, and Doubao, while the transport remains one provider-neutral Chat Completions implementation. A one-time idempotent migration copies the 0.4.0 single-provider configuration into the profile model without deleting the legacy values first.
 
 The client requires HTTPS except for loopback HTTP endpoints, rejects embedded URL credentials, query strings, and fragments, and uses manual redirect handling so a bearer key is not forwarded to another origin. `AbortController` implements Stop and the request timeout. HTTP failures, cancellation, timeout, malformed SSE, and empty responses remain distinct failures.
 
-The AI payload contains only the fixed system instruction and text entered in the AI conversation. It has no code path to read the active document, selection, variable cache, cases, SPSS output, filenames, or workspace paths. Chat history is memory-only, bounded by message and character counts, and discarded on reload. AI requests are disabled in untrusted workspaces.
+The AI payload contains only the fixed system instruction and text entered in the active AI conversation. It has no code path to read the active document, selection, variable cache, cases, SPSS output, filenames, or workspace paths. Successful conversations are stored as a versioned JSON file below `ExtensionContext.globalStorageUri`, shared across all `.sps` documents and workspaces in one local VS Code profile. The store keeps at most 100 conversations, bounds per-conversation messages/content and total bytes, writes through a validated temporary file, keeps a last-known-good backup, and preserves corrupt evidence rather than silently overwriting it. It is deliberately local plaintext, not SecretStorage; API keys are structurally excluded. AI requests are disabled in untrusted workspaces.
+
+The production packaging command applies a positive allowlist before and after VSIX creation. Extension global storage, chat history, SecretStorage, tests, development notes, Git metadata, and `.superpowers` artifacts cannot enter the archive.
 
 ## Serialized SPSS Operations
 

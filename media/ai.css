@@ -90,6 +90,10 @@ textarea:disabled {
   color: var(--vscode-descriptionForeground);
 }
 
+.profile-selector span {
+  white-space: nowrap;
+}
+
 .profile-selector select {
   max-width: 250px;
 }
@@ -121,6 +125,7 @@ textarea:disabled {
 }
 
 .banner {
+  grid-row: 3;
   padding: 7px 10px;
   color: var(--vscode-notificationsInfoIcon-foreground);
   background: var(--vscode-textBlockQuote-background);
@@ -138,6 +143,7 @@ textarea:disabled {
 }
 
 .page {
+  grid-row: 4;
   min-width: 0;
   min-height: 0;
   overflow: hidden;
