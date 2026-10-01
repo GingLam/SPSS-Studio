@@ -390,6 +390,8 @@ export class SpssStudioPanel implements vscode.Disposable {
     const nonce = randomBytes(16).toString('base64');
     const studioCss = webview.asWebviewUri(vscode.Uri.joinPath(mediaRoot, 'studio.css'));
     const aiCss = webview.asWebviewUri(vscode.Uri.joinPath(mediaRoot, 'ai.css'));
+    const syntaxDataScript = webview.asWebviewUri(vscode.Uri.joinPath(mediaRoot, 'spss-syntax-data.js'));
+    const highlighterScript = webview.asWebviewUri(vscode.Uri.joinPath(mediaRoot, 'spss-highlighter.js'));
     const aiScript = webview.asWebviewUri(vscode.Uri.joinPath(mediaRoot, 'ai.js'));
     const studioScript = webview.asWebviewUri(vscode.Uri.joinPath(mediaRoot, 'studio.js'));
     const csp = [
@@ -411,13 +413,13 @@ export class SpssStudioPanel implements vscode.Disposable {
 </head>
 <body>
   <header class="toolbar">
-    <nav><button id="output-tab" class="tab active">Output</button><button id="data-tab" class="tab">Data</button><button id="variables-tab" class="tab">Variables</button><button id="ai-tab" class="tab">SPSS AI</button></nav>
+    <nav><button id="output-tab" class="tab active">Output</button><button id="data-tab" class="tab">Data</button><button id="variables-tab" class="tab">Variables</button><button id="ai-tab" class="tab">Chat</button></nav>
     <span id="engine-state">SPSS: Stopped</span>
   </header>
   <main>
     <section id="output-view" class="view active">
       <article id="output-content">
-        <div class="output-actions"><button id="export-output" disabled>Export HTML</button><button id="print-output" disabled>Print</button></div>
+        <div class="output-actions"><button id="export-output" disabled>Export HTML</button><button id="print-output" disabled>Print</button><button id="toggle-history" type="button" aria-expanded="false">History</button></div>
         <div id="run-summary" class="summary">No executions yet.</div><div id="spss-output" class="spss-output"></div>
       </article>
       <div id="output-splitter" role="separator" aria-label="Resize run history" aria-orientation="vertical" tabindex="0"></div>
@@ -488,6 +490,8 @@ export class SpssStudioPanel implements vscode.Disposable {
       </div>
     </section>
   </main>
+  <script nonce="${nonce}" src="${syntaxDataScript.toString()}"></script>
+  <script nonce="${nonce}" src="${highlighterScript.toString()}"></script>
   <script nonce="${nonce}" src="${aiScript.toString()}"></script>
   <script nonce="${nonce}" src="${studioScript.toString()}"></script>
 </body>

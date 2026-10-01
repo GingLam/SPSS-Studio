@@ -79,16 +79,32 @@ describe('assistant fenced-code parsing', () => {
     assert.deepEqual(
       parseAssistantContent('Try this:\n```spss\nFREQUENCIES VARIABLES=age.\n```\nThen inspect Output.'),
       [
-        { type: 'text', content: 'Try this:\n' },
+        {
+          type: 'markdown',
+          blocks: [{ type: 'paragraph', children: [{ type: 'text', content: 'Try this:' }] }],
+        },
         { type: 'code', language: 'spss', content: 'FREQUENCIES VARIABLES=age.\n' },
-        { type: 'text', content: '\nThen inspect Output.' },
+        {
+          type: 'markdown',
+          blocks: [{ type: 'paragraph', children: [{ type: 'text', content: 'Then inspect Output.' }] }],
+        },
       ],
     );
   });
 
   it('treats an unclosed fence as inert text', () => {
     assert.deepEqual(parseAssistantContent('```spss\nFREQUENCIES.'), [
-      { type: 'text', content: '```spss\nFREQUENCIES.' },
+      {
+        type: 'markdown',
+        blocks: [{
+          type: 'paragraph',
+          children: [
+            { type: 'text', content: '```spss' },
+            { type: 'break' },
+            { type: 'text', content: 'FREQUENCIES.' },
+          ],
+        }],
+      },
     ]);
   });
 });

@@ -7,6 +7,7 @@ const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '
 const manifestPath = path.join(projectRoot, 'syntax', 'spss-language.json');
 const grammarPath = path.join(projectRoot, 'syntaxes', 'spss.tmLanguage.json');
 const coveragePath = path.join(projectRoot, 'docs', 'SYNTAX-COVERAGE.md');
+const webviewSyntaxPath = path.join(projectRoot, 'media', 'spss-syntax-data.js');
 
 const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
 
@@ -361,6 +362,19 @@ const grammar = {
 };
 
 const rendered = `${JSON.stringify(grammar, null, 2)}\n`;
+const webviewSyntax = {
+  commands: manifest.commands,
+  controlCommands: manifest.controlCommands,
+  subcommands: manifest.subcommands,
+  functions: [...allFunctions].sort(),
+  formats: manifest.formats,
+  macroDirectives: manifest.macroDirectives,
+  reservedKeywords: manifest.reservedKeywords,
+  structuralKeywords: manifest.structuralKeywords,
+  completionKeywords: manifest.completion.keywords,
+  systemVariables: manifest.systemVariables,
+};
+const renderedWebviewSyntax = `(() => {\n  'use strict';\n  window.SPSS_SYNTAX_DATA = ${JSON.stringify(webviewSyntax, null, 2)};\n})();\n`;
 const coverage = `# SPSS Syntax Coverage
 
 > This file is generated from \`syntax/spss-language.json\`. Do not maintain a second command list here.
@@ -375,6 +389,8 @@ const coverage = `# SPSS Syntax Coverage
 ## Universal lexical coverage
 
 The generated TextMate Grammar handles command-start recognition, multiline commands, generic unknown commands, generic \`/SUBCOMMAND\`, single and double quoted strings, three comment forms, numeric constants, arithmetic/relational/logical operators, SPSS formats, ordinary/scratch/system variables, dotted functions, minimum-valid-count modifiers, and command terminators.
+
+The Chat code-block highlighter receives generated vocabulary from this same manifest. Automated parity tests cover every canonical command plus the shared subcommand, function, format, macro-directive, and system-variable inventories.
 
 Dedicated block scopes cover BEGIN DATA, BEGIN PROGRAM, BEGIN GPL, BEGIN EXPR, MATRIX, INPUT PROGRAM, FILE TYPE, and DEFINE. BEGIN PROGRAM PYTHON3 uses an embedded Python scope when available. BEGIN DATA content remains raw data and is not tokenized as ordinary SPSS commands.
 
@@ -406,14 +422,23 @@ ${manifest.commands.join('\n')}
 if (process.argv.includes('--check')) {
   const existing = fs.existsSync(grammarPath) ? fs.readFileSync(grammarPath, 'utf8') : '';
   const existingCoverage = fs.existsSync(coveragePath) ? fs.readFileSync(coveragePath, 'utf8') : '';
-  if (existing !== rendered || existingCoverage !== coverage) {
-    process.stderr.write('Generated TextMate grammar or syntax coverage is missing or stale. Run npm run generate:grammar.\n');
+  const existingWebviewSyntax = fs.existsSync(webviewSyntaxPath)
+    ? fs.readFileSync(webviewSyntaxPath, 'utf8')
+    : '';
+  if (
+    existing !== rendered
+    || existingCoverage !== coverage
+    || existingWebviewSyntax !== renderedWebviewSyntax
+  ) {
+    process.stderr.write('Generated TextMate grammar, Chat syntax data, or syntax coverage is missing or stale. Run npm run generate:grammar.\n');
     process.exitCode = 1;
   }
 } else {
   fs.mkdirSync(path.dirname(grammarPath), { recursive: true });
   fs.mkdirSync(path.dirname(coveragePath), { recursive: true });
+  fs.mkdirSync(path.dirname(webviewSyntaxPath), { recursive: true });
   fs.writeFileSync(grammarPath, rendered, 'utf8');
   fs.writeFileSync(coveragePath, coverage, 'utf8');
-  process.stdout.write(`Generated ${path.relative(projectRoot, grammarPath)} and ${path.relative(projectRoot, coveragePath)} from ${manifest.commands.length} canonical commands.\n`);
+  fs.writeFileSync(webviewSyntaxPath, renderedWebviewSyntax, 'utf8');
+  process.stdout.write(`Generated ${path.relative(projectRoot, grammarPath)}, ${path.relative(projectRoot, webviewSyntaxPath)}, and ${path.relative(projectRoot, coveragePath)} from ${manifest.commands.length} canonical commands.\n`);
 }

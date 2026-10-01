@@ -17,7 +17,7 @@ VS Code editor
        `-> sliced case and variable page
   -> OutputStore / VariableCache / DataPreviewState / DataViewportState
        |-> completion and validated variable insertion
-       `-> Output / Data / Variables / SPSS AI views
+       `-> Output / Data / Variables / Chat views
   -> one reusable SPSS Studio WebviewPanel beside the editor
 ```
 
@@ -99,7 +99,7 @@ An `ERROR` response does not imply rollback: earlier SPSS commands may already h
 
 Clear removes only run directories owned by the current `OutputStore`; disposal removes that session root. The OutputChannel contains lifecycle and diagnostic text, not a second rendering of output.
 
-The Output tab renders the selected result on the left and metadata-only run history on the right. Export and print reuse the same sanitizer. `portableOutput.ts` converts only in-run raster images to data URIs and creates a complete standalone HTML document. Export writes that document through VS Code's save dialog. Print writes a temporary copy and opens it in the system browser because direct Webview printing is not a reliable extension API.
+The Output tab gives the selected result the full width by default. A History button beside Print toggles the metadata-only Runs column and its resizable splitter without changing stored execution history. Export and print reuse the same sanitizer. `portableOutput.ts` converts only in-run raster images to data URIs and creates a complete standalone HTML document. Export writes that document through VS Code's save dialog. Print writes a temporary copy and opens it in the system browser because direct Webview printing is not a reliable extension API.
 
 ## Read-only Variables View
 
@@ -107,11 +107,13 @@ The Variables tab consumes `ActiveDatasetInfo.variables`, which is already popul
 
 ## Webview security
 
-`SpssStudioPanel` is a singleton reusable panel in `ViewColumn.Beside`, with Output, Data, Variables, and SPSS AI tabs. One shell owns the only `acquireVsCodeApi()` handle and routes validated, scope-tagged Studio and AI messages. Its Content Security Policy defaults to no access, denies Webview network connections, permits only nonce-bearing extension scripts, extension/local styles, owned session images, and strict raster image data URIs. `localResourceRoots` contains only `media` and the owned session root.
+`SpssStudioPanel` is a singleton reusable panel in `ViewColumn.Beside`, with Output, Data, Variables, and Chat tabs. One shell owns the only `acquireVsCodeApi()` handle and routes validated, scope-tagged Studio and AI messages. Its Content Security Policy defaults to no access, denies Webview network connections, permits only nonce-bearing extension scripts, extension/local styles, owned session images, and strict raster image data URIs. `localResourceRoots` contains only `media` and the owned session root.
 
 Before insertion, `htmlSanitizer.ts` removes executable and embedding elements, inline event handlers, form actions, remote links, CSS imports/URLs/expressions, and unsafe image sources. Local images are resolved only when their normalized path stays inside the run directory. Dataset cells are rendered with `textContent`.
 
-The AI browser code is a host-independent module mounted inside that shell. `SpssAiPanelController` owns the AI state and network boundary without owning another Webview. Model text and fenced code are converted into typed segments in the extension host and rendered with DOM `textContent`; model HTML is never inserted. Only locally created Insert and Copy buttons can send code-action messages.
+The AI browser code is a host-independent module mounted inside that shell. `SpssAiPanelController` owns the AI state and network boundary without owning another Webview. Model text is parsed into typed Markdown blocks and inline nodes in the extension host; the Webview creates DOM elements without inserting model HTML. Fenced code remains a separate typed segment. Only locally created Insert and Copy buttons can send code-action messages.
+
+`tools/generate-grammar.mjs` also emits `media/spss-syntax-data.js` from the canonical language schema. The Chat code renderer therefore receives the same command, subcommand, function, format, macro, keyword, and system-variable vocabularies as the editor grammar instead of maintaining a second hand-written keyword list.
 
 ## OpenAI-compatible AI boundary
 

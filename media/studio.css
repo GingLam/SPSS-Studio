@@ -20,8 +20,9 @@ main { height: calc(100vh - 42px); }
 .view.active { display: flex; }
 #ai-view.active { display: block; min-width: 0; min-height: 0; overflow: hidden; }
 #output-content { flex: 1; min-width: 0; overflow: auto; padding: 10px 14px; }
-#output-history { width: var(--history-width); min-width: 160px; max-width: 55vw; overflow-y: auto; border-left: 1px solid var(--vscode-panel-border); }
-#output-splitter { width: 5px; flex: 0 0 5px; cursor: col-resize; background: transparent; }
+#output-history { display: none; width: var(--history-width); min-width: 160px; max-width: 55vw; overflow-y: auto; border-left: 1px solid var(--vscode-panel-border); }
+#output-splitter { display: none; width: 5px; flex: 0 0 5px; cursor: col-resize; background: transparent; }
+#output-view.history-open #output-history, #output-view.history-open #output-splitter { display: block; }
 #output-splitter:hover, #output-splitter:focus { background: var(--vscode-focusBorder); outline: 0; }
 .output-actions { display: flex; justify-content: flex-end; gap: 8px; margin-bottom: 8px; }
 .aside-title, .data-toolbar, .pager { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px; border-bottom: 1px solid var(--vscode-panel-border); }

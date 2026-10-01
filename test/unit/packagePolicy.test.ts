@@ -23,6 +23,8 @@ describe('VSIX package policy', () => {
       'package.nls.zh-cn.json',
       'images/plugin.png',
       'media/ai.js',
+      'media/spss-highlighter.js',
+      'media/spss-syntax-data.js',
       'out/src/extension.js',
       'out/src/ai/modelProfileStore.js',
       'resources/bridge/spss_bridge.py',
@@ -56,6 +58,8 @@ describe('VSIX package policy', () => {
     const policy = await loadPolicy();
     const required = [
       'package.json',
+      'media/spss-highlighter.js',
+      'media/spss-syntax-data.js',
       'out/src/extension.js',
       'resources/bridge/spss_bridge.py',
     ];

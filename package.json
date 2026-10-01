@@ -2,7 +2,7 @@
   "name": "spss-studio",
   "displayName": "SPSS Studio",
   "description": "SPSS Syntax IntelliSense, Active Dataset tools, native HTML output, and optional OpenAI-compatible assistance.",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "publisher": "jinglin",
   "author": {
     "name": "Jing LIN (林景)",

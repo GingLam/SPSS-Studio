@@ -26,6 +26,7 @@
     requestId: 0,
     generation: 0,
     historyWidth: Number(savedStudioState.historyWidth) || 240,
+    historyVisible: false,
   };
 
   const byId = (id) => document.getElementById(id);
@@ -92,6 +93,12 @@
     const enabled = Boolean(record?.hasHtml) && record.status !== 'RUNNING';
     byId('export-output').disabled = !enabled;
     byId('print-output').disabled = !enabled;
+  }
+
+  function setHistoryVisible(visible) {
+    state.historyVisible = Boolean(visible);
+    byId('output-view').classList.toggle('history-open', state.historyVisible);
+    byId('toggle-history').setAttribute('aria-expanded', String(state.historyVisible));
   }
 
   function renderExecution(record, html) {
@@ -306,6 +313,9 @@
   byId('print-output').addEventListener('click', () => {
     if (state.selectedId) postStudio({ type: 'printOutput', id: state.selectedId });
   });
+  byId('toggle-history').addEventListener('click', () => {
+    setHistoryVisible(!state.historyVisible);
+  });
   byId('refresh-data').addEventListener('click', () => {
     resetDataRequests(false);
     postStudio({ type: 'refreshData' });
@@ -430,6 +440,7 @@
   });
 
   setHistoryWidth(state.historyWidth);
+  setHistoryVisible(false);
   renderVariables();
   vscode.postMessage({ scope: 'shell', type: 'ready' });
 }());

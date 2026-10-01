@@ -57,7 +57,13 @@ export function assertAllowedSourceFiles(values, phase = 'package input') {
   if (rejected.length > 0) {
     throw new Error(`${phase} contains forbidden files:\n${rejected.join('\n')}`);
   }
-  const required = ['package.json', 'out/src/extension.js', 'resources/bridge/spss_bridge.py'];
+  const required = [
+    'package.json',
+    'media/spss-highlighter.js',
+    'media/spss-syntax-data.js',
+    'out/src/extension.js',
+    'resources/bridge/spss_bridge.py',
+  ];
   const missing = required.filter((value) => !files.includes(value));
   if (missing.length > 0) {
     throw new Error(`${phase} is missing required files:\n${missing.join('\n')}`);

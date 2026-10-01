@@ -1,6 +1,7 @@
 import type { AiStrings } from '../ai/aiStrings';
 import type { ConversationSummary } from '../ai/conversation';
 import type { AssistantContentSegment } from '../ai/fencedCode';
+import { safeMarkdownUrl } from '../ai/markdown';
 import type { ModelProfileDraft, ModelProfileState } from '../ai/modelProfile';
 import {
   isAiProviderId,
@@ -73,6 +74,7 @@ export type AiWebviewToExtensionMessage =
   | { type: 'deleteProfile'; profileId: string }
   | { type: 'deleteProfileKey'; profileId: string }
   | { type: 'openProviderHelp'; providerId: AiProviderId }
+  | { type: 'openLink'; url: string }
   | { type: 'setComposerHeight'; height: number }
   | { type: 'insertCode'; code: string }
   | { type: 'copyCode'; code: string };
@@ -117,6 +119,9 @@ export function isAiWebviewMessage(value: unknown): value is AiWebviewToExtensio
   }
   if (value.type === 'openProviderHelp') {
     return isAiProviderId(value.providerId);
+  }
+  if (value.type === 'openLink') {
+    return boundedString(value.url, 1, 4_096) && safeMarkdownUrl(value.url) !== undefined;
   }
   if (value.type === 'createProfile') {
     return validProfileFields(value);

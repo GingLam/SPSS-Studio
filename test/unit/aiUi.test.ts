@@ -20,6 +20,8 @@ describe('SPSS AI Webview contract', () => {
     assert.equal(isAiWebviewMessage({ type: 'selectProfile', profileId: 'profile-1' }), true);
     assert.equal(isAiWebviewMessage({ type: 'insertCode', code: 'FREQUENCIES VARIABLES=age.' }), true);
     assert.equal(isAiWebviewMessage({ type: 'copyCode', code: 'FREQUENCIES VARIABLES=age.' }), true);
+    assert.equal(isAiWebviewMessage({ type: 'openLink', url: 'https://www.ibm.com/docs/' }), true);
+    assert.equal(isAiWebviewMessage({ type: 'openLink', url: 'javascript:alert(1)' }), false);
     assert.equal(isAiWebviewMessage({
       type: 'createProfile',
       name: 'DeepSeek teaching',
@@ -64,6 +66,8 @@ describe('SPSS AI Webview contract', () => {
     assert.match(script, /type: 'createProfile'/u);
     assert.match(script, /type: 'openConversation'/u);
     assert.match(script, /type: 'setComposerHeight'/u);
+    assert.match(script, /function renderMarkdownBlocks/u);
+    assert.match(script, /type: 'openLink'/u);
   });
 
   it('declares one restrictive Studio shell content security policy', () => {
@@ -106,6 +110,8 @@ describe('SPSS AI Webview contract', () => {
     assert.match(script, /if \(role === 'assistant'\)/u);
     assert.doesNotMatch(script, /role === 'user'\s*\?\s*strings\.user/u);
     assert.match(script, /function renderSpssCode/u);
+    assert.match(script, /window\.SPSS_SYNTAX_DATA/u);
+    assert.doesNotMatch(script, /const SPSS_KEYWORDS/u);
     assert.match(script, /className = `syntax-token \$\{token\.type\}`/u);
     assert.match(script, /isSpssLanguage\(segment\.language\)/u);
     assert.match(style, /--vscode-inputOption-activeBackground/u);

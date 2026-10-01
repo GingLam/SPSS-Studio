@@ -1,5 +1,7 @@
+import { parseMarkdown, type MarkdownBlock } from './markdown';
+
 export type AssistantContentSegment =
-  | { type: 'text'; content: string }
+  | { type: 'markdown'; blocks: MarkdownBlock[] }
   | { type: 'code'; content: string; language?: string };
 
 export function parseAssistantContent(content: string): AssistantContentSegment[] {
@@ -9,7 +11,7 @@ export function parseAssistantContent(content: string): AssistantContentSegment[
   for (const match of content.matchAll(fence)) {
     const index = match.index;
     if (index > cursor) {
-      segments.push({ type: 'text', content: content.slice(cursor, index) });
+      segments.push({ type: 'markdown', blocks: parseMarkdown(content.slice(cursor, index)) });
     }
     const code = match[2] ?? '';
     const language = (match[1] ?? '').trim();
@@ -19,10 +21,10 @@ export function parseAssistantContent(content: string): AssistantContentSegment[
     cursor = index + match[0].length;
   }
   if (cursor < content.length) {
-    segments.push({ type: 'text', content: content.slice(cursor) });
+    segments.push({ type: 'markdown', blocks: parseMarkdown(content.slice(cursor)) });
   }
   if (segments.length === 0) {
-    return [{ type: 'text', content }];
+    return [{ type: 'markdown', blocks: parseMarkdown(content) }];
   }
   return segments;
 }

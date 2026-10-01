@@ -13,6 +13,8 @@
 
 The generated TextMate Grammar handles command-start recognition, multiline commands, generic unknown commands, generic `/SUBCOMMAND`, single and double quoted strings, three comment forms, numeric constants, arithmetic/relational/logical operators, SPSS formats, ordinary/scratch/system variables, dotted functions, minimum-valid-count modifiers, and command terminators.
 
+The Chat code-block highlighter receives generated vocabulary from this same manifest. Automated parity tests cover every canonical command plus the shared subcommand, function, format, macro-directive, and system-variable inventories.
+
 Dedicated block scopes cover BEGIN DATA, BEGIN PROGRAM, BEGIN GPL, BEGIN EXPR, MATRIX, INPUT PROGRAM, FILE TYPE, and DEFINE. BEGIN PROGRAM PYTHON3 uses an embedded Python scope when available. BEGIN DATA content remains raw data and is not tokenized as ordinary SPSS commands.
 
 ## Completion schema

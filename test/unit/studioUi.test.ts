@@ -23,7 +23,7 @@ describe('SPSS Studio Webview UI contract', () => {
     assert.equal(isWebviewMessage({ type: 'arbitraryCommand' }), false);
   });
 
-  it('declares Output, Data, Variables, SPSS AI in order and places output before history', () => {
+  it('declares Output, Data, Variables, Chat in order and places output before history', () => {
     const panelSource = fs.readFileSync(
       path.resolve(__dirname, '../../../src/views/spssStudioPanel.ts'),
       'utf8',
@@ -33,12 +33,28 @@ describe('SPSS Studio Webview UI contract', () => {
     const variablesTab = panelSource.indexOf('id="variables-tab"');
     const aiTab = panelSource.indexOf('id="ai-tab"');
     assert.ok(outputTab >= 0 && outputTab < dataTab && dataTab < variablesTab && variablesTab < aiTab);
+    assert.match(panelSource, /id="ai-tab" class="tab">Chat<\/button>/u);
     assert.match(panelSource, /id="ai-view"/u);
     assert.match(panelSource, /id="spss-ai"/u);
     const outputContent = panelSource.indexOf('id="output-content"');
     const outputHistory = panelSource.indexOf('id="output-history"');
     assert.ok(outputContent >= 0 && outputContent < outputHistory);
     assert.match(panelSource, /id="output-splitter"/u);
+  });
+
+  it('keeps run history collapsed until the History button is toggled', () => {
+    const panelSource = fs.readFileSync(
+      path.resolve(__dirname, '../../../src/views/spssStudioPanel.ts'),
+      'utf8',
+    );
+    const script = fs.readFileSync(path.resolve(__dirname, '../../../media/studio.js'), 'utf8');
+    const style = fs.readFileSync(path.resolve(__dirname, '../../../media/studio.css'), 'utf8');
+    assert.ok(panelSource.indexOf('id="print-output"') < panelSource.indexOf('id="toggle-history"'));
+    assert.match(panelSource, /id="toggle-history"[^>]*aria-expanded="false"[^>]*>History/u);
+    assert.match(script, /historyVisible: false/u);
+    assert.match(script, /setHistoryVisible\(!state\.historyVisible\)/u);
+    assert.match(style, /#output-history \{ display: none;/u);
+    assert.match(style, /#output-view\.history-open #output-history/u);
   });
 
   it('uses row paging only in Data and five read-only variable attributes', () => {

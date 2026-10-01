@@ -19,7 +19,7 @@ Contact：[linjing@nufe.edu.cn](mailto:linjing@nufe.edu.cn)
 - Native OMS HTML output with run history, safe standalone HTML export, and browser-based printing.
 - Read-only Data and Variables views for the current Active Dataset.
 - A read-only Variables table whose Name cells can be double-clicked to insert the exact cached variable at the last `.sps` cursor position.
-- A lightweight SPSS AI question-and-answer workspace embedded as the fourth SPSS Studio tab, with multiple DeepSeek, Zhipu GLM, Qwen, Doubao, and custom OpenAI-compatible model profiles.
+- A lightweight SPSS AI question-and-answer workspace embedded in the fourth SPSS Studio tab, **Chat**, with multiple DeepSeek, Zhipu GLM, Qwen, Doubao, and custom OpenAI-compatible model profiles.
 - Insert and Copy controls on every AI response code block; generated code is never run automatically.
 - Automatic IBM SPSS Statistics discovery on macOS and Windows, with manual path overrides.
 
@@ -51,7 +51,7 @@ SPSS Studio expands leading TAB indentation on SPSS command lines only at the fi
 
 ## Output
 
-Each execution uses one private, uniquely tagged, short-lived OMS HTML destination. The SPSS Studio panel places the selected result on the left and run history on the right.
+Each execution uses one private, uniquely tagged, short-lived OMS HTML destination. The selected result initially receives the full Output width. Use **History** beside **Print** to show or hide the resizable Runs column on the right.
 
 - **Export HTML** saves the selected output as a sanitized, self-contained HTML file.
 - **Print** opens a print-ready copy in the default browser.
@@ -69,9 +69,9 @@ Execution statuses are `SUCCESS`, `SUCCESS_NO_OUTPUT`, `WARNING`, `ERROR`, `ENGI
 
 ## SPSS AI
 
-The reusable SPSS Studio panel opens beside the native `.sps` editor and contains four tabs in this order: **Output**, **Data**, **Variables**, and **SPSS AI**. Opening a `.sps` file alone does not open the panel. Running syntax opens **Output**; the Show Data, Show Variables, Show AI Assistant, and Manage AI Model Profiles commands open their corresponding Studio location. The extension does not contribute or automatically reveal a native VS Code bottom-panel view.
+The reusable SPSS Studio panel opens beside the native `.sps` editor and contains four tabs in this order: **Output**, **Data**, **Variables**, and **Chat**. Opening a `.sps` file alone does not open the panel. Running syntax opens **Output**; the Show Data, Show Variables, Show AI Assistant, and Manage AI Model Profiles commands open their corresponding Studio location. The extension does not contribute or automatically reveal a native VS Code bottom-panel view.
 
-The **SPSS AI** tab is a question-and-answer tool for SPSS Syntax and does not control the SPSS engine. Its compact header exposes **Current Chat** and **Chat History**; use **Manage Models** to open the model-profile editor without duplicating it as a third navigation tab. The boundary between the transcript and question box can be dragged with the mouse or adjusted from the keyboard.
+The **Chat** tab is an SPSS AI question-and-answer tool and does not control the SPSS engine. Its compact header exposes **Current Chat** and **Chat History**; use **Manage Models** to open the model-profile editor without duplicating it as a third navigation tab. The boundary between the transcript and question box can be dragged with the mouse or adjusted from the keyboard. Completed answers render common Markdown structures without accepting model-generated HTML.
 
 Configure it from **Manage Models** or run **SPSS: Manage AI Model Profiles**:
 
@@ -91,7 +91,7 @@ Provider model catalogs change independently of the extension, so the model fiel
 | Qwen / Alibaba Cloud Model Studio | `https://dashscope.aliyuncs.com/compatible-mode/v1` |
 | Doubao / Volcano Engine Ark | `https://ark.cn-beijing.volces.com/api/v3` |
 
-Every fenced code block in an assistant response has high-contrast **Insert** and **Copy** actions. Blocks marked `spss` or `sps` also use theme-aware SPSS Syntax highlighting:
+Every fenced code block in an assistant response has high-contrast **Insert** and **Copy** actions. Blocks marked `spss` or `sps` use theme-aware highlighting generated from the same SPSS language schema as the editor TextMate Grammar:
 
 - **Insert** places the code, without fence markers or the language identifier, at the most recently used `.sps` selection.
 - **Copy** writes the same code to the system clipboard.

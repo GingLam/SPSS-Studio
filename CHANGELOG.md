@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.6.1 — 2026-10-02
+
+- Collapsed Output run history by default and added a History toggle beside Print so results receive the full panel width until history is requested.
+- Renamed the fourth Studio tab from SPSS AI to Chat.
+- Added safe structured Markdown rendering for headings, emphasis, inline code, lists, blockquotes, rules, tables, and HTTPS or email links while keeping model HTML inert.
+- Replaced the Chat code block's manually maintained SPSS keyword subset with generated vocabulary from the same language schema that builds the editor TextMate Grammar.
+- Expanded theme-aware Chat highlighting across commands, control commands, subcommands, functions, formats, macro directives and variables, keywords, missing values, comments, strings, numbers, operators, punctuation, and variables.
+
 ## 0.6.0 — 2026-10-01
 
 - Consolidated the product into a two-column workflow: the native `.sps` editor on the left and one reusable SPSS Studio panel on the right.

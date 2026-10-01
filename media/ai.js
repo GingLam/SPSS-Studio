@@ -195,137 +195,11 @@
     }, 1_200);
   }
 
-  const SPSS_KEYWORDS = new Set(`
-    ADD AGGREGATE ALL ALTER AND ANOVA APPLY AUTORECODE BEGIN BOOTSTRAP BY CACHE
-    CASESTOVARS CLEAR CLOSE COMMENT COMPUTE CORRELATIONS COUNT CROSSTABS DATA DATASET
-    DELETE DESCRIPTIVES DISPLAY DO ELSE END EQ EXECUTE EXAMINE FILE FILTER FORMATS
-    FREQUENCIES GE GET GLM GT HI IF INCLUDE INTO LE LIST LO LOGISTIC LOOP LT MATCH
-    MEANS MISSING MIXED NE NOMREG NOT NPAR NUMERIC OFF OMS OMSEND ONEWAY OR OUTPUT
-    PRINT RECODE REGRESSION RENAME REPEAT SAVE SELECT SORT SPLIT STRING SYSMIS TEMPORARY
-    TEST THEN THRU TITLE TO T-TEST UNIANOVA VALUE VARIABLE VARIABLES VARSTOCASES WEIGHT WITH
-    METHOD CRITERIA PRINT SAVE PLOT STATISTICS CONTRAST CATEGORICAL MISSING ORIGIN
-  `.trim().split(/\s+/u));
+  const tokenizeSpssSyntax = window.createSpssTokenizer(window.SPSS_SYNTAX_DATA || {});
 
   function isSpssLanguage(language) {
     return ['spss', 'sps', 'spss-syntax', 'ibm-spss', 'ibm spss']
       .includes(String(language || '').trim().toLowerCase());
-  }
-
-  function pushSyntaxToken(tokens, type, content) {
-    if (!content) {
-      return;
-    }
-    const previous = tokens[tokens.length - 1];
-    if (previous?.type === type) {
-      previous.content += content;
-    } else {
-      tokens.push({ type, content });
-    }
-  }
-
-  function tokenizeSpssSyntax(source) {
-    const tokens = [];
-    let inBlockComment = false;
-    for (const lineWithEnding of source.match(/.*(?:\n|$)/gu) || []) {
-      if (!lineWithEnding) {
-        continue;
-      }
-      const line = lineWithEnding.endsWith('\n') ? lineWithEnding.slice(0, -1) : lineWithEnding;
-      const ending = lineWithEnding.endsWith('\n') ? '\n' : '';
-      if (!inBlockComment && /^\s*(?:\*|COMMENT\b)/iu.test(line)) {
-        pushSyntaxToken(tokens, 'comment', line);
-        pushSyntaxToken(tokens, 'plain', ending);
-        continue;
-      }
-
-      let cursor = 0;
-      let firstWord = true;
-      let afterSlash = false;
-      while (cursor < line.length) {
-        if (inBlockComment) {
-          const end = line.indexOf('*/', cursor);
-          if (end < 0) {
-            pushSyntaxToken(tokens, 'comment', line.slice(cursor));
-            cursor = line.length;
-          } else {
-            pushSyntaxToken(tokens, 'comment', line.slice(cursor, end + 2));
-            cursor = end + 2;
-            inBlockComment = false;
-          }
-          continue;
-        }
-        if (line.startsWith('/*', cursor)) {
-          inBlockComment = true;
-          continue;
-        }
-
-        const remainder = line.slice(cursor);
-        const whitespace = remainder.match(/^\s+/u);
-        if (whitespace) {
-          pushSyntaxToken(tokens, 'plain', whitespace[0]);
-          cursor += whitespace[0].length;
-          continue;
-        }
-        const quote = remainder[0];
-        if (quote === "'" || quote === '"') {
-          let end = 1;
-          while (end < remainder.length) {
-            if (remainder[end] === quote) {
-              if (remainder[end + 1] === quote) {
-                end += 2;
-                continue;
-              }
-              end += 1;
-              break;
-            }
-            end += 1;
-          }
-          pushSyntaxToken(tokens, 'string', remainder.slice(0, end));
-          cursor += end;
-          continue;
-        }
-
-        const number = remainder.match(/^(?:\d+\.\d*|\.\d+|\d+)(?:e[+-]?\d+)?/iu);
-        if (number) {
-          pushSyntaxToken(tokens, 'number', number[0]);
-          cursor += number[0].length;
-          firstWord = false;
-          afterSlash = false;
-          continue;
-        }
-        const word = remainder.match(/^[A-Z@#$!][A-Z0-9_@#$!-]*(?:\.[A-Z0-9_@#$-]+)*/iu);
-        if (word) {
-          const value = word[0];
-          const upper = value.toUpperCase();
-          const nextCharacter = remainder.slice(value.length).trimStart()[0];
-          let type = 'variable';
-          if (value.startsWith('!') || firstWord || afterSlash || SPSS_KEYWORDS.has(upper)) {
-            type = 'keyword';
-          } else if (nextCharacter === '(') {
-            type = 'function';
-          } else if (value.startsWith('$') || value.startsWith('#')) {
-            type = 'system-variable';
-          }
-          pushSyntaxToken(tokens, type, value);
-          cursor += value.length;
-          firstWord = false;
-          afterSlash = false;
-          continue;
-        }
-
-        const operator = remainder.match(/^(?:<=|>=|~=|<>|\*\*|[=<>+*/&|~-])/u);
-        if (operator) {
-          pushSyntaxToken(tokens, 'operator', operator[0]);
-          cursor += operator[0].length;
-          afterSlash = operator[0] === '/';
-          continue;
-        }
-        pushSyntaxToken(tokens, 'punctuation', remainder[0]);
-        cursor += 1;
-      }
-      pushSyntaxToken(tokens, 'plain', ending);
-    }
-    return tokens;
   }
 
   function renderSpssCode(target, source) {
@@ -341,13 +215,97 @@
     }
   }
 
+  function renderInline(target, nodes) {
+    for (const node of nodes) {
+      if (node.type === 'text') {
+        target.append(document.createTextNode(node.content));
+      } else if (node.type === 'break') {
+        target.append(document.createElement('br'));
+      } else if (node.type === 'code') {
+        const code = document.createElement('code');
+        code.className = 'inline-code';
+        code.textContent = node.content;
+        target.append(code);
+      } else if (node.type === 'link') {
+        const link = document.createElement('a');
+        link.href = node.url;
+        link.title = node.url;
+        link.rel = 'noreferrer';
+        renderInline(link, node.children);
+        link.addEventListener('click', (event) => {
+          event.preventDefault();
+          vscode.postMessage({ type: 'openLink', url: node.url });
+        });
+        target.append(link);
+      } else {
+        const element = document.createElement(node.type === 'strong'
+          ? 'strong'
+          : node.type === 'emphasis'
+            ? 'em'
+            : 'del');
+        renderInline(element, node.children);
+        target.append(element);
+      }
+    }
+  }
+
+  function renderMarkdownBlocks(target, blocks) {
+    for (const block of blocks) {
+      if (block.type === 'paragraph' || block.type === 'heading') {
+        const element = document.createElement(block.type === 'heading' ? `h${block.level}` : 'p');
+        renderInline(element, block.children);
+        target.append(element);
+      } else if (block.type === 'thematicBreak') {
+        target.append(document.createElement('hr'));
+      } else if (block.type === 'blockquote') {
+        const quote = document.createElement('blockquote');
+        renderMarkdownBlocks(quote, block.blocks);
+        target.append(quote);
+      } else if (block.type === 'list') {
+        const list = document.createElement(block.ordered ? 'ol' : 'ul');
+        if (block.ordered && block.start) list.start = block.start;
+        for (const item of block.items) {
+          const entry = document.createElement('li');
+          renderMarkdownBlocks(entry, item);
+          list.append(entry);
+        }
+        target.append(list);
+      } else if (block.type === 'table') {
+        const table = document.createElement('table');
+        const head = document.createElement('thead');
+        const headRow = document.createElement('tr');
+        for (const cell of block.header) {
+          const heading = document.createElement('th');
+          renderInline(heading, cell);
+          headRow.append(heading);
+        }
+        head.append(headRow);
+        const body = document.createElement('tbody');
+        for (const row of block.rows) {
+          const tableRow = document.createElement('tr');
+          for (const cell of row) {
+            const data = document.createElement('td');
+            renderInline(data, cell);
+            tableRow.append(data);
+          }
+          body.append(tableRow);
+        }
+        table.append(head, body);
+        const scroll = document.createElement('div');
+        scroll.className = 'markdown-table-scroll';
+        scroll.append(table);
+        target.append(scroll);
+      }
+    }
+  }
+
   function renderSegments(target, segments) {
     target.replaceChildren();
     for (const segment of segments) {
-      if (segment.type === 'text') {
+      if (segment.type === 'markdown') {
         const prose = document.createElement('div');
         prose.className = 'prose';
-        prose.textContent = segment.content;
+        renderMarkdownBlocks(prose, segment.blocks);
         target.append(prose);
         continue;
       }

@@ -21,6 +21,7 @@ type MutationMessage = Exclude<AiWebviewToExtensionMessage,
 | { type: 'insertCode' }
 | { type: 'copyCode' }
 | { type: 'openProviderHelp' }
+| { type: 'openLink' }
 | { type: 'setComposerHeight' }
 | { type: 'sendQuestion' }>;
 
@@ -108,6 +109,10 @@ export class SpssAiPanelController {
     }
     if (message.type === 'openProviderHelp') {
       await this.platform.openExternal(providerPreset(message.providerId).helpUrl);
+      return;
+    }
+    if (message.type === 'openLink') {
+      await this.platform.openExternal(message.url);
       return;
     }
     if (message.type === 'setComposerHeight') {
