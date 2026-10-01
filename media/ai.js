@@ -3,7 +3,6 @@
   const elements = {
     activeProfile: document.getElementById('active-profile'),
     activeProfileLabel: document.getElementById('active-profile-label'),
-    aiTitle: document.getElementById('ai-title'),
     apiKey: document.getElementById('api-key'),
     apiKeyLabel: document.getElementById('api-key-label'),
     banner: document.getElementById('banner'),
@@ -40,7 +39,6 @@
     tabHistory: document.getElementById('tab-history'),
     tabProfiles: document.getElementById('tab-profiles'),
     tabs: document.getElementById('tabs'),
-    transcriptTitle: document.getElementById('transcript-title'),
   };
 
   const restored = vscode.getState() || {};
@@ -103,14 +101,12 @@
 
   function applyStrings() {
     document.title = strings.title;
-    elements.aiTitle.textContent = strings.title;
     elements.activeProfileLabel.textContent = strings.activeProfile;
     elements.newChat.textContent = strings.newChat;
     elements.manageProfiles.textContent = strings.configureModels;
     elements.tabChat.textContent = strings.currentChat;
     elements.tabHistory.textContent = strings.history;
     elements.tabProfiles.textContent = strings.modelProfiles;
-    elements.transcriptTitle.textContent = strings.transcript;
     elements.question.placeholder = strings.questionPlaceholder;
     elements.stop.textContent = strings.stop;
     elements.send.textContent = strings.send;

@@ -321,21 +321,19 @@ export class SpssAiViewProvider implements vscode.WebviewViewProvider, vscode.Di
 </head>
 <body>
   <header class="ai-header">
-    <strong id="ai-title">SPSS AI</strong>
+    <nav id="tabs" class="tabs" aria-label="SPSS AI">
+      <button type="button" data-page="chat" id="tab-chat"></button>
+      <button type="button" data-page="history" id="tab-history"></button>
+      <button type="button" data-page="profiles" id="tab-profiles"></button>
+    </nav>
     <div class="header-actions">
       <label class="profile-selector"><span id="active-profile-label"></span><select id="active-profile"></select></label>
       <button id="new-chat" type="button"></button>
       <button id="manage-profiles" type="button"></button>
     </div>
   </header>
-  <nav id="tabs" class="tabs" aria-label="SPSS AI">
-    <button type="button" data-page="chat" id="tab-chat"></button>
-    <button type="button" data-page="history" id="tab-history"></button>
-    <button type="button" data-page="profiles" id="tab-profiles"></button>
-  </nav>
   <div id="banner" class="banner" hidden></div>
   <section id="page-chat" class="page chat-page">
-    <div id="transcript-title" class="section-title"></div>
     <main id="messages" aria-live="polite"></main>
     <div id="splitter" class="splitter" role="separator" aria-orientation="horizontal" tabindex="0"></div>
     <footer class="composer">

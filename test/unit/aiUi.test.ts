@@ -93,4 +93,21 @@ describe('SPSS AI Webview contract', () => {
     assert.match(style, /--composer-height/u);
     assert.match(style, /cursor: ns-resize/u);
   });
+
+  it('keeps AI navigation in one compact header without redundant titles', () => {
+    const provider = fs.readFileSync(
+      path.resolve(__dirname, '../../../src/views/spssAiViewProvider.ts'),
+      'utf8',
+    );
+    const headerStart = provider.indexOf('<header class="ai-header">');
+    const tabs = provider.indexOf('<nav id="tabs"');
+    const headerEnd = provider.indexOf('</header>', headerStart);
+    assert.ok(headerStart >= 0 && tabs > headerStart && tabs < headerEnd);
+    assert.doesNotMatch(provider, /id="ai-title"/u);
+    assert.doesNotMatch(provider, /id="transcript-title"/u);
+
+    const style = fs.readFileSync(path.resolve(__dirname, '../../../media/ai.css'), 'utf8');
+    assert.match(style, /grid-template-rows: auto auto minmax\(0, 1fr\)/u);
+    assert.match(style, /grid-template-rows: minmax\(0, 1fr\) 9px var\(--composer-height\)/u);
+  });
 });
