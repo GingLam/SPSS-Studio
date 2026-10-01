@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.4.0 — 2026-10-01
+
+- Added clickable Active Dataset variable names at the first SPSS editor position, with Label tooltips and native undoable insertion.
+- Added a complete searchable variable picker and a 50-name inlay limit for wide dictionaries.
+- Added a bottom-panel SPSS AI question-and-answer view using streamed OpenAI-compatible Chat Completions.
+- Added quick provider presets for DeepSeek, Zhipu GLM, Qwen, and Doubao plus a custom compatible endpoint.
+- Stored provider API keys in VS Code SecretStorage and prevented editor, dataset, Output, filename, and workspace context from entering AI requests.
+- Added Insert and Copy actions to every fenced assistant code block without automatic save or execution.
+- Added strict Webview rendering, HTTPS and loopback URL rules, manual redirect rejection, cancellation, timeout, and bounded in-memory conversation history.
+- Fixed Undo so it explicitly targets the SPSS text editor when a Webview has focus.
+- Added local mock-server, protocol, security, variable-cache, inlay, manifest, and Extension Host regressions.
+
 ## 0.3.0 — 2026-09-30
 
 - Added SPSS-only editor title actions for native Undo, Run Selection / Current Command, and Run All.

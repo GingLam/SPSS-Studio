@@ -52,10 +52,38 @@ Wide datasets are loaded in variable chunks while one continuous scrollbar repre
 
 Variable candidates require an Active Dataset metadata refresh. Run the syntax that creates/opens the dataset successfully, use **SPSS: Refresh Data Preview**, or open **SPSS: Show Data**. Starting, stopping, restarting, or losing the engine intentionally clears the cache.
 
+## The variable strip is missing
+
+The editor strip uses the same Active Dataset cache as completion. First run syntax that creates or opens a dataset. If completion contains dataset variables but the strip is still absent, confirm that VS Code inlay hints are enabled in the editor settings. The strip contains at most 50 names; use **More Variables…** or **SPSS: Search Active Dataset Variables** for the complete list.
+
+## SPSS AI says that it is not configured
+
+Run **SPSS: Configure AI Provider**. Select a preset, enter the model identifier exactly as supplied by the provider, and save an API Key. The model name is not discovered automatically because providers change model catalogs and account-specific endpoint identifiers independently of the extension.
+
+The Base URL is the protocol root, not a full `/chat/completions` URL. The extension appends `/chat/completions` itself.
+
+## SPSS AI returns HTTP 401, 403, or 404
+
+- `401` normally means the API Key is invalid, belongs to another region, or does not match the selected service.
+- `403` normally means the account or key lacks permission for the requested model.
+- `404` normally means the Base URL or model identifier is wrong, or the endpoint does not implement OpenAI-compatible Chat Completions.
+
+Use the **Official docs** button in the configuration panel and verify the current provider values. SPSS Studio does not log the API Key or raw provider response body.
+
+## SPSS AI reports an incompatible stream or empty response
+
+Version 0.4.0 requires streamed OpenAI-compatible Chat Completions. Provider-specific native protocols, Responses-only endpoints, tools, and nonstandard event formats are not silently translated. Choose the provider's OpenAI-compatible endpoint or use a compatible gateway.
+
+Only HTTPS endpoints are accepted. Plain HTTP is limited to `localhost`, `127.0.0.1`, and `::1` for local model servers. Redirects are intentionally rejected to avoid forwarding the bearer credential to another origin.
+
+## AI-generated syntax does not run
+
+Insert and Copy transfer the code block exactly without its fence markers or language identifier. They do not validate, save, or execute it. Model output can contain unsupported commands, version-specific options, or ordinary mistakes; inspect the syntax and compare uncertain details with IBM documentation before running it.
+
 ## Current command is not selected as expected
 
 Place the cursor inside the command, not on a blank line or command comment. Explicit selection is the escape hatch: select exactly the intended syntax and run **SPSS: Run Selection / Current Command**.
 
 ## Windows status
 
-Windows discovery, Registry parsing, paths with spaces, batch launch, bundled-Python fallback, JSONL transport, completion, paging bounds, and Webview-independent logic are unit tested. Version 0.3.0 does not claim Windows + SPSS real-machine verification.
+Windows discovery, Registry parsing, paths with spaces, batch launch, bundled-Python fallback, JSONL transport, completion, paging bounds, AI protocol handling, and Webview-independent logic are unit tested. Version 0.4.0 does not claim Windows + SPSS real-machine verification.

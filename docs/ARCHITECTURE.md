@@ -16,6 +16,8 @@ VS Code editor
        |-> Active Dataset metadata
        `-> sliced case and variable page
   -> OutputStore / VariableCache / DataPreviewState / DataViewportState
+       |-> completion and variable inlay/picker
+       `-> Output / Data / Variables views
   -> reusable SPSS Studio WebviewPanel
 ```
 
@@ -41,9 +43,15 @@ The completion path is synchronous and local. It never sends a bridge request on
 
 ## Variable Cache and Active Dataset
 
-`VariableCache` holds only the most recently fetched `ActiveDatasetInfo` and its variable metadata. `StudioSession` replaces the cache after `SUCCESS`, `SUCCESS_NO_OUTPUT`, or `WARNING`, and clears it when the engine stops, starts, or enters an error state. Completion reads this cache directly.
+`VariableCache` holds only the most recently fetched `ActiveDatasetInfo` and its variable metadata. `StudioSession` replaces the cache after `SUCCESS`, `SUCCESS_NO_OUTPUT`, or `WARNING`, and clears it when the engine stops, starts, or enters an error state. Completion reads this cache directly. The cache emits a local change notification only when effective metadata changes; it does not poll SPSS.
 
 The `datasetInfo` bridge operation obtains the Active Dataset name, case and variable counts, variable name/label/type/format, optional measurement level, and weight/split/filter state where the installed SPSS API exposes it. No case values are read during metadata refresh.
+
+## Variable Inlay and Editor Target
+
+`SpssVariableInlayProvider` listens to `VariableCache` changes and renders one inlay hint at the first document position. Up to 50 variable names become interactive `InlayHintLabelPart` objects. Their tooltips contain the cached label, and their commands insert the exact dictionary name. A dataset with more variables receives one `More Variables…` command that opens a native Quick Pick backed by the complete cache.
+
+`SpssEditorTargetTracker` remembers the URI, view column, document version, and selection of the last SPSS text editor without retaining its contents. Variable clicks and AI code insertion share this target. Each insertion uses one `TextEditor.edit`, so it participates in the native undo stack. No insertion saves or executes the document.
 
 ## Lazy Data Preview and Continuous Variable Scrolling
 
@@ -102,6 +110,27 @@ The Variables tab consumes `ActiveDatasetInfo.variables`, which is already popul
 `SpssStudioPanel` is a singleton reusable panel in `ViewColumn.Beside`, with Output, Data, and Variables tabs. Its Content Security Policy defaults to no access, permits only the extension's nonce-bearing script, extension/local styles, owned session images, and strict raster image data URIs. `localResourceRoots` contains only `media` and the owned session root.
 
 Before insertion, `htmlSanitizer.ts` removes executable and embedding elements, inline event handlers, form actions, remote links, CSS imports/URLs/expressions, and unsafe image sources. Local images are resolved only when their normalized path stays inside the run directory. Dataset cells are rendered with `textContent`.
+
+The separate `SpssAiViewProvider` is a contributed Webview View in the bottom panel. Its Content Security Policy denies network access from the Webview and allows only extension-local styles plus a nonce-bearing local script. Model text and fenced code are converted into typed segments in the extension host and rendered with DOM `textContent`; model HTML is never inserted. Only locally created Insert and Copy buttons can send code-action messages.
+
+## OpenAI-compatible AI boundary
+
+```text
+AI question box
+  -> validated Webview message
+  -> bounded in-memory user/assistant text history
+  -> fixed SPSS helper system instruction
+  -> OpenAiCompatibleClient
+  -> user-configured /chat/completions endpoint
+  -> streamed SSE content only
+  -> escaped prose and fenced-code segments
+```
+
+Provider selection, Base URL, and model identifier are stored in extension `globalState`. Provider-specific API keys are stored only in `ExtensionContext.secrets`; they are not returned to the Webview after saving. Built-in presets cover DeepSeek, Zhipu GLM, Qwen, and Doubao, while the transport remains one provider-neutral Chat Completions implementation.
+
+The client requires HTTPS except for loopback HTTP endpoints, rejects embedded URL credentials, query strings, and fragments, and uses manual redirect handling so a bearer key is not forwarded to another origin. `AbortController` implements Stop and the request timeout. HTTP failures, cancellation, timeout, malformed SSE, and empty responses remain distinct failures.
+
+The AI payload contains only the fixed system instruction and text entered in the AI conversation. It has no code path to read the active document, selection, variable cache, cases, SPSS output, filenames, or workspace paths. Chat history is memory-only, bounded by message and character counts, and discarded on reload. AI requests are disabled in untrusted workspaces.
 
 ## Serialized SPSS Operations
 

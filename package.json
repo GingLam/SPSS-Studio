@@ -1,8 +1,8 @@
 {
   "name": "spss-studio",
   "displayName": "SPSS Studio",
-  "description": "SPSS Syntax IntelliSense, Active Dataset preview, and native HTML output through a local IBM SPSS Statistics engine.",
-  "version": "0.3.0",
+  "description": "SPSS Syntax IntelliSense, Active Dataset tools, native HTML output, and optional OpenAI-compatible assistance.",
+  "version": "0.4.0",
   "publisher": "jinglin",
   "author": {
     "name": "Jing LIN (林景)",
@@ -39,7 +39,7 @@
   "capabilities": {
     "untrustedWorkspaces": {
       "supported": "limited",
-      "description": "SPSS Syntax highlighting remains available, but starting the SPSS engine and executing syntax are disabled."
+      "description": "SPSS Syntax highlighting remains available, but SPSS execution, Active Dataset access, and AI network requests are disabled."
     }
   },
   "activationEvents": [

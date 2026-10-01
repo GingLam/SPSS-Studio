@@ -1,6 +1,6 @@
 # SPSS Studio
 
-SPSS Studio is a Visual Studio Code extension for editing and running IBM SPSS Statistics Syntax (`.sps`). It provides syntax highlighting, context-aware completion, a persistent local SPSS execution engine, native OMS HTML output, and read-only Active Dataset previews.
+SPSS Studio is a Visual Studio Code extension for editing and running IBM SPSS Statistics Syntax (`.sps`). It provides syntax highlighting, context-aware completion, a persistent local SPSS execution engine, native OMS HTML output, read-only Active Dataset previews, fast variable insertion, and an optional OpenAI-compatible syntax assistant.
 
 Author：Jing LIN (林景)
 
@@ -18,6 +18,9 @@ Contact：[linjing@nufe.edu.cn](mailto:linjing@nufe.edu.cn)
 - A persistent, serialized local SPSS backend.
 - Native OMS HTML output with run history, safe standalone HTML export, and browser-based printing.
 - Read-only Data and Variables views for the current Active Dataset.
+- Clickable Active Dataset variable names at the start of the editor, with label tooltips and a searchable complete-variable picker.
+- A lightweight bottom-panel SPSS AI question-and-answer view with DeepSeek, Zhipu GLM, Qwen, Doubao, and custom OpenAI-compatible configuration.
+- Insert and Copy controls on every AI response code block; generated code is never run automatically.
 - Automatic IBM SPSS Statistics discovery on macOS and Windows, with manual path overrides.
 
 ## Requirements
@@ -64,6 +67,41 @@ Execution statuses are `SUCCESS`, `SUCCESS_NO_OUTPUT`, `WARNING`, `ERROR`, `ENGI
 
 **SPSS: Show Variables** displays variable order, Name, Label, Type, Format, and Measure. It reuses metadata already cached for completion and Data preview and does not modify the SPSS data dictionary.
 
+After syntax creates or opens an Active Dataset, the first line of each `.sps` editor displays up to 50 cached variable names. Hovering a name shows its Label; clicking it inserts the exact variable name at the current selection. Datasets with more than 50 variables include **More Variables…**, which opens a searchable native picker containing the complete cached dictionary. **SPSS: Search Active Dataset Variables** opens the same picker at any time.
+
+The variable strip is a VS Code inlay hint. It uses the existing metadata cache, does not read case values, does not poll SPSS, and disappears when the engine or Active Dataset state is cleared.
+
+## SPSS AI
+
+The **SPSS AI** view appears in the bottom panel while the native `.sps` editor remains above it. It is a question-and-answer tool for SPSS Syntax and does not control the SPSS engine.
+
+Configure it from the panel or run **SPSS: Configure AI Provider**:
+
+1. Choose DeepSeek, Zhipu GLM, Qwen, Doubao, or Custom OpenAI-compatible.
+2. Confirm the prefilled Base URL.
+3. Enter the model identifier supplied by the provider.
+4. Enter an API Key and save.
+
+Provider model catalogs change independently of the extension, so the model field is intentionally editable. The four built-in presets use these official OpenAI-compatible Base URLs:
+
+| Preset | Base URL |
+| --- | --- |
+| DeepSeek | `https://api.deepseek.com` |
+| Zhipu GLM | `https://open.bigmodel.cn/api/paas/v4` |
+| Qwen / Alibaba Cloud Model Studio | `https://dashscope.aliyuncs.com/compatible-mode/v1` |
+| Doubao / Volcano Engine Ark | `https://ark.cn-beijing.volces.com/api/v3` |
+
+Every fenced code block in an assistant response has two actions:
+
+- **Insert** places the code, without fence markers or the language identifier, at the most recently used `.sps` selection.
+- **Copy** writes the same code to the system clipboard.
+
+Insert performs one ordinary, undoable text edit. It does not save or execute the syntax.
+
+The API Key is stored in VS Code `SecretStorage`, not in `settings.json`, logs, chat history, or the repository. Each request contains a fixed SPSS-assistant system instruction, the text typed in the AI question box, and the bounded text history of that AI session. SPSS Studio does **not** attach the SPS file, editor selection, variables, cases, Output, filenames, or workspace paths. Chat history exists only in extension memory and is cleared when VS Code reloads.
+
+Model output is untrusted and can be wrong. Inspect generated syntax before running it. SPSS Studio does not provide model-provider billing, retention, or correctness guarantees.
+
 ## Commands
 
 - **SPSS: Run Selection / Current Command**
@@ -76,6 +114,9 @@ Execution statuses are `SUCCESS`, `SUCCESS_NO_OUTPUT`, `WARNING`, `ERROR`, `ENGI
 - **SPSS: Show Output**
 - **SPSS: Show Data**
 - **SPSS: Show Variables**
+- **SPSS: Search Active Dataset Variables**
+- **SPSS: Show AI Assistant**
+- **SPSS: Configure AI Provider**
 - **SPSS: Refresh Data Preview**
 - **SPSS: Clear Output**
 
@@ -90,14 +131,17 @@ Execution statuses are `SUCCESS`, `SUCCESS_NO_OUTPUT`, `WARNING`, `ERROR`, `ENGI
 | `spssStudio.dataPreviewPageSize` | `100` | Active Dataset rows per page: 25, 50, 100, 200, or 500. |
 | `spssStudio.autoStart` | `true` | Start the engine when syntax is first executed. |
 | `spssStudio.debugLogging` | `false` | Write additional bridge diagnostics. |
+| `spssStudio.aiAutoReveal` | `true` | Reveal the SPSS AI bottom panel when an SPSS editor first becomes active. |
 
 On Windows, JSON settings paths must escape backslashes, for example `C:\\Program Files\\IBM\\SPSS Statistics\\32`.
 
 ## Workspace trust and local processing
 
-Syntax highlighting and static completion remain available in an untrusted workspace. Starting SPSS, executing syntax, and accessing the Active Dataset require a trusted workspace.
+Syntax highlighting and static completion remain available in an untrusted workspace. Starting SPSS, executing syntax, accessing the Active Dataset, and sending AI network requests require a trusted workspace.
 
 SPSS syntax and dataset requests are sent to the locally installed IBM SPSS Statistics processor. The extension does not provide a cloud execution service.
+
+AI questions are sent directly from the extension host to the Base URL selected by the user. HTTPS is required, except that loopback HTTP addresses such as `localhost` and `127.0.0.1` are permitted for local compatible servers. Redirects are rejected so the bearer credential is not forwarded to another origin.
 
 ## Development
 
@@ -121,7 +165,7 @@ Report reproducible defects through [GitHub Issues](https://github.com/GingLam/S
 
 ## Limitations
 
-SPSS Studio is not an LSP or a full semantic validator. It does not provide statistical menus, editable Data View cells, variable metadata editing, AI features, paper-table generation, or a general SPV viewer. Variables is intentionally read-only, and exported output is HTML rather than SPV.
+SPSS Studio is not an LSP or a full semantic validator. It does not provide statistical menus, editable Data View cells, variable metadata editing, paper-table generation, or a general SPV viewer. Variables is intentionally read-only, and exported output is HTML rather than SPV. The AI client supports the common streamed OpenAI-compatible Chat Completions contract only; provider-specific tools, search, attachments, and advanced parameters are outside its scope.
 
 ## License
 
