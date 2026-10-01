@@ -28,8 +28,9 @@ describe('SPSS Studio real SPSS Extension Host', () => {
     await configuration.update('startupTimeoutSeconds', 120, vscode.ConfigurationTarget.Workspace);
     await configuration.update('executionTimeoutSeconds', 120, vscode.ConfigurationTarget.Workspace);
     await configuration.update('autoStart', true, vscode.ConfigurationTarget.Workspace);
+    await configuration.update('aiAutoReveal', false, vscode.ConfigurationTarget.Workspace);
 
-    const extension = vscode.extensions.getExtension<SpssStudioExtensionApi>('ginglam.spss-studio');
+    const extension = vscode.extensions.getExtension<SpssStudioExtensionApi>('jinglin.spss-studio');
     assert.ok(extension);
     const api = await extension.activate();
     const document = await vscode.workspace.openTextDocument(vscode.Uri.file(path.join(workspace, 'real.sps')));
