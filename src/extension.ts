@@ -1,6 +1,9 @@
 import * as vscode from 'vscode';
+import { AiSessionController } from './ai/aiSessionController';
+import { ConversationStore } from './ai/conversationStore';
+import { migrateLegacyProviderConfiguration } from './ai/modelProfileMigration';
+import { ModelProfileStore } from './ai/modelProfileStore';
 import { OpenAiCompatibleClient } from './ai/openAiCompatibleClient';
-import { ProviderConfigurationStore } from './ai/providerConfigurationStore';
 import {
   restartEngine,
   showStatus,
@@ -139,11 +142,29 @@ export function activate(context: vscode.ExtensionContext): SpssStudioExtensionA
   const editorTarget = new SpssEditorTargetTracker();
   const variableInlayProvider = new SpssVariableInlayProvider(variableCache);
   const variableCommandDependencies = { variableCache, editorTarget };
+  const modelProfiles = new ModelProfileStore(context.globalState, context.secrets);
+  const conversationStore = new ConversationStore(
+    vscode.Uri.joinPath(context.globalStorageUri, 'ai-history').fsPath,
+    {
+      onWarning: (message) => {
+        void vscode.window.showWarningMessage(message);
+      },
+    },
+  );
+  const aiInitialization = migrateLegacyProviderConfiguration(
+    context.globalState,
+    context.secrets,
+    modelProfiles,
+  ).catch((error: unknown) => {
+    const message = error instanceof Error ? error.message : String(error);
+    void vscode.window.showErrorMessage(`SPSS AI configuration migration failed: ${message}`);
+  });
   const aiViewProvider = new SpssAiViewProvider(
     context.extensionUri,
-    new ProviderConfigurationStore(context.globalState, context.secrets),
-    new OpenAiCompatibleClient(),
+    new AiSessionController(modelProfiles, conversationStore, new OpenAiCompatibleClient()),
     editorTarget,
+    context.globalState,
+    aiInitialization,
   );
   let aiAutoRevealed = false;
   const autoRevealAi = (editor: vscode.TextEditor | undefined): void => {

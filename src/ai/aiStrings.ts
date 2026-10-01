@@ -22,6 +22,7 @@ export interface AiStrings {
   history: string;
   historyEmpty: string;
   insert: string;
+  insertRequiresEditor: string;
   inserted: string;
   makeActive: string;
   model: string;
@@ -35,6 +36,7 @@ export interface AiStrings {
   profileEmpty: string;
   provider: string;
   questionPlaceholder: string;
+  questions: string;
   rename: string;
   save: string;
   savedLocallyWarning: string;
@@ -44,6 +46,8 @@ export interface AiStrings {
   title: string;
   transcript: string;
   truncatedHistory: string;
+  untrustedWorkspace: string;
+  manageWorkspaceTrust: string;
   user: string;
 }
 
@@ -71,6 +75,7 @@ export const AI_STRINGS_EN: AiStrings = {
   history: 'Chat History',
   historyEmpty: 'No saved conversations yet.',
   insert: 'Insert',
+  insertRequiresEditor: 'Open an SPSS syntax editor before inserting AI-generated code.',
   inserted: 'Inserted',
   makeActive: 'Make active',
   model: 'Model',
@@ -84,6 +89,7 @@ export const AI_STRINGS_EN: AiStrings = {
   profileEmpty: 'Create a model profile to start using SPSS AI.',
   provider: 'Provider',
   questionPlaceholder: 'Ask about SPSS Syntax…',
+  questions: 'question(s)',
   rename: 'Rename',
   save: 'Save',
   savedLocallyWarning: 'The answer is visible now but could not be saved to local history.',
@@ -93,6 +99,8 @@ export const AI_STRINGS_EN: AiStrings = {
   title: 'SPSS AI',
   transcript: 'Conversation',
   truncatedHistory: 'Older messages were removed because this conversation exceeded the local history limit.',
+  untrustedWorkspace: 'Sending an AI question is disabled in an untrusted workspace.',
+  manageWorkspaceTrust: 'Manage Workspace Trust',
   user: 'You',
 };
 
@@ -120,6 +128,7 @@ export const AI_STRINGS_ZH_CN: AiStrings = {
   history: '历史对话',
   historyEmpty: '尚无历史对话。',
   insert: '插入',
+  insertRequiresEditor: '请先打开 SPSS 语法编辑器，再插入 AI 生成的代码。',
   inserted: '已插入',
   makeActive: '设为当前模型',
   model: '模型',
@@ -133,6 +142,7 @@ export const AI_STRINGS_ZH_CN: AiStrings = {
   profileEmpty: '请先创建模型配置，然后使用 SPSS AI。',
   provider: '服务商',
   questionPlaceholder: '询问 SPSS 语法……',
+  questions: '轮提问',
   rename: '重命名',
   save: '保存',
   savedLocallyWarning: '回答当前可见，但未能保存到本机历史。',
@@ -142,6 +152,8 @@ export const AI_STRINGS_ZH_CN: AiStrings = {
   title: 'SPSS AI',
   transcript: '对话内容',
   truncatedHistory: '该对话超过本地历史上限，较早的消息已被移除。',
+  untrustedWorkspace: '不受信任的工作区禁止发送 AI 问题。',
+  manageWorkspaceTrust: '管理工作区信任',
   user: '你',
 };
 

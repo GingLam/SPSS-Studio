@@ -1,39 +1,52 @@
 import { randomBytes } from 'node:crypto';
 import * as vscode from 'vscode';
-import { boundConversation, type AiChatMessage } from '../ai/chatProtocol';
+import type { AiSessionController } from '../ai/aiSessionController';
+import { aiStringsForLanguage, type AiStrings } from '../ai/aiStrings';
 import { parseAssistantContent } from '../ai/fencedCode';
-import type { OpenAiCompatibleClient } from '../ai/openAiCompatibleClient';
-import type { ProviderConfigurationStore } from '../ai/providerConfigurationStore';
+import type { KeyValueStore } from '../ai/providerConfigurationStore';
 import { AI_PROVIDER_PRESETS, providerPreset } from '../ai/providerPresets';
 import type { SpssEditorTargetTracker } from '../editor/spssEditorTargetTracker';
 import {
-  configurationFromMessage,
   isAiWebviewMessage,
-  type AiDisplayMessage,
+  profileDraftFromMessage,
+  type AiDisplayConversation,
+  type AiPage,
+  type AiViewRenderState,
   type AiWebviewToExtensionMessage,
   type ExtensionToAiWebviewMessage,
 } from './aiWebviewProtocol';
 
-interface ActiveAiRequest {
-  id: number;
-  controller: AbortController;
-}
+const COMPOSER_HEIGHT_KEY = 'spssStudio.ai.composerHeight';
+const DEFAULT_COMPOSER_HEIGHT = 112;
+
+type MutationMessage = Exclude<AiWebviewToExtensionMessage,
+| { type: 'ready' }
+| { type: 'stop' }
+| { type: 'insertCode' }
+| { type: 'copyCode' }
+| { type: 'openProviderHelp' }
+| { type: 'setComposerHeight' }
+| { type: 'sendQuestion' }>;
 
 export class SpssAiViewProvider implements vscode.WebviewViewProvider, vscode.Disposable {
   private view: vscode.WebviewView | undefined;
-  private history: AiChatMessage[] = [];
-  private activeRequest: ActiveAiRequest | undefined;
-  private requestSequence = 0;
+  private webviewReady = false;
+  private pendingPage: AiPage | undefined;
+  private readonly strings: AiStrings;
 
   public constructor(
     private readonly extensionUri: vscode.Uri,
-    private readonly configurationStore: ProviderConfigurationStore,
-    private readonly client: OpenAiCompatibleClient,
+    private readonly controller: AiSessionController,
     private readonly editorTarget: SpssEditorTargetTracker,
-  ) {}
+    private readonly uiState: KeyValueStore,
+    private readonly initialization: Promise<unknown> = Promise.resolve(),
+  ) {
+    this.strings = aiStringsForLanguage(vscode.env.language);
+  }
 
-  public async resolveWebviewView(view: vscode.WebviewView): Promise<void> {
+  public resolveWebviewView(view: vscode.WebviewView): void {
     this.view = view;
+    this.webviewReady = false;
     const mediaRoot = vscode.Uri.joinPath(this.extensionUri, 'media');
     view.webview.options = {
       enableScripts: true,
@@ -48,9 +61,9 @@ export class SpssAiViewProvider implements vscode.WebviewViewProvider, vscode.Di
     view.onDidDispose(() => {
       if (this.view === view) {
         this.view = undefined;
+        this.webviewReady = false;
       }
     });
-    await this.initialize();
   }
 
   public async reveal(preserveFocus = false): Promise<void> {
@@ -65,127 +78,200 @@ export class SpssAiViewProvider implements vscode.WebviewViewProvider, vscode.Di
   }
 
   public async showConfiguration(): Promise<void> {
+    this.pendingPage = 'profiles';
     await this.reveal(false);
-    await this.post({ type: 'showConfiguration' });
-  }
-
-  public dispose(): void {
-    this.activeRequest?.controller.abort();
-    this.activeRequest = undefined;
-    this.view = undefined;
-    this.history = [];
-  }
-
-  private async initialize(): Promise<void> {
-    const history: AiDisplayMessage[] = this.history.map((message) => message.role === 'user'
-      ? { role: 'user', content: message.content }
-      : { role: 'assistant', segments: parseAssistantContent(message.content) });
-    await this.post({
-      type: 'initialize',
-      presets: [...AI_PROVIDER_PRESETS],
-      state: await this.configurationStore.state(),
-      history,
-    });
-  }
-
-  private async handleMessage(message: AiWebviewToExtensionMessage): Promise<void> {
-    if (message.type === 'sendQuestion') {
-      await this.sendQuestion(message.question.trim());
-    } else if (message.type === 'stop') {
-      this.activeRequest?.controller.abort();
-    } else if (message.type === 'clear') {
-      this.clearConversation();
-    } else if (message.type === 'insertCode') {
-      if (!await this.editorTarget.insert(message.code)) {
-        void vscode.window.showWarningMessage('Open an SPSS syntax editor before inserting AI-generated code.');
-      }
-    } else if (message.type === 'copyCode') {
-      await vscode.env.clipboard.writeText(message.code);
-    } else if (message.type === 'saveConfiguration') {
-      await this.saveConfiguration(message);
-    } else if (message.type === 'deleteApiKey') {
-      await this.configurationStore.deleteApiKey(message.providerId);
-      await this.post({ type: 'configurationState', state: await this.configurationStore.state() });
-    } else {
-      await vscode.env.openExternal(vscode.Uri.parse(providerPreset(message.providerId).helpUrl));
+    if (this.webviewReady) {
+      await this.postRenderState();
+      await this.post({ type: 'showPage', page: 'profiles' });
+      this.pendingPage = undefined;
     }
   }
 
-  private async saveConfiguration(
-    message: Extract<AiWebviewToExtensionMessage, { type: 'saveConfiguration' }>,
-  ): Promise<void> {
+  public dispose(): void {
+    this.controller.dispose();
+    this.view = undefined;
+    this.webviewReady = false;
+  }
+
+  private async handleMessage(message: AiWebviewToExtensionMessage): Promise<void> {
+    if (message.type === 'ready') {
+      this.webviewReady = true;
+      try {
+        await this.initialization;
+        await this.postRenderState();
+        if (this.pendingPage) {
+          await this.post({ type: 'showPage', page: this.pendingPage });
+          this.pendingPage = undefined;
+        }
+      } catch (error) {
+        await this.postOperationError(error);
+      }
+      return;
+    }
+    if (message.type === 'stop') {
+      this.controller.stop();
+      return;
+    }
+    if (message.type === 'insertCode') {
+      if (!await this.editorTarget.insert(message.code)) {
+        void vscode.window.showWarningMessage(this.strings.insertRequiresEditor);
+      }
+      return;
+    }
+    if (message.type === 'copyCode') {
+      await vscode.env.clipboard.writeText(message.code);
+      return;
+    }
+    if (message.type === 'openProviderHelp') {
+      await vscode.env.openExternal(vscode.Uri.parse(providerPreset(message.providerId).helpUrl));
+      return;
+    }
+    if (message.type === 'setComposerHeight') {
+      await this.uiState.update(COMPOSER_HEIGHT_KEY, Math.round(message.height));
+      return;
+    }
+    if (message.type === 'sendQuestion') {
+      await this.sendQuestion(message.question.trim());
+      return;
+    }
+    await this.handleMutation(message);
+  }
+
+  private async handleMutation(message: MutationMessage): Promise<void> {
     try {
-      await this.configurationStore.save(configurationFromMessage(message), message.apiKey);
-      await this.post({ type: 'configurationState', state: await this.configurationStore.state() });
+      if (message.type === 'newChat') {
+        await this.controller.newChat();
+      } else if (message.type === 'openConversation') {
+        await this.controller.openConversation(message.conversationId);
+        this.pendingPage = 'chat';
+      } else if (message.type === 'renameConversation') {
+        await this.controller.renameConversation(message.conversationId, message.title);
+      } else if (message.type === 'deleteConversation') {
+        if (!await this.confirm(this.strings.deleteConversationConfirm, this.strings.delete)) {
+          return;
+        }
+        await this.controller.deleteConversation(message.conversationId);
+      } else if (message.type === 'clearAllConversations') {
+        if (!await this.confirm(this.strings.clearAllConfirmFirst, this.strings.clearAll)) {
+          return;
+        }
+        if (!await this.confirm(this.strings.clearAllConfirmSecond, this.strings.clearAll)) {
+          return;
+        }
+        await this.controller.clearConversations();
+      } else if (message.type === 'selectProfile') {
+        await this.controller.selectProfile(message.profileId);
+      } else if (message.type === 'createProfile') {
+        await this.controller.createProfile(profileDraftFromMessage(message), message.apiKey);
+      } else if (message.type === 'saveProfile') {
+        await this.controller.updateProfile(
+          message.profileId,
+          profileDraftFromMessage(message),
+          message.apiKey,
+        );
+      } else if (message.type === 'duplicateProfile') {
+        await this.controller.duplicateProfile(message.profileId);
+      } else if (message.type === 'deleteProfile') {
+        if (!await this.confirm(this.strings.deleteProfileConfirm, this.strings.delete)) {
+          return;
+        }
+        await this.controller.deleteProfile(message.profileId);
+      } else {
+        await this.controller.deleteProfileKey(message.profileId);
+      }
+      await this.postRenderState();
+      if (this.pendingPage) {
+        await this.post({ type: 'showPage', page: this.pendingPage });
+        this.pendingPage = undefined;
+      }
     } catch (error) {
-      await this.post({ type: 'configurationError', message: this.errorMessage(error) });
+      await this.postOperationError(error);
     }
   }
 
   private async sendQuestion(question: string): Promise<void> {
-    if (this.activeRequest) {
-      return;
-    }
     if (!await this.requireTrustedWorkspace()) {
       return;
     }
-    let resolved;
     try {
-      resolved = await this.configurationStore.resolve();
-    } catch (error) {
-      await this.post({ type: 'configurationError', message: this.errorMessage(error) });
-      return;
-    }
-
-    const previousHistory = this.history;
-    this.history = boundConversation([...this.history, { role: 'user', content: question }]);
-    const request: ActiveAiRequest = {
-      id: ++this.requestSequence,
-      controller: new AbortController(),
-    };
-    this.activeRequest = request;
-    await this.post({ type: 'appendUser', content: question });
-    await this.post({ type: 'responseStarted' });
-    try {
-      const response = await this.client.streamChat({
-        configuration: resolved.configuration,
-        apiKey: resolved.apiKey,
-        history: this.history,
-        signal: request.controller.signal,
-      }, (content) => {
-        if (this.activeRequest?.id === request.id) {
+      const result = await this.controller.sendQuestion(question, {
+        onStarted: (content) => {
+          void this.post({ type: 'responseStarted', question: content });
+        },
+        onDelta: (content) => {
           void this.post({ type: 'responseDelta', content });
-        }
+        },
       });
-      if (!this.isCurrentRequest(request.id)) {
-        return;
+      await this.postRenderState(this.toViewState(result.state));
+      if (result.persistenceWarning) {
+        await this.post({
+          type: 'operationMessage',
+          message: `${this.strings.savedLocallyWarning} ${result.persistenceWarning}`,
+          error: true,
+        });
       }
-      this.history = boundConversation([...this.history, { role: 'assistant', content: response }]);
-      await this.post({ type: 'responseCompleted', segments: parseAssistantContent(response) });
     } catch (error) {
-      if (!this.isCurrentRequest(request.id)) {
-        return;
-      }
-      this.history = previousHistory;
+      await this.postRenderState();
       const message = this.errorMessage(error);
       await this.post({
-        type: 'responseFailed',
+        type: 'requestFailed',
         message,
         cancelled: /cancelled/iu.test(message),
+        question,
       });
-    } finally {
-      if (this.isCurrentRequest(request.id)) {
-        this.activeRequest = undefined;
-      }
     }
   }
 
-  private clearConversation(): void {
-    this.requestSequence += 1;
-    this.activeRequest?.controller.abort();
-    this.activeRequest = undefined;
-    this.history = [];
-    void this.post({ type: 'conversationCleared' });
+  private async postRenderState(renderState?: AiViewRenderState): Promise<void> {
+    const state = renderState ?? this.toViewState(await this.controller.renderState());
+    await this.post({
+      type: 'renderState',
+      composerHeight: this.composerHeight(),
+      presets: [...AI_PROVIDER_PRESETS],
+      state,
+      strings: this.strings,
+    });
+  }
+
+  private toViewState(state: Awaited<ReturnType<AiSessionController['renderState']>>): AiViewRenderState {
+    const currentConversation: AiDisplayConversation | undefined = state.currentConversation === undefined
+      ? undefined
+      : {
+        id: state.currentConversation.id,
+        title: state.currentConversation.title,
+        createdAt: state.currentConversation.createdAt,
+        updatedAt: state.currentConversation.updatedAt,
+        truncated: state.currentConversation.truncated === true,
+        messages: state.currentConversation.messages.map((message) => message.role === 'user'
+          ? {
+            id: message.id,
+            role: 'user',
+            createdAt: message.createdAt,
+            content: message.content,
+          }
+          : {
+            id: message.id,
+            role: 'assistant',
+            createdAt: message.createdAt,
+            ...(message.profileName === undefined ? {} : { profileName: message.profileName }),
+            segments: parseAssistantContent(message.content),
+          }),
+      };
+    return currentConversation === undefined
+      ? { busy: state.busy, profiles: state.profiles, history: state.history }
+      : { busy: state.busy, profiles: state.profiles, history: state.history, currentConversation };
+  }
+
+  private composerHeight(): number {
+    const stored = this.uiState.get(COMPOSER_HEIGHT_KEY);
+    return typeof stored === 'number' && Number.isFinite(stored)
+      ? Math.max(72, Math.min(600, Math.round(stored)))
+      : DEFAULT_COMPOSER_HEIGHT;
+  }
+
+  private async confirm(message: string, action: string): Promise<boolean> {
+    const choice = await vscode.window.showWarningMessage(message, { modal: true }, action);
+    return choice === action;
   }
 
   private async requireTrustedWorkspace(): Promise<boolean> {
@@ -193,10 +279,10 @@ export class SpssAiViewProvider implements vscode.WebviewViewProvider, vscode.Di
       return true;
     }
     const choice = await vscode.window.showWarningMessage(
-      'Sending an AI question is disabled in an untrusted workspace.',
-      'Manage Workspace Trust',
+      this.strings.untrustedWorkspace,
+      this.strings.manageWorkspaceTrust,
     );
-    if (choice === 'Manage Workspace Trust') {
+    if (choice === this.strings.manageWorkspaceTrust) {
       await vscode.commands.executeCommand('workbench.trust.manage');
     }
     return false;
@@ -206,12 +292,12 @@ export class SpssAiViewProvider implements vscode.WebviewViewProvider, vscode.Di
     return this.view?.webview.postMessage(message);
   }
 
-  private errorMessage(error: unknown): string {
-    return error instanceof Error ? error.message : String(error);
+  private async postOperationError(error: unknown): Promise<void> {
+    await this.post({ type: 'operationMessage', message: this.errorMessage(error), error: true });
   }
 
-  private isCurrentRequest(id: number): boolean {
-    return this.activeRequest?.id === id;
+  private errorMessage(error: unknown): string {
+    return error instanceof Error ? error.message : String(error);
   }
 
   private shellHtml(webview: vscode.Webview, mediaRoot: vscode.Uri): string {
@@ -235,34 +321,58 @@ export class SpssAiViewProvider implements vscode.WebviewViewProvider, vscode.Di
 </head>
 <body>
   <header class="ai-header">
-    <div><strong>SPSS AI</strong><span id="provider-summary">Not configured</span></div>
-    <button id="configure" type="button">Configure</button>
+    <strong id="ai-title">SPSS AI</strong>
+    <div class="header-actions">
+      <label class="profile-selector"><span id="active-profile-label"></span><select id="active-profile"></select></label>
+      <button id="new-chat" type="button"></button>
+      <button id="manage-profiles" type="button"></button>
+    </div>
   </header>
+  <nav id="tabs" class="tabs" aria-label="SPSS AI">
+    <button type="button" data-page="chat" id="tab-chat"></button>
+    <button type="button" data-page="history" id="tab-history"></button>
+    <button type="button" data-page="profiles" id="tab-profiles"></button>
+  </nav>
   <div id="banner" class="banner" hidden></div>
-  <section id="configuration" class="configuration" hidden>
-    <label>Provider<select id="provider"></select></label>
-    <label>Base URL<input id="base-url" type="url" autocomplete="off"></label>
-    <label>Model<input id="model" type="text" autocomplete="off"></label>
-    <label>API Key<input id="api-key" type="password" autocomplete="off" placeholder="Leave blank to keep the saved key"></label>
-    <div id="key-status" class="key-status"></div>
-    <div class="configuration-actions">
-      <button id="save-configuration" type="button">Save</button>
-      <button id="cancel-configuration" type="button">Cancel</button>
-      <button id="delete-key" type="button">Delete key</button>
-      <button id="provider-help" type="button">Official docs</button>
-    </div>
+  <section id="page-chat" class="page chat-page">
+    <div id="transcript-title" class="section-title"></div>
+    <main id="messages" aria-live="polite"></main>
+    <div id="splitter" class="splitter" role="separator" aria-orientation="horizontal" tabindex="0"></div>
+    <footer class="composer">
+      <textarea id="question" placeholder=""></textarea>
+      <div class="composer-actions">
+        <span id="sending-status" class="sending-status"></span>
+        <button id="stop" type="button" disabled></button>
+        <button id="send" type="button"></button>
+      </div>
+    </footer>
   </section>
-  <main id="messages" aria-live="polite">
-    <div id="empty-state" class="empty-state">Ask a question about SPSS Syntax. Only the text typed here is sent to the configured provider.</div>
-  </main>
-  <footer class="composer">
-    <textarea id="question" rows="3" placeholder="Ask about SPSS Syntax…"></textarea>
-    <div class="composer-actions">
-      <button id="send" type="button">Send</button>
-      <button id="stop" type="button" disabled>Stop</button>
-      <button id="clear" type="button">Clear</button>
-    </div>
-  </footer>
+  <section id="page-history" class="page history-page" hidden>
+    <div class="page-toolbar"><span id="history-heading"></span><button id="clear-history" type="button"></button></div>
+    <div id="history-list" class="history-list"></div>
+  </section>
+  <section id="page-profiles" class="page profiles-page" hidden>
+    <aside class="profiles-sidebar">
+      <button id="new-profile" type="button"></button>
+      <div id="profile-list" class="profile-list"></div>
+    </aside>
+    <form id="profile-form" class="profile-form">
+      <label><span id="profile-name-label"></span><input id="profile-name" type="text" maxlength="120" autocomplete="off"></label>
+      <label><span id="provider-label"></span><select id="provider"></select></label>
+      <label class="wide"><span id="base-url-label"></span><input id="base-url" type="url" autocomplete="off"></label>
+      <label><span id="model-label"></span><input id="model" type="text" autocomplete="off"></label>
+      <label><span id="api-key-label"></span><input id="api-key" type="password" autocomplete="off"></label>
+      <div id="key-status" class="key-status wide"></div>
+      <div class="profile-actions wide">
+        <button id="save-profile" type="submit"></button>
+        <button id="duplicate-profile" type="button"></button>
+        <button id="make-active" type="button"></button>
+        <button id="delete-key" type="button"></button>
+        <button id="delete-profile" type="button"></button>
+        <button id="provider-help" type="button"></button>
+      </div>
+    </form>
+  </section>
   <script nonce="${nonce}" src="${script.toString()}"></script>
 </body>
 </html>`;
