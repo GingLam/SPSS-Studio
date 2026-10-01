@@ -55,6 +55,9 @@
     "onCommand:spssStudio.showData",
     "onCommand:spssStudio.showVariables",
     "onCommand:spssStudio.showVariablePicker",
+    "onCommand:spssStudio.showAi",
+    "onCommand:spssStudio.configureAi",
+    "onView:spssStudio.aiView",
     "onCommand:spssStudio.refreshDataPreview",
     "onCommand:spssStudio.clearOutput"
   ],
@@ -133,6 +136,16 @@
         "icon": "$(symbol-variable)"
       },
       {
+        "command": "spssStudio.showAi",
+        "title": "SPSS: Show AI Assistant",
+        "icon": "$(comment-discussion)"
+      },
+      {
+        "command": "spssStudio.configureAi",
+        "title": "SPSS: Configure AI Provider",
+        "icon": "$(gear)"
+      },
+      {
         "command": "spssStudio.refreshDataPreview",
         "title": "SPSS: Refresh Data Preview"
       },
@@ -157,6 +170,38 @@
           "command": "spssStudio.runFile",
           "when": "resourceLangId == spss",
           "group": "navigation@3"
+        },
+        {
+          "command": "spssStudio.showAi",
+          "when": "resourceLangId == spss",
+          "group": "navigation@4"
+        }
+      ],
+      "view/title": [
+        {
+          "command": "spssStudio.configureAi",
+          "when": "view == spssStudio.aiView",
+          "group": "navigation"
+        }
+      ]
+    },
+    "viewsContainers": {
+      "panel": [
+        {
+          "id": "spssStudioAi",
+          "title": "SPSS AI",
+          "icon": "images/ai.svg"
+        }
+      ]
+    },
+    "views": {
+      "spssStudioAi": [
+        {
+          "type": "webview",
+          "id": "spssStudio.aiView",
+          "name": "SPSS Syntax Assistant",
+          "visibility": "visible",
+          "contextualTitle": "SPSS AI"
         }
       ]
     },
@@ -217,6 +262,12 @@
           "default": false,
           "scope": "machine-overridable",
           "description": "Write additional bridge diagnostics without intentionally logging credentials."
+        },
+        "spssStudio.aiAutoReveal": {
+          "type": "boolean",
+          "default": true,
+          "scope": "window",
+          "description": "Reveal the SPSS AI bottom panel the first time an SPSS Syntax editor becomes active."
         }
       }
     }

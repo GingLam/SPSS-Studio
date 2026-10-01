@@ -73,6 +73,7 @@ describe('SPSS Studio Extension Host', () => {
     await configuration.update('startupTimeoutSeconds', 10, vscode.ConfigurationTarget.Workspace);
     await configuration.update('executionTimeoutSeconds', 10, vscode.ConfigurationTarget.Workspace);
     await configuration.update('autoStart', true, vscode.ConfigurationTarget.Workspace);
+    await configuration.update('aiAutoReveal', false, vscode.ConfigurationTarget.Workspace);
 
     const languages = await vscode.languages.getLanguages();
     assert.ok(languages.includes('spss'));
@@ -96,6 +97,8 @@ describe('SPSS Studio Extension Host', () => {
       'spssStudio.showVariables',
       'spssStudio.showVariablePicker',
       'spssStudio.insertVariable',
+      'spssStudio.showAi',
+      'spssStudio.configureAi',
       'spssStudio.refreshDataPreview',
       'spssStudio.clearOutput',
     ];

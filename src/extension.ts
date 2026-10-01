@@ -1,4 +1,6 @@
 import * as vscode from 'vscode';
+import { OpenAiCompatibleClient } from './ai/openAiCompatibleClient';
+import { ProviderConfigurationStore } from './ai/providerConfigurationStore';
 import {
   restartEngine,
   showStatus,
@@ -23,6 +25,7 @@ import { VariableCache } from './spss/variableCache';
 import type { EngineState } from './spss/types';
 import { StudioSession } from './studioSession';
 import { OutputStore } from './views/outputStore';
+import { SpssAiViewProvider } from './views/spssAiViewProvider';
 import { SpssStudioPanel } from './views/spssStudioPanel';
 
 let engineService: EngineService | undefined;
@@ -136,6 +139,24 @@ export function activate(context: vscode.ExtensionContext): SpssStudioExtensionA
   const editorTarget = new SpssEditorTargetTracker();
   const variableInlayProvider = new SpssVariableInlayProvider(variableCache);
   const variableCommandDependencies = { variableCache, editorTarget };
+  const aiViewProvider = new SpssAiViewProvider(
+    context.extensionUri,
+    new ProviderConfigurationStore(context.globalState, context.secrets),
+    new OpenAiCompatibleClient(),
+    editorTarget,
+  );
+  let aiAutoRevealed = false;
+  const autoRevealAi = (editor: vscode.TextEditor | undefined): void => {
+    if (
+      aiAutoRevealed
+      || editor?.document.languageId !== 'spss'
+      || !vscode.workspace.getConfiguration('spssStudio').get<boolean>('aiAutoReveal', true)
+    ) {
+      return;
+    }
+    aiAutoRevealed = true;
+    void aiViewProvider.reveal(true);
+  };
 
   context.subscriptions.push(
     output,
@@ -145,8 +166,11 @@ export function activate(context: vscode.ExtensionContext): SpssStudioExtensionA
     variableCache,
     editorTarget,
     variableInlayProvider,
+    aiViewProvider,
     vscode.languages.registerCompletionItemProvider('spss', completionProvider, '/', '.'),
     vscode.languages.registerInlayHintsProvider('spss', variableInlayProvider),
+    vscode.window.registerWebviewViewProvider('spssStudio.aiView', aiViewProvider),
+    vscode.window.onDidChangeActiveTextEditor(autoRevealAi),
     vscode.commands.registerCommand('spssStudio.undo', undoLastEdit),
     vscode.commands.registerCommand(
       'spssStudio.runSelection',
@@ -182,7 +206,10 @@ export function activate(context: vscode.ExtensionContext): SpssStudioExtensionA
       'spssStudio.showVariablePicker',
       async () => showVariablePicker(variableCommandDependencies),
     ),
+    vscode.commands.registerCommand('spssStudio.showAi', async () => aiViewProvider.reveal(false)),
+    vscode.commands.registerCommand('spssStudio.configureAi', async () => aiViewProvider.showConfiguration()),
   );
+  autoRevealAi(vscode.window.activeTextEditor);
 
   return {
     getStatusBarText: () => statusBar.text,

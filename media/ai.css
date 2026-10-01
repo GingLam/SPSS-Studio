@@ -1,0 +1,242 @@
+:root {
+  color-scheme: light dark;
+  font-family: var(--vscode-font-family);
+  font-size: var(--vscode-font-size);
+  color: var(--vscode-foreground);
+  background: var(--vscode-panel-background, var(--vscode-editor-background));
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  display: grid;
+  grid-template-rows: auto auto auto minmax(120px, 1fr) auto;
+  height: 100vh;
+  margin: 0;
+  overflow: hidden;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button {
+  padding: 3px 9px;
+  color: var(--vscode-button-foreground);
+  background: var(--vscode-button-background);
+  border: 1px solid transparent;
+  border-radius: 2px;
+  cursor: pointer;
+}
+
+button:hover:not(:disabled) {
+  background: var(--vscode-button-hoverBackground);
+}
+
+button:disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+
+.ai-header,
+.composer-actions,
+.configuration-actions,
+.code-header,
+.code-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ai-header {
+  justify-content: space-between;
+  min-height: 34px;
+  padding: 5px 10px;
+  border-bottom: 1px solid var(--vscode-panel-border);
+}
+
+.ai-header strong {
+  margin-right: 10px;
+}
+
+#provider-summary,
+.key-status,
+.message-label {
+  color: var(--vscode-descriptionForeground);
+  font-size: 0.9em;
+}
+
+.banner {
+  padding: 6px 10px;
+  color: var(--vscode-notificationsInfoIcon-foreground);
+  background: var(--vscode-textBlockQuote-background);
+  border-bottom: 1px solid var(--vscode-panel-border);
+  white-space: pre-wrap;
+}
+
+.banner.error {
+  color: var(--vscode-errorForeground);
+}
+
+.configuration {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(140px, 1fr));
+  gap: 7px 10px;
+  padding: 8px 10px;
+  background: var(--vscode-sideBar-background);
+  border-bottom: 1px solid var(--vscode-panel-border);
+}
+
+.configuration[hidden],
+.banner[hidden] {
+  display: none;
+}
+
+.configuration label {
+  display: grid;
+  gap: 3px;
+}
+
+.configuration input,
+.configuration select,
+.composer textarea {
+  width: 100%;
+  color: var(--vscode-input-foreground);
+  background: var(--vscode-input-background);
+  border: 1px solid var(--vscode-input-border, transparent);
+  outline: none;
+}
+
+.configuration input,
+.configuration select {
+  height: 28px;
+  padding: 3px 6px;
+}
+
+.configuration input:focus,
+.configuration select:focus,
+.composer textarea:focus {
+  border-color: var(--vscode-focusBorder);
+}
+
+.configuration-actions,
+.key-status {
+  grid-column: 1 / -1;
+}
+
+#messages {
+  overflow: auto;
+  padding: 8px 10px;
+}
+
+.empty-state {
+  max-width: 720px;
+  margin: 20px auto;
+  color: var(--vscode-descriptionForeground);
+  text-align: center;
+}
+
+.message {
+  max-width: 920px;
+  margin: 0 auto 10px;
+}
+
+.message-label {
+  margin-bottom: 3px;
+  font-weight: 600;
+}
+
+.message-body {
+  padding: 8px 10px;
+  background: var(--vscode-editorWidget-background);
+  border: 1px solid var(--vscode-editorWidget-border);
+  border-radius: 5px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.message.user .message-body {
+  background: var(--vscode-textBlockQuote-background);
+}
+
+.message-body.streaming {
+  font-family: var(--vscode-editor-font-family);
+}
+
+.prose + .code-block,
+.code-block + .prose,
+.code-block + .code-block {
+  margin-top: 8px;
+}
+
+.code-block {
+  overflow: hidden;
+  background: var(--vscode-textCodeBlock-background);
+  border: 1px solid var(--vscode-panel-border);
+  border-radius: 4px;
+}
+
+.code-header {
+  justify-content: space-between;
+  min-height: 30px;
+  padding: 3px 5px 3px 9px;
+  color: var(--vscode-descriptionForeground);
+  background: var(--vscode-editorGroupHeader-tabsBackground);
+  border-bottom: 1px solid var(--vscode-panel-border);
+}
+
+.code-actions button {
+  padding: 2px 7px;
+  color: var(--vscode-button-secondaryForeground);
+  background: var(--vscode-button-secondaryBackground);
+}
+
+.code-actions button:hover {
+  background: var(--vscode-button-secondaryHoverBackground);
+}
+
+.code-block pre {
+  margin: 0;
+  padding: 10px;
+  overflow: auto;
+  white-space: pre;
+}
+
+.code-block code {
+  font-family: var(--vscode-editor-font-family);
+  font-size: var(--vscode-editor-font-size);
+}
+
+.composer {
+  padding: 8px 10px;
+  border-top: 1px solid var(--vscode-panel-border);
+}
+
+.composer textarea {
+  min-height: 54px;
+  max-height: 180px;
+  padding: 7px;
+  resize: vertical;
+}
+
+.composer-actions {
+  justify-content: flex-end;
+  margin-top: 6px;
+}
+
+@media (max-width: 760px) {
+  .configuration {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 480px) {
+  .configuration {
+    grid-template-columns: 1fr;
+  }
+}
