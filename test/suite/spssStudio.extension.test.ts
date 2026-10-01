@@ -77,7 +77,7 @@ describe('SPSS Studio Extension Host', () => {
     const languages = await vscode.languages.getLanguages();
     assert.ok(languages.includes('spss'));
 
-    const extension = vscode.extensions.getExtension<SpssStudioExtensionApi>('ginglam.spss-studio');
+    const extension = vscode.extensions.getExtension<SpssStudioExtensionApi>('jinglin.spss-studio');
     assert.ok(extension);
     const api = await extension.activate();
     assert.equal(api.outputChannelName, 'SPSS');
@@ -94,6 +94,8 @@ describe('SPSS Studio Extension Host', () => {
       'spssStudio.showOutput',
       'spssStudio.showData',
       'spssStudio.showVariables',
+      'spssStudio.showVariablePicker',
+      'spssStudio.insertVariable',
       'spssStudio.refreshDataPreview',
       'spssStudio.clearOutput',
     ];
@@ -132,6 +134,17 @@ describe('SPSS Studio Extension Host', () => {
     await waitForOperation(capturePath, 'datasetInfo');
     assert.equal(api.getVariableCount(), 2);
     assert.ok((await completionLabels('DESCRIPTIVES VARIABLES=hou')).includes('HouseholdIncome'));
+
+    const variablePosition = new vscode.Position(1, 0);
+    editor.selection = new vscode.Selection(variablePosition, variablePosition);
+    await vscode.commands.executeCommand('spssStudio.insertVariable', 'HouseholdIncome');
+    assert.equal(document.lineAt(1).text.startsWith('HouseholdIncome'), true);
+    await vscode.commands.executeCommand('spssStudio.undo');
+    await waitForValue(
+      () => document.lineAt(1).text.startsWith('HouseholdIncome'),
+      false,
+      'variable insertion undo',
+    );
 
     const currentPosition = new vscode.Position(2, 10);
     editor.selection = new vscode.Selection(currentPosition, currentPosition);
@@ -181,7 +194,7 @@ describe('SPSS Studio Extension Host', () => {
     assert.equal(api.getEngineState(), 'stopped');
     assert.equal(api.getVariableCount(), 0);
     await vscode.commands.executeCommand('spssStudio.restartEngine');
-    assert.equal(api.getEngineState(), 'ready');
+    await waitForValue(() => api.getEngineState(), 'ready', 'engine restart');
     await vscode.commands.executeCommand('spssStudio.stopEngine');
   });
 });

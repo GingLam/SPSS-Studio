@@ -54,6 +54,7 @@
     "onCommand:spssStudio.showOutput",
     "onCommand:spssStudio.showData",
     "onCommand:spssStudio.showVariables",
+    "onCommand:spssStudio.showVariablePicker",
     "onCommand:spssStudio.refreshDataPreview",
     "onCommand:spssStudio.clearOutput"
   ],
@@ -125,6 +126,11 @@
       {
         "command": "spssStudio.showVariables",
         "title": "SPSS: Show Variables"
+      },
+      {
+        "command": "spssStudio.showVariablePicker",
+        "title": "SPSS: Search Active Dataset Variables",
+        "icon": "$(symbol-variable)"
       },
       {
         "command": "spssStudio.refreshDataPreview",

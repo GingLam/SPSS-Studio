@@ -13,8 +13,11 @@ import {
 } from './commands/executionCommands';
 import { requireTrustedWorkspace } from './commands/workspaceTrust';
 import { undoLastEdit } from './commands/editorCommands';
+import { insertVariable, showVariablePicker } from './commands/variableCommands';
+import { SpssEditorTargetTracker } from './editor/spssEditorTargetTracker';
 import { SpssCompletionProvider } from './language/completionProvider';
 import { loadLanguageSchema } from './language/languageSchema';
+import { SpssVariableInlayProvider } from './language/variableInlayProvider';
 import { EngineService, type SpssRuntimeConfiguration } from './spss/engineService';
 import { VariableCache } from './spss/variableCache';
 import type { EngineState } from './spss/types';
@@ -130,13 +133,20 @@ export function activate(context: vscode.ExtensionContext): SpssStudioExtensionA
     loadLanguageSchema(context.extensionPath),
     variableCache,
   );
+  const editorTarget = new SpssEditorTargetTracker();
+  const variableInlayProvider = new SpssVariableInlayProvider(variableCache);
+  const variableCommandDependencies = { variableCache, editorTarget };
 
   context.subscriptions.push(
     output,
     statusBar,
     outputStore,
     studioPanel,
+    variableCache,
+    editorTarget,
+    variableInlayProvider,
     vscode.languages.registerCompletionItemProvider('spss', completionProvider, '/', '.'),
+    vscode.languages.registerInlayHintsProvider('spss', variableInlayProvider),
     vscode.commands.registerCommand('spssStudio.undo', undoLastEdit),
     vscode.commands.registerCommand(
       'spssStudio.runSelection',
@@ -164,6 +174,14 @@ export function activate(context: vscode.ExtensionContext): SpssStudioExtensionA
       }
     }),
     vscode.commands.registerCommand('spssStudio.clearOutput', () => studio.clearOutput()),
+    vscode.commands.registerCommand(
+      'spssStudio.insertVariable',
+      async (variableName: unknown) => insertVariable(variableCommandDependencies, variableName),
+    ),
+    vscode.commands.registerCommand(
+      'spssStudio.showVariablePicker',
+      async () => showVariablePicker(variableCommandDependencies),
+    ),
   );
 
   return {
