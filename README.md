@@ -18,8 +18,8 @@ Contact：[linjing@nufe.edu.cn](mailto:linjing@nufe.edu.cn)
 - A persistent, serialized local SPSS backend.
 - Native OMS HTML output with run history, safe standalone HTML export, and browser-based printing.
 - Read-only Data and Variables views for the current Active Dataset.
-- Clickable Active Dataset variable names at the start of the editor, with label tooltips and a searchable complete-variable picker.
-- A lightweight bottom-panel SPSS AI question-and-answer workspace with multiple DeepSeek, Zhipu GLM, Qwen, Doubao, and custom OpenAI-compatible model profiles.
+- A read-only Variables table whose Name cells can be double-clicked to insert the exact cached variable at the last `.sps` cursor position.
+- A lightweight SPSS AI question-and-answer workspace embedded as the fourth SPSS Studio tab, with multiple DeepSeek, Zhipu GLM, Qwen, Doubao, and custom OpenAI-compatible model profiles.
 - Insert and Copy controls on every AI response code block; generated code is never run automatically.
 - Automatic IBM SPSS Statistics discovery on macOS and Windows, with manual path overrides.
 
@@ -65,15 +65,13 @@ Execution statuses are `SUCCESS`, `SUCCESS_NO_OUTPUT`, `WARNING`, `ERROR`, `ENGI
 
 **SPSS: Show Data** opens a read-only view of the current Active Dataset. Rows are paged, while variables are available through continuous horizontal scrolling. The bridge never calls `fetchall` and limits each request to 500 rows and 200 variables.
 
-**SPSS: Show Variables** displays variable order, Name, Label, Type, Format, and Measure. It reuses metadata already cached for completion and Data preview and does not modify the SPSS data dictionary.
-
-After syntax creates or opens an Active Dataset, the first line of each `.sps` editor displays up to 50 cached variable names. Hovering a name shows its Label; clicking it inserts the exact variable name at the current selection. Datasets with more than 50 variables include **More Variables…**, which opens a searchable native picker containing the complete cached dictionary. **SPSS: Search Active Dataset Variables** opens the same picker at any time.
-
-The variable strip is a VS Code inlay hint. It uses the existing metadata cache, does not read case values, does not poll SPSS, and disappears when the engine or Active Dataset state is cleared.
+**SPSS: Show Variables** displays variable order, Name, Label, Type, Format, and Measure. It reuses metadata already cached for completion and Data preview and does not modify the SPSS data dictionary. Double-click a cell in the **Name** column to insert that exact cached variable at the most recently used `.sps` selection. Other cells are read-only and do not insert text. The insertion is one ordinary, undoable editor operation; it does not save or execute syntax.
 
 ## SPSS AI
 
-The **SPSS AI** view appears in the bottom panel while the native `.sps` editor remains above it. It is a question-and-answer tool for SPSS Syntax and does not control the SPSS engine. Its compact header exposes **Current Chat** and **Chat History**; use **Manage Models** to open the model-profile editor without duplicating it as a third navigation tab. The boundary between the transcript and question box can be dragged with the mouse or adjusted from the keyboard.
+The reusable SPSS Studio panel opens beside the native `.sps` editor and contains four tabs in this order: **Output**, **Data**, **Variables**, and **SPSS AI**. Opening a `.sps` file alone does not open the panel. Running syntax opens **Output**; the Show Data, Show Variables, Show AI Assistant, and Manage AI Model Profiles commands open their corresponding Studio location. The extension does not contribute or automatically reveal a native VS Code bottom-panel view.
+
+The **SPSS AI** tab is a question-and-answer tool for SPSS Syntax and does not control the SPSS engine. Its compact header exposes **Current Chat** and **Chat History**; use **Manage Models** to open the model-profile editor without duplicating it as a third navigation tab. The boundary between the transcript and question box can be dragged with the mouse or adjusted from the keyboard.
 
 Configure it from **Manage Models** or run **SPSS: Manage AI Model Profiles**:
 
@@ -118,7 +116,6 @@ Model output is untrusted and can be wrong. Inspect generated syntax before runn
 - **SPSS: Show Output**
 - **SPSS: Show Data**
 - **SPSS: Show Variables**
-- **SPSS: Search Active Dataset Variables**
 - **SPSS: Show AI Assistant**
 - **SPSS: Manage AI Model Profiles**
 - **SPSS: Refresh Data Preview**
@@ -135,7 +132,6 @@ Model output is untrusted and can be wrong. Inspect generated syntax before runn
 | `spssStudio.dataPreviewPageSize` | `100` | Active Dataset rows per page: 25, 50, 100, 200, or 500. |
 | `spssStudio.autoStart` | `true` | Start the engine when syntax is first executed. |
 | `spssStudio.debugLogging` | `false` | Write additional bridge diagnostics. |
-| `spssStudio.aiAutoReveal` | `true` | Reveal the SPSS AI bottom panel when an SPSS editor first becomes active. |
 
 On Windows, JSON settings paths must escape backslashes, for example `C:\\Program Files\\IBM\\SPSS Statistics\\32`.
 

@@ -18,17 +18,16 @@ import {
 } from './commands/executionCommands';
 import { requireTrustedWorkspace } from './commands/workspaceTrust';
 import { undoLastEdit } from './commands/editorCommands';
-import { insertVariable, showVariablePicker } from './commands/variableCommands';
+import { insertCachedVariable } from './commands/variableCommands';
 import { SpssEditorTargetTracker } from './editor/spssEditorTargetTracker';
 import { SpssCompletionProvider } from './language/completionProvider';
 import { loadLanguageSchema } from './language/languageSchema';
-import { SpssVariableInlayProvider } from './language/variableInlayProvider';
 import { EngineService, type SpssRuntimeConfiguration } from './spss/engineService';
 import { VariableCache } from './spss/variableCache';
 import type { EngineState } from './spss/types';
 import { StudioSession } from './studioSession';
 import { OutputStore } from './views/outputStore';
-import { SpssAiViewProvider } from './views/spssAiViewProvider';
+import { SpssAiPanelController } from './views/spssAiPanelController';
 import { SpssStudioPanel } from './views/spssStudioPanel';
 
 let engineService: EngineService | undefined;
@@ -97,6 +96,56 @@ export function activate(context: vscode.ExtensionContext): SpssStudioExtensionA
     },
   });
   const variableCache = new VariableCache();
+  const editorTarget = new SpssEditorTargetTracker();
+  const variableCommandDependencies = { variableCache, editorTarget };
+  const modelProfiles = new ModelProfileStore(context.globalState, context.secrets);
+  const conversationStore = new ConversationStore(
+    vscode.Uri.joinPath(context.globalStorageUri, 'ai-history').fsPath,
+    {
+      onWarning: (message) => {
+        void vscode.window.showWarningMessage(message);
+      },
+    },
+  );
+  const aiInitialization = migrateLegacyProviderConfiguration(
+    context.globalState,
+    context.secrets,
+    modelProfiles,
+  ).catch((error: unknown) => {
+    const message = error instanceof Error ? error.message : String(error);
+    void vscode.window.showErrorMessage(`SPSS AI configuration migration failed: ${message}`);
+  });
+  const aiPanelController = new SpssAiPanelController(
+    new AiSessionController(modelProfiles, conversationStore, new OpenAiCompatibleClient()),
+    {
+      insertCode: (code) => editorTarget.insert(code),
+      showWarning: (message) => {
+        void vscode.window.showWarningMessage(message);
+      },
+      writeClipboard: (code) => vscode.env.clipboard.writeText(code),
+      openExternal: (url) => vscode.env.openExternal(vscode.Uri.parse(url)),
+      confirm: async (message, action) => {
+        const choice = await vscode.window.showWarningMessage(message, { modal: true }, action);
+        return choice === action;
+      },
+      requireTrustedWorkspace: async (strings) => {
+        if (vscode.workspace.isTrusted) {
+          return true;
+        }
+        const choice = await vscode.window.showWarningMessage(
+          strings.untrustedWorkspace,
+          strings.manageWorkspaceTrust,
+        );
+        if (choice === strings.manageWorkspaceTrust) {
+          await vscode.commands.executeCommand('workbench.trust.manage');
+        }
+        return false;
+      },
+    },
+    context.globalState,
+    aiInitialization,
+    vscode.env.language,
+  );
   outputStore = new OutputStore();
   studioPanel = new SpssStudioPanel(context.extensionUri, outputStore, {
     requestDatasetPage: async (page) => {
@@ -114,8 +163,9 @@ export function activate(context: vscode.ExtensionContext): SpssStudioExtensionA
         await studioHolder.current?.refreshVariables();
       }
     },
+    insertVariable: async (name) => insertCachedVariable(variableCommandDependencies, name),
     clearOutput: () => studioHolder.current?.clearOutput(),
-  });
+  }, aiPanelController);
   const studio = new StudioSession(
     engineService,
     variableCache,
@@ -139,46 +189,6 @@ export function activate(context: vscode.ExtensionContext): SpssStudioExtensionA
     loadLanguageSchema(context.extensionPath),
     variableCache,
   );
-  const editorTarget = new SpssEditorTargetTracker();
-  const variableInlayProvider = new SpssVariableInlayProvider(variableCache);
-  const variableCommandDependencies = { variableCache, editorTarget };
-  const modelProfiles = new ModelProfileStore(context.globalState, context.secrets);
-  const conversationStore = new ConversationStore(
-    vscode.Uri.joinPath(context.globalStorageUri, 'ai-history').fsPath,
-    {
-      onWarning: (message) => {
-        void vscode.window.showWarningMessage(message);
-      },
-    },
-  );
-  const aiInitialization = migrateLegacyProviderConfiguration(
-    context.globalState,
-    context.secrets,
-    modelProfiles,
-  ).catch((error: unknown) => {
-    const message = error instanceof Error ? error.message : String(error);
-    void vscode.window.showErrorMessage(`SPSS AI configuration migration failed: ${message}`);
-  });
-  const aiViewProvider = new SpssAiViewProvider(
-    context.extensionUri,
-    new AiSessionController(modelProfiles, conversationStore, new OpenAiCompatibleClient()),
-    editorTarget,
-    context.globalState,
-    aiInitialization,
-  );
-  let aiAutoRevealed = false;
-  const autoRevealAi = (editor: vscode.TextEditor | undefined): void => {
-    if (
-      aiAutoRevealed
-      || editor?.document.languageId !== 'spss'
-      || !vscode.workspace.getConfiguration('spssStudio').get<boolean>('aiAutoReveal', true)
-    ) {
-      return;
-    }
-    aiAutoRevealed = true;
-    void aiViewProvider.reveal(true);
-  };
-
   context.subscriptions.push(
     output,
     statusBar,
@@ -186,12 +196,8 @@ export function activate(context: vscode.ExtensionContext): SpssStudioExtensionA
     studioPanel,
     variableCache,
     editorTarget,
-    variableInlayProvider,
-    aiViewProvider,
+    aiPanelController,
     vscode.languages.registerCompletionItemProvider('spss', completionProvider, '/', '.'),
-    vscode.languages.registerInlayHintsProvider('spss', variableInlayProvider),
-    vscode.window.registerWebviewViewProvider('spssStudio.aiView', aiViewProvider),
-    vscode.window.onDidChangeActiveTextEditor(autoRevealAi),
     vscode.commands.registerCommand('spssStudio.undo', undoLastEdit),
     vscode.commands.registerCommand(
       'spssStudio.runSelection',
@@ -219,18 +225,9 @@ export function activate(context: vscode.ExtensionContext): SpssStudioExtensionA
       }
     }),
     vscode.commands.registerCommand('spssStudio.clearOutput', () => studio.clearOutput()),
-    vscode.commands.registerCommand(
-      'spssStudio.insertVariable',
-      async (variableName: unknown) => insertVariable(variableCommandDependencies, variableName),
-    ),
-    vscode.commands.registerCommand(
-      'spssStudio.showVariablePicker',
-      async () => showVariablePicker(variableCommandDependencies),
-    ),
-    vscode.commands.registerCommand('spssStudio.showAi', async () => aiViewProvider.reveal(false)),
-    vscode.commands.registerCommand('spssStudio.configureAi', async () => aiViewProvider.showConfiguration()),
+    vscode.commands.registerCommand('spssStudio.showAi', () => studioPanel?.showAi('chat')),
+    vscode.commands.registerCommand('spssStudio.configureAi', () => studioPanel?.showAi('profiles')),
   );
-  autoRevealAi(vscode.window.activeTextEditor);
 
   return {
     getStatusBarText: () => statusBar.text,

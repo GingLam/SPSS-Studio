@@ -1,5 +1,4 @@
 {
   "spssStudio.command.showAi": "SPSS: Show AI Assistant",
-  "spssStudio.command.configureAi": "SPSS: Manage AI Model Profiles",
-  "spssStudio.view.ai": "SPSS Syntax Assistant"
+  "spssStudio.command.configureAi": "SPSS: Manage AI Model Profiles"
 }

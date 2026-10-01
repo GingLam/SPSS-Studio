@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.6.0 — 2026-10-01
+
+- Consolidated the product into a two-column workflow: the native `.sps` editor on the left and one reusable SPSS Studio panel on the right.
+- Embedded SPSS AI as the fourth Studio tab after Output, Data, and Variables while preserving chat, history, model profiles, resizing, code highlighting, Insert, and Copy.
+- Removed the standalone SPSS AI bottom-panel contribution, automatic reveal behavior, and redundant native-panel integration.
+- Removed the editor variable inlay strip, More Variables action, and searchable variable-picker command.
+- Added exact-cache, undoable variable insertion by double-clicking only a Name cell in the Variables tab.
+- Stopped engine lifecycle and status commands from automatically revealing VS Code's Output panel; diagnostics remain available in the background SPSS OutputChannel.
+- Added scoped shell messaging and regression coverage for the unified Studio/AI Webview.
+
 ## 0.5.0 — 2026-10-01
 
 - Rebuilt SPSS AI as one lightweight Webview with Current Chat and Chat History navigation plus model management opened from a dedicated Manage Models button.

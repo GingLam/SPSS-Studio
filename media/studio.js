@@ -2,7 +2,8 @@
   'use strict';
 
   const vscode = acquireVsCodeApi();
-  const savedState = vscode.getState() || {};
+  let persistedState = vscode.getState() || {};
+  const savedStudioState = persistedState.studio || persistedState;
   const DATA_ROW_NUMBER_WIDTH = 64;
   const DATA_VARIABLE_WIDTH = 160;
   const DATA_VARIABLE_CHUNK = 50;
@@ -24,11 +25,27 @@
     variablePageSize: 100,
     requestId: 0,
     generation: 0,
-    historyWidth: Number(savedState.historyWidth) || 240,
+    historyWidth: Number(savedStudioState.historyWidth) || 240,
   };
 
   const byId = (id) => document.getElementById(id);
-  const tabs = ['output', 'data', 'variables'];
+  const tabs = ['output', 'data', 'variables', 'ai'];
+
+  function postStudio(message) {
+    vscode.postMessage({ scope: 'studio', message });
+  }
+
+  function updatePersistedState(scope, value) {
+    persistedState = { ...persistedState, [scope]: value };
+    vscode.setState(persistedState);
+  }
+
+  const aiModule = window.createSpssAiModule({
+    root: byId('spss-ai'),
+    postMessage: (message) => vscode.postMessage({ scope: 'ai', message }),
+    getState: () => persistedState.ai || {},
+    setState: (value) => updatePersistedState('ai', value),
+  });
 
   function showTab(tab, notify = true) {
     state.activeTab = tab;
@@ -37,10 +54,16 @@
       byId(`${candidate}-tab`).classList.toggle('active', candidate === tab);
     }
     if (notify) {
-      const messages = { output: 'showOutput', data: 'showData', variables: 'showVariables' };
-      vscode.postMessage({ type: messages[tab] });
+      const messages = {
+        output: 'showOutput',
+        data: 'showData',
+        variables: 'showVariables',
+        ai: 'showAi',
+      };
+      postStudio({ type: messages[tab] });
     }
     if (tab === 'data') window.setTimeout(requestVisiblePage, 0);
+    if (tab === 'ai') window.requestAnimationFrame(() => aiModule.resize());
   }
 
   function statusLabel(status) {
@@ -60,7 +83,7 @@
       detail.className = 'run-status';
       detail.textContent = `${statusLabel(record.status)} · ${new Date(record.timestamp).toLocaleTimeString()}`;
       button.append(title, detail);
-      button.addEventListener('click', () => vscode.postMessage({ type: 'selectExecution', id: record.id }));
+      button.addEventListener('click', () => postStudio({ type: 'selectExecution', id: record.id }));
       container.append(button);
     }
   }
@@ -118,6 +141,7 @@
     if (className) cell.className = className;
     cell.textContent = value;
     row.append(cell);
+    return cell;
   }
 
   function renderVariables() {
@@ -130,7 +154,15 @@
     visible.forEach((variable, index) => {
       const row = document.createElement('tr');
       appendTextCell(row, String(state.variablePageOffset + index + 1), 'row-number');
-      appendTextCell(row, String(variable.name || '—'));
+      const name = String(variable.name || '—');
+      const nameCell = appendTextCell(row, name, 'variable-name');
+      nameCell.title = document.documentElement.lang.toLowerCase().startsWith('zh')
+        ? `双击插入 ${name}`
+        : `Double-click to insert ${name}`;
+      nameCell.addEventListener('dblclick', (event) => {
+        event.preventDefault();
+        postStudio({ type: 'insertVariable', name });
+      });
       appendTextCell(row, String(variable.label || '—'));
       appendTextCell(row, String(variable.type || '—'));
       appendTextCell(row, String(variable.format || '—'));
@@ -236,7 +268,7 @@
     if (state.pendingData.has(key)) return;
     state.pendingData.add(key);
     state.requestId += 1;
-    vscode.postMessage({
+    postStudio({
       type: 'requestDatasetPage',
       offset: state.rowOffset,
       limit: state.pageSize,
@@ -260,24 +292,25 @@
     const maximum = Math.max(minimum, Math.floor(window.innerWidth * 0.55));
     state.historyWidth = Math.max(minimum, Math.min(maximum, Math.round(width)));
     document.documentElement.style.setProperty('--history-width', `${state.historyWidth}px`);
-    vscode.setState({ historyWidth: state.historyWidth });
+    updatePersistedState('studio', { historyWidth: state.historyWidth });
   }
 
   byId('output-tab').addEventListener('click', () => showTab('output'));
   byId('data-tab').addEventListener('click', () => showTab('data'));
   byId('variables-tab').addEventListener('click', () => showTab('variables'));
-  byId('clear-output').addEventListener('click', () => vscode.postMessage({ type: 'clearOutput' }));
+  byId('ai-tab').addEventListener('click', () => showTab('ai'));
+  byId('clear-output').addEventListener('click', () => postStudio({ type: 'clearOutput' }));
   byId('export-output').addEventListener('click', () => {
-    if (state.selectedId) vscode.postMessage({ type: 'exportOutput', id: state.selectedId });
+    if (state.selectedId) postStudio({ type: 'exportOutput', id: state.selectedId });
   });
   byId('print-output').addEventListener('click', () => {
-    if (state.selectedId) vscode.postMessage({ type: 'printOutput', id: state.selectedId });
+    if (state.selectedId) postStudio({ type: 'printOutput', id: state.selectedId });
   });
   byId('refresh-data').addEventListener('click', () => {
     resetDataRequests(false);
-    vscode.postMessage({ type: 'refreshData' });
+    postStudio({ type: 'refreshData' });
   });
-  byId('refresh-variables').addEventListener('click', () => vscode.postMessage({ type: 'refreshVariables' }));
+  byId('refresh-variables').addEventListener('click', () => postStudio({ type: 'refreshVariables' }));
   byId('previous-page').addEventListener('click', () => {
     state.rowOffset = Math.max(0, state.rowOffset - state.pageSize);
     resetDataRequests(false);
@@ -330,7 +363,15 @@
   });
 
   window.addEventListener('message', (event) => {
-    const message = event.data;
+    const envelope = event.data;
+    if (envelope.scope === 'ai') {
+      aiModule.handleMessage(envelope.message);
+      return;
+    }
+    if (envelope.scope !== 'studio') {
+      return;
+    }
+    const message = envelope.message;
     if (message.type === 'executionStarted' || message.type === 'executionCompleted') {
       state.history = message.history;
       state.selectedId = message.selectedId;
@@ -376,6 +417,8 @@
       showTab('data', false);
     } else if (message.type === 'showVariables') {
       showTab('variables', false);
+    } else if (message.type === 'showAi') {
+      showTab('ai', false);
     } else if (message.type === 'outputCleared') {
       state.history = [];
       state.selectedId = undefined;
@@ -388,4 +431,5 @@
 
   setHistoryWidth(state.historyWidth);
   renderVariables();
+  vscode.postMessage({ scope: 'shell', type: 'ready' });
 }());

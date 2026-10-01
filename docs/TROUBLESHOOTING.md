@@ -52,9 +52,9 @@ Wide datasets are loaded in variable chunks while one continuous scrollbar repre
 
 Variable candidates require an Active Dataset metadata refresh. Run the syntax that creates/opens the dataset successfully, use **SPSS: Refresh Data Preview**, or open **SPSS: Show Data**. Starting, stopping, restarting, or losing the engine intentionally clears the cache.
 
-## The variable strip is missing
+## Double-clicking a variable name does not insert it
 
-The editor strip uses the same Active Dataset cache as completion. First run syntax that creates or opens a dataset. If completion contains dataset variables but the strip is still absent, confirm that VS Code inlay hints are enabled in the editor settings. The strip contains at most 50 names; use **More Variables…** or **SPSS: Search Active Dataset Variables** for the complete list.
+First run syntax that creates or opens an Active Dataset, then open **SPSS: Show Variables**. Double-click the cell in the **Name** column, not its Label, Type, Format, or Measure cell. SPSS Studio inserts only names that still match the current metadata cache. Keep a `.sps` editor open; the insertion targets its most recently used selection and remains undoable with the ordinary editor undo command.
 
 ## SPSS AI says that it is not configured
 
@@ -74,7 +74,7 @@ Use the **Official docs** button in the configuration panel and verify the curre
 
 ## SPSS AI reports an incompatible stream or empty response
 
-Version 0.5.0 requires streamed OpenAI-compatible Chat Completions. Provider-specific native protocols, Responses-only endpoints, tools, and nonstandard event formats are not silently translated. Choose the provider's OpenAI-compatible endpoint or use a compatible gateway.
+Version 0.6.0 requires streamed OpenAI-compatible Chat Completions. Provider-specific native protocols, Responses-only endpoints, tools, and nonstandard event formats are not silently translated. Choose the provider's OpenAI-compatible endpoint or use a compatible gateway.
 
 Only HTTPS endpoints are accepted. Plain HTTP is limited to `localhost`, `127.0.0.1`, and `::1` for local model servers. Redirects are intentionally rejected to avoid forwarding the bearer credential to another origin.
 
@@ -94,4 +94,4 @@ Place the cursor inside the command, not on a blank line or command comment. Exp
 
 ## Windows status
 
-Windows discovery, Registry parsing, paths with spaces, batch launch, bundled-Python fallback, JSONL transport, completion, paging bounds, AI protocol handling, and Webview-independent logic are unit tested. Version 0.5.0 does not claim Windows + SPSS real-machine verification.
+Windows discovery, Registry parsing, paths with spaces, batch launch, bundled-Python fallback, JSONL transport, completion, paging bounds, AI protocol handling, and Webview-independent logic are unit tested. Version 0.6.0 does not claim Windows + SPSS real-machine verification.

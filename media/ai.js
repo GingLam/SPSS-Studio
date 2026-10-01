@@ -1,43 +1,45 @@
 (() => {
-  const vscode = acquireVsCodeApi();
+  window.createSpssAiModule = ({ root, postMessage, getState, setState }) => {
+  const vscode = { postMessage, getState, setState };
+  const byId = (id) => root.querySelector(`#${id}`);
   const elements = {
-    activeProfile: document.getElementById('active-profile'),
-    activeProfileLabel: document.getElementById('active-profile-label'),
-    apiKey: document.getElementById('api-key'),
-    apiKeyLabel: document.getElementById('api-key-label'),
-    banner: document.getElementById('banner'),
-    baseUrl: document.getElementById('base-url'),
-    baseUrlLabel: document.getElementById('base-url-label'),
-    clearHistory: document.getElementById('clear-history'),
-    deleteKey: document.getElementById('delete-key'),
-    deleteProfile: document.getElementById('delete-profile'),
-    duplicateProfile: document.getElementById('duplicate-profile'),
-    historyHeading: document.getElementById('history-heading'),
-    historyList: document.getElementById('history-list'),
-    keyStatus: document.getElementById('key-status'),
-    makeActive: document.getElementById('make-active'),
-    manageProfiles: document.getElementById('manage-profiles'),
-    messages: document.getElementById('messages'),
-    model: document.getElementById('model'),
-    modelLabel: document.getElementById('model-label'),
-    newChat: document.getElementById('new-chat'),
-    newProfile: document.getElementById('new-profile'),
-    profileForm: document.getElementById('profile-form'),
-    profileList: document.getElementById('profile-list'),
-    profileName: document.getElementById('profile-name'),
-    profileNameLabel: document.getElementById('profile-name-label'),
-    provider: document.getElementById('provider'),
-    providerHelp: document.getElementById('provider-help'),
-    providerLabel: document.getElementById('provider-label'),
-    question: document.getElementById('question'),
-    saveProfile: document.getElementById('save-profile'),
-    send: document.getElementById('send'),
-    sendingStatus: document.getElementById('sending-status'),
-    splitter: document.getElementById('splitter'),
-    stop: document.getElementById('stop'),
-    tabChat: document.getElementById('tab-chat'),
-    tabHistory: document.getElementById('tab-history'),
-    tabs: document.getElementById('tabs'),
+    activeProfile: byId('active-profile'),
+    activeProfileLabel: byId('active-profile-label'),
+    apiKey: byId('api-key'),
+    apiKeyLabel: byId('api-key-label'),
+    banner: byId('banner'),
+    baseUrl: byId('base-url'),
+    baseUrlLabel: byId('base-url-label'),
+    clearHistory: byId('clear-history'),
+    deleteKey: byId('delete-key'),
+    deleteProfile: byId('delete-profile'),
+    duplicateProfile: byId('duplicate-profile'),
+    historyHeading: byId('history-heading'),
+    historyList: byId('history-list'),
+    keyStatus: byId('key-status'),
+    makeActive: byId('make-active'),
+    manageProfiles: byId('manage-profiles'),
+    messages: byId('messages'),
+    model: byId('model'),
+    modelLabel: byId('model-label'),
+    newChat: byId('new-chat'),
+    newProfile: byId('new-profile'),
+    profileForm: byId('profile-form'),
+    profileList: byId('profile-list'),
+    profileName: byId('profile-name'),
+    profileNameLabel: byId('profile-name-label'),
+    provider: byId('provider'),
+    providerHelp: byId('provider-help'),
+    providerLabel: byId('provider-label'),
+    question: byId('question'),
+    saveProfile: byId('save-profile'),
+    send: byId('send'),
+    sendingStatus: byId('sending-status'),
+    splitter: byId('splitter'),
+    stop: byId('stop'),
+    tabChat: byId('tab-chat'),
+    tabHistory: byId('tab-history'),
+    tabs: byId('tabs'),
   };
 
   const restored = vscode.getState() || {};
@@ -89,8 +91,8 @@
     currentPage = page;
     for (const candidate of ['chat', 'history', 'profiles']) {
       const active = candidate === page;
-      const tab = document.getElementById(`tab-${candidate}`);
-      const section = document.getElementById(`page-${candidate}`);
+      const tab = byId(`tab-${candidate}`);
+      const section = byId(`page-${candidate}`);
       if (tab) {
         tab.classList.toggle('active', active);
         tab.setAttribute('aria-selected', String(active));
@@ -103,7 +105,6 @@
   }
 
   function applyStrings() {
-    document.title = strings.title;
     elements.activeProfileLabel.textContent = strings.activeProfile;
     elements.newChat.textContent = strings.newChat;
     elements.manageProfiles.textContent = strings.configureModels;
@@ -641,12 +642,13 @@
   }
 
   function maximumComposerHeight() {
-    return Math.max(86, Math.min(600, window.innerHeight - 180));
+    const availableHeight = root.clientHeight > 0 ? root.clientHeight : window.innerHeight;
+    return Math.max(86, Math.min(600, availableHeight - 180));
   }
 
   function applyComposerHeight(height, persist = false) {
     composerHeight = Math.max(86, Math.min(maximumComposerHeight(), Math.round(height)));
-    document.documentElement.style.setProperty('--composer-height', `${composerHeight}px`);
+    root.style.setProperty('--composer-height', `${composerHeight}px`);
     elements.splitter.setAttribute('aria-valuemin', '86');
     elements.splitter.setAttribute('aria-valuemax', String(maximumComposerHeight()));
     elements.splitter.setAttribute('aria-valuenow', String(composerHeight));
@@ -769,8 +771,7 @@
     vscode.postMessage({ type: 'openProviderHelp', providerId: elements.provider.value });
   });
 
-  window.addEventListener('message', (event) => {
-    const message = event.data;
+  function handleMessage(message) {
     if (message.type === 'renderState') {
       presets = message.presets;
       strings = message.strings;
@@ -810,8 +811,13 @@
     } else if (message.type === 'operationMessage') {
       setBanner(message.message, message.error);
     }
-  });
+  }
+
+  function resize() {
+    applyComposerHeight(composerHeight);
+  }
 
   initializeSplitter();
-  vscode.postMessage({ type: 'ready' });
+  return { handleMessage, resize, showPage };
+  };
 })();

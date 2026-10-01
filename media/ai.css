@@ -1,32 +1,31 @@
-:root {
+#spss-ai {
   --composer-height: 112px;
   color-scheme: light dark;
   font-family: var(--vscode-font-family);
   font-size: var(--vscode-font-size);
   color: var(--vscode-foreground);
   background: var(--vscode-panel-background, var(--vscode-editor-background));
-}
-
-* {
-  box-sizing: border-box;
-}
-
-body {
   display: grid;
   grid-template-rows: auto auto minmax(0, 1fr);
-  height: 100vh;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
   margin: 0;
   overflow: hidden;
 }
 
-button,
-input,
-select,
-textarea {
+#spss-ai * {
+  box-sizing: border-box;
+}
+
+#spss-ai button,
+#spss-ai input,
+#spss-ai select,
+#spss-ai textarea {
   font: inherit;
 }
 
-button {
+#spss-ai button {
   min-height: 26px;
   padding: 3px 9px;
   color: var(--vscode-button-foreground);
@@ -36,23 +35,23 @@ button {
   cursor: pointer;
 }
 
-button:hover:not(:disabled) {
+#spss-ai button:hover:not(:disabled) {
   background: var(--vscode-button-hoverBackground);
 }
 
-button:focus-visible,
-input:focus,
-select:focus,
-textarea:focus,
-.splitter:focus-visible {
+#spss-ai button:focus-visible,
+#spss-ai input:focus,
+#spss-ai select:focus,
+#spss-ai textarea:focus,
+#spss-ai .splitter:focus-visible {
   outline: 1px solid var(--vscode-focusBorder);
   outline-offset: -1px;
 }
 
-button:disabled,
-input:disabled,
-select:disabled,
-textarea:disabled {
+#spss-ai button:disabled,
+#spss-ai input:disabled,
+#spss-ai select:disabled,
+#spss-ai textarea:disabled {
   cursor: default;
   opacity: 0.55;
 }

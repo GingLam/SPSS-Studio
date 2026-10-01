@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import type { SpssEditorTargetTracker } from '../editor/spssEditorTargetTracker';
+import { cachedVariableName } from '../spss/variableInsertion';
 import type { VariableCache } from '../spss/variableCache';
 
 export interface VariableCommandDependencies {
@@ -19,27 +20,16 @@ export async function insertVariable(
   }
 }
 
-export async function showVariablePicker(
+export async function insertCachedVariable(
   dependencies: VariableCommandDependencies,
+  variableName: unknown,
 ): Promise<void> {
-  const variables = dependencies.variableCache.variables;
-  if (variables.length === 0) {
-    void vscode.window.showInformationMessage('No Active Dataset variables are available. Run syntax that creates or opens a dataset first.');
+  const validatedName = cachedVariableName(dependencies.variableCache.variables, variableName);
+  if (!validatedName) {
+    void vscode.window.showWarningMessage(
+      'That variable is no longer available in the current Active Dataset.',
+    );
     return;
   }
-  const selected = await vscode.window.showQuickPick(
-    variables.map((variable) => ({
-      label: variable.name,
-      description: variable.label || 'No label',
-      variableName: variable.name,
-    })),
-    {
-      title: 'SPSS Active Dataset Variables',
-      placeHolder: 'Search by variable name or label',
-      matchOnDescription: true,
-    },
-  );
-  if (selected) {
-    await insertVariable(dependencies, selected.variableName);
-  }
+  await insertVariable(dependencies, validatedName);
 }

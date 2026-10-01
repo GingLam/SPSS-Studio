@@ -5,10 +5,15 @@ import * as vscode from 'vscode';
 import type { ActiveDatasetInfo, DatasetPage, EngineState } from '../spss/types';
 import { sanitizeSpssHtml } from './htmlSanitizer';
 import { normalizeVariableWindow } from './dataViewportState';
+import type { AiPage, ExtensionToAiWebviewMessage } from './aiWebviewProtocol';
 import type { ExecutionRecord, OutputStore } from './outputStore';
 import { buildPortableOutputHtml } from './portableOutput';
+import type { SpssAiPanelController } from './spssAiPanelController';
 import {
-  isWebviewMessage,
+  isStudioShellMessage,
+  type StudioTab,
+} from './studioShellProtocol';
+import {
   type DatasetPageUiRequest,
   type ExtensionToWebviewMessage,
 } from './webviewProtocol';
@@ -17,12 +22,15 @@ export interface SpssStudioPanelCallbacks {
   requestDatasetPage: (page: DatasetPageUiRequest) => Promise<void>;
   refreshData: () => Promise<void>;
   refreshVariables: () => Promise<void>;
+  insertVariable: (name: string) => Promise<void>;
   clearOutput: () => void;
 }
 
 export class SpssStudioPanel implements vscode.Disposable {
   private panel: vscode.WebviewPanel | undefined;
-  private activeTab: 'output' | 'data' | 'variables' = 'output';
+  private activeTab: StudioTab = 'output';
+  private webviewReady = false;
+  private engineState: EngineState = 'stopped';
   private dataset: ActiveDatasetInfo | undefined;
   private datasetRevision = 0;
   private page: DatasetPage | undefined;
@@ -33,6 +41,7 @@ export class SpssStudioPanel implements vscode.Disposable {
     private readonly extensionUri: vscode.Uri,
     private readonly outputStore: OutputStore,
     private readonly callbacks: SpssStudioPanelCallbacks,
+    private readonly aiController: SpssAiPanelController,
   ) {}
 
   public get dataVisible(): boolean {
@@ -53,7 +62,7 @@ export class SpssStudioPanel implements vscode.Disposable {
     const panel = this.ensurePanel();
     this.activeTab = 'output';
     panel.reveal(vscode.ViewColumn.Beside, true);
-    void this.post({ type: 'showOutput' });
+    void this.postStudio({ type: 'showOutput' });
     void this.postSelected();
   }
 
@@ -61,10 +70,10 @@ export class SpssStudioPanel implements vscode.Disposable {
     const panel = this.ensurePanel();
     this.activeTab = 'data';
     panel.reveal(vscode.ViewColumn.Beside, true);
-    void this.post({ type: 'showData' });
-    void this.post({ type: 'datasetMetadata', dataset: this.dataset ?? null, revision: this.datasetRevision });
+    void this.postStudio({ type: 'showData' });
+    void this.postStudio({ type: 'datasetMetadata', dataset: this.dataset ?? null, revision: this.datasetRevision });
     if (this.page) {
-      void this.post({ type: 'datasetPage', page: this.page, ...this.pageRequest });
+      void this.postStudio({ type: 'datasetPage', page: this.page, ...this.pageRequest });
     } else {
       void this.callbacks.refreshData();
     }
@@ -74,33 +83,41 @@ export class SpssStudioPanel implements vscode.Disposable {
     const panel = this.ensurePanel();
     this.activeTab = 'variables';
     panel.reveal(vscode.ViewColumn.Beside, true);
-    void this.post({ type: 'showVariables' });
-    void this.post({ type: 'datasetMetadata', dataset: this.dataset ?? null, revision: this.datasetRevision });
+    void this.postStudio({ type: 'showVariables' });
+    void this.postStudio({ type: 'datasetMetadata', dataset: this.dataset ?? null, revision: this.datasetRevision });
     if (!this.dataset) {
       void this.callbacks.refreshVariables();
     }
   }
 
+  public showAi(page: AiPage = 'chat'): void {
+    const panel = this.ensurePanel();
+    this.activeTab = 'ai';
+    panel.reveal(vscode.ViewColumn.Beside, false);
+    void this.postStudio({ type: 'showAi' });
+    void this.aiController.showPage(page);
+  }
+
   public executionStarted(record: ExecutionRecord): void {
     this.showOutput();
-    void this.post({ type: 'executionStarted', history: this.outputStore.metadata, selectedId: record.id });
+    void this.postStudio({ type: 'executionStarted', history: this.outputStore.metadata, selectedId: record.id });
   }
 
   public executionCompleted(record: ExecutionRecord): void {
-    void this.post({ type: 'executionCompleted', history: this.outputStore.metadata, selectedId: record.id });
+    void this.postStudio({ type: 'executionCompleted', history: this.outputStore.metadata, selectedId: record.id });
     void this.selectExecution(record.id);
   }
 
   public setDatasetMetadata(dataset: ActiveDatasetInfo | undefined): void {
     this.dataset = dataset;
     this.datasetRevision += 1;
-    void this.post({ type: 'datasetMetadata', dataset: dataset ?? null, revision: this.datasetRevision });
+    void this.postStudio({ type: 'datasetMetadata', dataset: dataset ?? null, revision: this.datasetRevision });
   }
 
   public setDatasetPage(page: DatasetPage, requestId = 0, generation = 0): void {
     this.page = page;
     this.pageRequest = { requestId, generation };
-    void this.post({ type: 'datasetPage', page, requestId, generation });
+    void this.postStudio({ type: 'datasetPage', page, requestId, generation });
   }
 
   public clearDatasetPage(): void {
@@ -108,16 +125,19 @@ export class SpssStudioPanel implements vscode.Disposable {
   }
 
   public setEngineState(state: EngineState): void {
-    void this.post({ type: 'engineState', state });
+    this.engineState = state;
+    void this.postStudio({ type: 'engineState', state });
   }
 
   public outputCleared(): void {
-    void this.post({ type: 'outputCleared' });
+    void this.postStudio({ type: 'outputCleared' });
   }
 
   public dispose(): void {
     this.panel?.dispose();
     this.panel = undefined;
+    this.webviewReady = false;
+    this.aiController.detach();
   }
 
   private ensurePanel(): vscode.WebviewPanel {
@@ -135,10 +155,15 @@ export class SpssStudioPanel implements vscode.Disposable {
         localResourceRoots: [mediaRoot, vscode.Uri.file(this.outputStore.sessionRoot)],
       },
     );
-    panel.webview.html = this.shellHtml(panel.webview, mediaRoot);
+    this.panel = panel;
+    this.aiController.attach((message: ExtensionToAiWebviewMessage) => (
+      panel.webview.postMessage({ scope: 'ai', message })
+    ));
     panel.onDidDispose(() => {
       if (this.panel === panel) {
         this.panel = undefined;
+        this.webviewReady = false;
+        this.aiController.detach();
       }
     });
     panel.onDidChangeViewState(() => {
@@ -148,10 +173,21 @@ export class SpssStudioPanel implements vscode.Disposable {
         void this.callbacks.refreshVariables();
       }
     });
-    panel.webview.onDidReceiveMessage((message: unknown) => {
-      if (!isWebviewMessage(message)) {
+    panel.webview.onDidReceiveMessage((value: unknown) => {
+      if (!isStudioShellMessage(value)) {
         return;
       }
+      if (value.scope === 'shell') {
+        this.webviewReady = true;
+        void this.postInitialState();
+        void this.aiController.handleMessage({ type: 'ready' });
+        return;
+      }
+      if (value.scope === 'ai') {
+        void this.aiController.handleMessage(value.message);
+        return;
+      }
+      const message = value.message;
       if (message.type === 'selectExecution') {
         void this.selectExecution(message.id);
       } else if (message.type === 'showOutput') {
@@ -179,6 +215,9 @@ export class SpssStudioPanel implements vscode.Disposable {
         if (!this.dataset) {
           void this.callbacks.refreshVariables();
         }
+      } else if (message.type === 'showAi') {
+        this.activeTab = 'ai';
+        void this.aiController.refresh();
       } else if (message.type === 'refreshData') {
         void this.callbacks.refreshData();
       } else if (message.type === 'refreshVariables') {
@@ -187,14 +226,40 @@ export class SpssStudioPanel implements vscode.Disposable {
         void this.exportOutput(message.id);
       } else if (message.type === 'printOutput') {
         void this.printOutput(message.id);
+      } else if (message.type === 'insertVariable') {
+        void this.callbacks.insertVariable(message.name);
       } else {
         this.callbacks.clearOutput();
       }
     });
-    this.panel = panel;
-    void this.post({ type: 'engineState', state: 'stopped' });
-    void this.post({ type: 'datasetMetadata', dataset: this.dataset ?? null, revision: this.datasetRevision });
+    // Install the host receiver before loading scripts so the ready handshake cannot be missed.
+    panel.webview.html = this.shellHtml(panel.webview, mediaRoot);
     return panel;
+  }
+
+  private async postInitialState(): Promise<void> {
+    await this.postStudio({ type: 'engineState', state: this.engineState });
+    await this.postStudio({
+      type: 'datasetMetadata',
+      dataset: this.dataset ?? null,
+      revision: this.datasetRevision,
+    });
+    const selected = this.outputStore.selected;
+    if (selected) {
+      await this.postStudio({
+        type: 'executionCompleted',
+        history: this.outputStore.metadata,
+        selectedId: selected.id,
+      });
+      await this.selectExecution(selected.id);
+    }
+    const showType: Record<StudioTab, ExtensionToWebviewMessage['type']> = {
+      output: 'showOutput',
+      data: 'showData',
+      variables: 'showVariables',
+      ai: 'showAi',
+    };
+    await this.postStudio({ type: showType[this.activeTab] } as ExtensionToWebviewMessage);
   }
 
   private async selectExecution(id: string): Promise<void> {
@@ -210,7 +275,7 @@ export class SpssStudioPanel implements vscode.Disposable {
     this.selectedHtmlLength = html.length;
     const metadata = this.outputStore.metadata.find((item) => item.id === id);
     if (metadata) {
-      await this.post({ type: 'executionSelected', record: metadata, html });
+      await this.postStudio({ type: 'executionSelected', record: metadata, html });
     }
   }
 
@@ -314,32 +379,39 @@ export class SpssStudioPanel implements vscode.Disposable {
     return webview.asWebviewUri(vscode.Uri.file(resolved)).toString();
   }
 
-  private post(message: ExtensionToWebviewMessage): Thenable<boolean> | undefined {
-    return this.panel?.webview.postMessage(message);
+  private postStudio(message: ExtensionToWebviewMessage): Thenable<boolean> | undefined {
+    if (!this.webviewReady) {
+      return undefined;
+    }
+    return this.panel?.webview.postMessage({ scope: 'studio', message });
   }
 
   private shellHtml(webview: vscode.Webview, mediaRoot: vscode.Uri): string {
     const nonce = randomBytes(16).toString('base64');
-    const css = webview.asWebviewUri(vscode.Uri.joinPath(mediaRoot, 'studio.css'));
-    const script = webview.asWebviewUri(vscode.Uri.joinPath(mediaRoot, 'studio.js'));
+    const studioCss = webview.asWebviewUri(vscode.Uri.joinPath(mediaRoot, 'studio.css'));
+    const aiCss = webview.asWebviewUri(vscode.Uri.joinPath(mediaRoot, 'ai.css'));
+    const aiScript = webview.asWebviewUri(vscode.Uri.joinPath(mediaRoot, 'ai.js'));
+    const studioScript = webview.asWebviewUri(vscode.Uri.joinPath(mediaRoot, 'studio.js'));
     const csp = [
       "default-src 'none'",
+      "connect-src 'none'",
       `img-src ${webview.cspSource} data:`,
       `style-src ${webview.cspSource} 'unsafe-inline'`,
       `script-src 'nonce-${nonce}'`,
     ].join('; ');
     return `<!DOCTYPE html>
-<html lang="en">
+<html lang="${vscode.env.language.toLowerCase()}">
 <head>
   <meta charset="UTF-8">
   <meta http-equiv="Content-Security-Policy" content="${csp}">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link href="${css.toString()}" rel="stylesheet">
+  <link href="${studioCss.toString()}" rel="stylesheet">
+  <link href="${aiCss.toString()}" rel="stylesheet">
   <title>SPSS Studio</title>
 </head>
 <body>
   <header class="toolbar">
-    <nav><button id="output-tab" class="tab active">Output</button><button id="data-tab" class="tab">Data</button><button id="variables-tab" class="tab">Variables</button></nav>
+    <nav><button id="output-tab" class="tab active">Output</button><button id="data-tab" class="tab">Data</button><button id="variables-tab" class="tab">Variables</button><button id="ai-tab" class="tab">SPSS AI</button></nav>
     <span id="engine-state">SPSS: Stopped</span>
   </header>
   <main>
@@ -361,8 +433,63 @@ export class SpssStudioPanel implements vscode.Disposable {
       <div class="table-scroll"><table id="variables-table"><thead><tr><th>#</th><th>Name</th><th>Label</th><th>Type</th><th>Format</th><th>Measure</th></tr></thead><tbody></tbody></table></div>
       <div class="pager"><button id="previous-variable-page">Previous variables</button><span id="variable-page-summary">—</span><button id="next-variable-page">Next variables</button><label>Rows <select id="variable-page-size"><option>25</option><option>50</option><option selected>100</option><option>200</option><option>500</option></select></label></div>
     </section>
+    <section id="ai-view" class="view">
+      <div id="spss-ai">
+        <header class="ai-header">
+          <nav id="tabs" class="tabs" aria-label="SPSS AI">
+            <button type="button" data-page="chat" id="tab-chat"></button>
+            <button type="button" data-page="history" id="tab-history"></button>
+          </nav>
+          <div class="header-actions">
+            <label class="profile-selector"><span id="active-profile-label"></span><select id="active-profile"></select></label>
+            <button id="new-chat" type="button"></button>
+            <button id="manage-profiles" type="button" aria-pressed="false"></button>
+          </div>
+        </header>
+        <div id="banner" class="banner" hidden></div>
+        <section id="page-chat" class="page chat-page">
+          <div id="messages" aria-live="polite"></div>
+          <div id="splitter" class="splitter" role="separator" aria-orientation="horizontal" tabindex="0"></div>
+          <footer class="composer">
+            <textarea id="question" placeholder=""></textarea>
+            <div class="composer-actions">
+              <span id="sending-status" class="sending-status"></span>
+              <button id="stop" type="button" disabled></button>
+              <button id="send" type="button"></button>
+            </div>
+          </footer>
+        </section>
+        <section id="page-history" class="page history-page" hidden>
+          <div class="page-toolbar"><span id="history-heading"></span><button id="clear-history" type="button"></button></div>
+          <div id="history-list" class="history-list"></div>
+        </section>
+        <section id="page-profiles" class="page profiles-page" hidden>
+          <aside class="profiles-sidebar">
+            <button id="new-profile" type="button"></button>
+            <div id="profile-list" class="profile-list"></div>
+          </aside>
+          <form id="profile-form" class="profile-form">
+            <label><span id="profile-name-label"></span><input id="profile-name" type="text" maxlength="120" autocomplete="off"></label>
+            <label><span id="provider-label"></span><select id="provider"></select></label>
+            <label class="wide"><span id="base-url-label"></span><input id="base-url" type="url" autocomplete="off"></label>
+            <label><span id="model-label"></span><input id="model" type="text" autocomplete="off"></label>
+            <label><span id="api-key-label"></span><input id="api-key" type="password" autocomplete="off"></label>
+            <div id="key-status" class="key-status wide"></div>
+            <div class="profile-actions wide">
+              <button id="save-profile" type="submit"></button>
+              <button id="duplicate-profile" type="button"></button>
+              <button id="make-active" type="button"></button>
+              <button id="delete-key" type="button"></button>
+              <button id="delete-profile" type="button"></button>
+              <button id="provider-help" type="button"></button>
+            </div>
+          </form>
+        </section>
+      </div>
+    </section>
   </main>
-  <script nonce="${nonce}" src="${script.toString()}"></script>
+  <script nonce="${nonce}" src="${aiScript.toString()}"></script>
+  <script nonce="${nonce}" src="${studioScript.toString()}"></script>
 </body>
 </html>`;
   }

@@ -24,6 +24,9 @@ interface ExtensionManifest {
     menus?: {
       'editor/title'?: MenuContribution[];
     };
+    configuration?: {
+      properties?: Record<string, unknown>;
+    };
   };
 }
 
@@ -46,22 +49,20 @@ describe('SPSS editor title actions', () => {
     assert.deepEqual(actions.map((item) => item.group), ['navigation@1', 'navigation@2', 'navigation@3']);
   });
 
-  it('contributes a Webview View in the bottom panel for SPSS AI', () => {
+  it('keeps AI inside Studio and removes obsolete variable and bottom-panel contributions', () => {
     const manifest = JSON.parse(
       fs.readFileSync(path.resolve(__dirname, '../../../package.json'), 'utf8'),
     ) as ExtensionManifest;
-    const container = manifest.contributes.viewsContainers?.panel?.find(
-      (candidate) => candidate.id === 'spssStudioAi',
+    const commandIds = manifest.contributes.commands.map((command) => command.command);
+    assert.equal(manifest.contributes.viewsContainers, undefined);
+    assert.equal(manifest.contributes.views, undefined);
+    assert.ok(commandIds.includes('spssStudio.showAi'));
+    assert.ok(commandIds.includes('spssStudio.configureAi'));
+    assert.ok(!commandIds.includes('spssStudio.showVariablePicker'));
+    assert.ok(!commandIds.includes('spssStudio.insertVariable'));
+    assert.equal(
+      manifest.contributes.configuration?.properties?.['spssStudio.aiAutoReveal'],
+      undefined,
     );
-    assert.ok(container);
-    assert.equal(container.title, 'SPSS AI');
-    assert.ok(container.icon);
-    const view = manifest.contributes.views?.spssStudioAi?.find(
-      (candidate) => candidate.id === 'spssStudio.aiView',
-    );
-    assert.ok(view);
-    assert.equal(view.type, 'webview');
-    assert.ok(manifest.contributes.commands.some((command) => command.command === 'spssStudio.showAi'));
-    assert.ok(manifest.contributes.commands.some((command) => command.command === 'spssStudio.configureAi'));
   });
 });

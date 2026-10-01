@@ -16,6 +16,7 @@ export type ExtensionToWebviewMessage =
   | { type: 'showOutput' }
   | { type: 'showData' }
   | { type: 'showVariables' }
+  | { type: 'showAi' }
   | { type: 'outputCleared' };
 
 export type WebviewToExtensionMessage =
@@ -23,6 +24,7 @@ export type WebviewToExtensionMessage =
   | { type: 'showOutput' }
   | { type: 'showData' }
   | { type: 'showVariables' }
+  | { type: 'showAi' }
   | {
     type: 'requestDatasetPage';
     offset: number;
@@ -36,19 +38,23 @@ export type WebviewToExtensionMessage =
   | { type: 'refreshVariables' }
   | { type: 'exportOutput'; id: string }
   | { type: 'printOutput'; id: string }
+  | { type: 'insertVariable'; name: string }
   | { type: 'clearOutput' };
 
 export function isWebviewMessage(value: unknown): value is WebviewToExtensionMessage {
-  if (typeof value !== 'object' || value === null || !('type' in value)) {
+  if (!isPlainObject(value) || typeof value.type !== 'string') {
     return false;
   }
-  const message = value as Record<string, unknown>;
-  const type = message.type;
-  if (['showOutput', 'showData', 'showVariables', 'refreshData', 'refreshVariables', 'clearOutput'].includes(String(type))) {
+  const message = value;
+  const type = String(message.type);
+  if (['showOutput', 'showData', 'showVariables', 'showAi', 'refreshData', 'refreshVariables', 'clearOutput'].includes(type)) {
     return true;
   }
-  if (['selectExecution', 'exportOutput', 'printOutput'].includes(String(type))) {
+  if (['selectExecution', 'exportOutput', 'printOutput'].includes(type)) {
     return typeof message.id === 'string' && message.id.length > 0;
+  }
+  if (type === 'insertVariable') {
+    return typeof message.name === 'string' && message.name.length > 0 && message.name.length <= 64;
   }
   if (type !== 'requestDatasetPage') {
     return false;
@@ -58,4 +64,12 @@ export function isWebviewMessage(value: unknown): value is WebviewToExtensionMes
     return false;
   }
   return Number(message.limit) > 0 && Number(message.variableLimit) > 0 && Number(message.variableLimit) <= 200;
+}
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    return false;
+  }
+  const prototype = Object.getPrototypeOf(value) as unknown;
+  return prototype === Object.prototype || prototype === null;
 }

@@ -16,9 +16,9 @@ VS Code editor
        |-> Active Dataset metadata
        `-> sliced case and variable page
   -> OutputStore / VariableCache / DataPreviewState / DataViewportState
-       |-> completion and variable inlay/picker
-       `-> Output / Data / Variables views
-  -> reusable SPSS Studio WebviewPanel
+       |-> completion and validated variable insertion
+       `-> Output / Data / Variables / SPSS AI views
+  -> one reusable SPSS Studio WebviewPanel beside the editor
 ```
 
 The extension implements editor integration and transport, not statistical algorithms. IBM SPSS Statistics remains the computation engine.
@@ -47,11 +47,11 @@ The completion path is synchronous and local. It never sends a bridge request on
 
 The `datasetInfo` bridge operation obtains the Active Dataset name, case and variable counts, variable name/label/type/format, optional measurement level, and weight/split/filter state where the installed SPSS API exposes it. No case values are read during metadata refresh.
 
-## Variable Inlay and Editor Target
+## Variable Insertion and Editor Target
 
-`SpssVariableInlayProvider` listens to `VariableCache` changes and renders one inlay hint at the first document position. Up to 50 variable names become interactive `InlayHintLabelPart` objects. Their tooltips contain the cached label, and their commands insert the exact dictionary name. A dataset with more variables receives one `More Variables…` command that opens a native Quick Pick backed by the complete cache.
+The Variables tab renders the complete cached dictionary in client-side row pages. Only a double-click on a Name cell emits an insertion request. The extension host accepts the name only when it is an exact member of the current `VariableCache`, preventing stale or forged Webview values from becoming editor text.
 
-`SpssEditorTargetTracker` remembers the URI, view column, document version, and selection of the last SPSS text editor without retaining its contents. Variable clicks and AI code insertion share this target. Each insertion uses one `TextEditor.edit`, so it participates in the native undo stack. No insertion saves or executes the document.
+`SpssEditorTargetTracker` remembers the URI, view column, document version, and selection of the last SPSS text editor without retaining its contents. Variables-table double-clicks and AI code insertion share this target. Each insertion uses one `TextEditor.edit`, so it participates in the native undo stack. No insertion saves or executes the document.
 
 ## Lazy Data Preview and Continuous Variable Scrolling
 
@@ -103,15 +103,15 @@ The Output tab renders the selected result on the left and metadata-only run his
 
 ## Read-only Variables View
 
-The Variables tab consumes `ActiveDatasetInfo.variables`, which is already populated for completion and Data preview. It displays Name, Label, Type, Format, and optional measurement level with client-side row pagination. It does not add a bridge operation and cannot modify the Active Dataset dictionary.
+The Variables tab consumes `ActiveDatasetInfo.variables`, which is already populated for completion and Data preview. It displays Name, Label, Type, Format, and optional measurement level with client-side row pagination. Double-clicking a Name cell requests editor insertion through the validated cache boundary; other cells have no edit action. It does not add a bridge operation and cannot modify the Active Dataset dictionary.
 
 ## Webview security
 
-`SpssStudioPanel` is a singleton reusable panel in `ViewColumn.Beside`, with Output, Data, and Variables tabs. Its Content Security Policy defaults to no access, permits only the extension's nonce-bearing script, extension/local styles, owned session images, and strict raster image data URIs. `localResourceRoots` contains only `media` and the owned session root.
+`SpssStudioPanel` is a singleton reusable panel in `ViewColumn.Beside`, with Output, Data, Variables, and SPSS AI tabs. One shell owns the only `acquireVsCodeApi()` handle and routes validated, scope-tagged Studio and AI messages. Its Content Security Policy defaults to no access, denies Webview network connections, permits only nonce-bearing extension scripts, extension/local styles, owned session images, and strict raster image data URIs. `localResourceRoots` contains only `media` and the owned session root.
 
 Before insertion, `htmlSanitizer.ts` removes executable and embedding elements, inline event handlers, form actions, remote links, CSS imports/URLs/expressions, and unsafe image sources. Local images are resolved only when their normalized path stays inside the run directory. Dataset cells are rendered with `textContent`.
 
-The separate `SpssAiViewProvider` is a contributed Webview View in the bottom panel. Its Content Security Policy denies network access from the Webview and allows only extension-local styles plus a nonce-bearing local script. Model text and fenced code are converted into typed segments in the extension host and rendered with DOM `textContent`; model HTML is never inserted. Only locally created Insert and Copy buttons can send code-action messages.
+The AI browser code is a host-independent module mounted inside that shell. `SpssAiPanelController` owns the AI state and network boundary without owning another Webview. Model text and fenced code are converted into typed segments in the extension host and rendered with DOM `textContent`; model HTML is never inserted. Only locally created Insert and Copy buttons can send code-action messages.
 
 ## OpenAI-compatible AI boundary
 
@@ -127,7 +127,7 @@ AI question box
   -> escaped prose and fenced-code segments
 ```
 
-`SpssAiViewProvider` owns one modular Webview with Current Chat, Chat History, and Model Profiles pages. A ready handshake prevents the extension host from posting initial state before the Webview listener exists. The transcript/composer boundary is pointer- and keyboard-adjustable; only its numeric height and the Webview's selected page/profile UI state are persisted as presentation state.
+`SpssAiPanelController` attaches to the shared Studio shell and supplies Current Chat, Chat History, and Model Profiles pages inside the fourth Studio tab. A shell-level ready handshake prevents the extension host from posting initial state before the Webview listener exists. The transcript/composer boundary is pointer- and keyboard-adjustable; only its numeric height and the Webview's selected page/profile UI state are persisted as presentation state.
 
 Named model profiles store provider selection, Base URL, model identifier, and active-profile identity in extension `globalState`. Each profile has an independent API Key stored only in `ExtensionContext.secrets`; keys are never returned to the Webview after saving. The blank key field means “preserve the saved key.” Built-in presets cover DeepSeek, Zhipu GLM, Qwen, and Doubao, while the transport remains one provider-neutral Chat Completions implementation. A one-time idempotent migration copies the 0.4.0 single-provider configuration into the profile model without deleting the legacy values first.
 

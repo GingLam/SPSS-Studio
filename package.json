@@ -2,7 +2,7 @@
   "name": "spss-studio",
   "displayName": "SPSS Studio",
   "description": "SPSS Syntax IntelliSense, Active Dataset tools, native HTML output, and optional OpenAI-compatible assistance.",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "publisher": "jinglin",
   "author": {
     "name": "Jing LIN (林景)",
@@ -54,10 +54,8 @@
     "onCommand:spssStudio.showOutput",
     "onCommand:spssStudio.showData",
     "onCommand:spssStudio.showVariables",
-    "onCommand:spssStudio.showVariablePicker",
     "onCommand:spssStudio.showAi",
     "onCommand:spssStudio.configureAi",
-    "onView:spssStudio.aiView",
     "onCommand:spssStudio.refreshDataPreview",
     "onCommand:spssStudio.clearOutput"
   ],
@@ -131,11 +129,6 @@
         "title": "SPSS: Show Variables"
       },
       {
-        "command": "spssStudio.showVariablePicker",
-        "title": "SPSS: Search Active Dataset Variables",
-        "icon": "$(symbol-variable)"
-      },
-      {
         "command": "spssStudio.showAi",
         "title": "%spssStudio.command.showAi%",
         "icon": "$(comment-discussion)"
@@ -175,33 +168,6 @@
           "command": "spssStudio.showAi",
           "when": "resourceLangId == spss",
           "group": "navigation@4"
-        }
-      ],
-      "view/title": [
-        {
-          "command": "spssStudio.configureAi",
-          "when": "view == spssStudio.aiView",
-          "group": "navigation"
-        }
-      ]
-    },
-    "viewsContainers": {
-      "panel": [
-        {
-          "id": "spssStudioAi",
-          "title": "SPSS AI",
-          "icon": "images/ai.svg"
-        }
-      ]
-    },
-    "views": {
-      "spssStudioAi": [
-        {
-          "type": "webview",
-          "id": "spssStudio.aiView",
-          "name": "%spssStudio.view.ai%",
-          "visibility": "visible",
-          "contextualTitle": "SPSS AI"
         }
       ]
     },
@@ -262,12 +228,6 @@
           "default": false,
           "scope": "machine-overridable",
           "description": "Write additional bridge diagnostics without intentionally logging credentials."
-        },
-        "spssStudio.aiAutoReveal": {
-          "type": "boolean",
-          "default": true,
-          "scope": "window",
-          "description": "Reveal the SPSS AI bottom panel the first time an SPSS Syntax editor becomes active."
         }
       }
     }

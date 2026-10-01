@@ -26,7 +26,6 @@ export async function startEngine(dependencies: EngineCommandDependencies): Prom
   if (!(await requireTrustedWorkspace())) {
     return;
   }
-  dependencies.output.show(true);
   dependencies.output.appendLine('Starting IBM SPSS Statistics engine…');
   try {
     await dependencies.engine.start(dependencies.getConfiguration());
@@ -48,7 +47,6 @@ export async function restartEngine(dependencies: EngineCommandDependencies): Pr
   if (!(await requireTrustedWorkspace())) {
     return;
   }
-  dependencies.output.show(true);
   dependencies.output.appendLine('Restarting IBM SPSS Statistics engine…');
   try {
     await dependencies.engine.restart(dependencies.getConfiguration());
@@ -61,6 +59,11 @@ export async function restartEngine(dependencies: EngineCommandDependencies): Pr
 }
 
 export function showStatus(dependencies: EngineCommandDependencies): void {
+  const status = dependencies.engine.status();
   appendStatus(dependencies);
-  dependencies.output.show(true);
+  const version = status.installation?.version ?? 'not detected';
+  const lastError = status.lastError ?? 'none';
+  void vscode.window.showInformationMessage(
+    `SPSS state: ${status.state} · Version: ${version} · Last error: ${lastError}`,
+  );
 }
