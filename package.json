@@ -137,12 +137,12 @@
       },
       {
         "command": "spssStudio.showAi",
-        "title": "SPSS: Show AI Assistant",
+        "title": "%spssStudio.command.showAi%",
         "icon": "$(comment-discussion)"
       },
       {
         "command": "spssStudio.configureAi",
-        "title": "SPSS: Configure AI Provider",
+        "title": "%spssStudio.command.configureAi%",
         "icon": "$(gear)"
       },
       {
@@ -199,7 +199,7 @@
         {
           "type": "webview",
           "id": "spssStudio.aiView",
-          "name": "SPSS Syntax Assistant",
+          "name": "%spssStudio.view.ai%",
           "visibility": "visible",
           "contextualTitle": "SPSS AI"
         }
