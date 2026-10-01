@@ -3,6 +3,7 @@ out/
 .vscode-test/
 dist/
 .work/
+.superpowers/
 docs/superpowers/
 TEST-REPORT.md
 *.log
