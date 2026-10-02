@@ -518,10 +518,34 @@
 .profiles-page {
   display: grid;
   grid-template-columns: minmax(190px, 30%) minmax(280px, 1fr);
+  grid-template-rows: auto minmax(0, 1fr);
   overflow: auto;
 }
 
+.response-language-setting {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  border-bottom: 1px solid var(--vscode-panel-border);
+}
+
+.response-language-setting label {
+  font-weight: 600;
+}
+
+.response-language-setting select {
+  min-width: 150px;
+  height: 30px;
+  padding: 4px 7px;
+  color: var(--vscode-input-foreground);
+  background: var(--vscode-input-background);
+  border: 1px solid var(--vscode-input-border, transparent);
+}
+
 .profiles-sidebar {
+  grid-row: 2;
   min-height: 0;
   padding: 10px;
   overflow: auto;
@@ -563,6 +587,7 @@
 }
 
 .profile-form {
+  grid-row: 2;
   display: grid;
   grid-template-columns: minmax(150px, 1fr) minmax(150px, 1fr);
   align-content: start;
@@ -604,9 +629,14 @@
   }
 
   .profiles-sidebar {
+    grid-row: auto;
     max-height: 190px;
     border-right: 0;
     border-bottom: 1px solid var(--vscode-panel-border);
+  }
+
+  .profile-form {
+    grid-row: auto;
   }
 }
 

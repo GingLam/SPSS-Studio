@@ -36,6 +36,7 @@ export type WebviewToExtensionMessage =
   }
   | { type: 'refreshData' }
   | { type: 'refreshVariables' }
+  | { type: 'explainOutput'; id: string }
   | { type: 'exportOutput'; id: string }
   | { type: 'printOutput'; id: string }
   | { type: 'insertVariable'; name: string }
@@ -50,7 +51,7 @@ export function isWebviewMessage(value: unknown): value is WebviewToExtensionMes
   if (['showOutput', 'showData', 'showVariables', 'showAi', 'refreshData', 'refreshVariables', 'clearOutput'].includes(type)) {
     return true;
   }
-  if (['selectExecution', 'exportOutput', 'printOutput'].includes(type)) {
+  if (['selectExecution', 'explainOutput', 'exportOutput', 'printOutput'].includes(type)) {
     return typeof message.id === 'string' && message.id.length > 0;
   }
   if (type === 'insertVariable') {

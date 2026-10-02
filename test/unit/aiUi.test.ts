@@ -39,6 +39,9 @@ describe('SPSS AI Webview contract', () => {
       model: 'qwen-plus',
     }), true);
     assert.equal(isAiWebviewMessage({ type: 'setComposerHeight', height: 180 }), true);
+    assert.equal(isAiWebviewMessage({ type: 'setResponseLanguage', language: 'zh-CN' }), true);
+    assert.equal(isAiWebviewMessage({ type: 'setResponseLanguage', language: 'en' }), true);
+    assert.equal(isAiWebviewMessage({ type: 'setResponseLanguage', language: 'fr' }), false);
     assert.equal(isAiWebviewMessage({ type: 'sendQuestion', question: '' }), false);
     assert.equal(isAiWebviewMessage({
       type: 'createProfile',
@@ -66,6 +69,7 @@ describe('SPSS AI Webview contract', () => {
     assert.match(script, /type: 'createProfile'/u);
     assert.match(script, /type: 'openConversation'/u);
     assert.match(script, /type: 'setComposerHeight'/u);
+    assert.match(script, /type: 'setResponseLanguage'/u);
     assert.match(script, /function renderMarkdownBlocks/u);
     assert.match(script, /type: 'openLink'/u);
   });
@@ -93,6 +97,7 @@ describe('SPSS AI Webview contract', () => {
     assert.doesNotMatch(panel, /data-page="profiles"/u);
     assert.match(panel, /id="manage-profiles"/u);
     assert.match(panel, /id="page-profiles"/u);
+    assert.match(panel, /id="response-language"/u);
     assert.match(script, /manageProfiles\.addEventListener\('click', \(\) => showPage\('profiles'\)\)/u);
     assert.match(panel, /role="separator"/u);
     assert.match(panel, /aria-orientation="horizontal"/u);

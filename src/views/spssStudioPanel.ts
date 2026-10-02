@@ -2,6 +2,10 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { randomBytes } from 'node:crypto';
 import * as vscode from 'vscode';
+import {
+  buildOutputExplanationQuestion,
+  extractSpssOutputForAi,
+} from '../ai/outputExplanation';
 import type { ActiveDatasetInfo, DatasetPage, EngineState } from '../spss/types';
 import { sanitizeSpssHtml } from './htmlSanitizer';
 import { normalizeVariableWindow } from './dataViewportState';
@@ -222,6 +226,8 @@ export class SpssStudioPanel implements vscode.Disposable {
         void this.callbacks.refreshData();
       } else if (message.type === 'refreshVariables') {
         void this.callbacks.refreshVariables();
+      } else if (message.type === 'explainOutput') {
+        void this.explainOutput(message.id);
       } else if (message.type === 'exportOutput') {
         void this.exportOutput(message.id);
       } else if (message.type === 'printOutput') {
@@ -319,6 +325,26 @@ export class SpssStudioPanel implements vscode.Disposable {
     }
   }
 
+  private async explainOutput(id: string): Promise<void> {
+    const source = this.outputSource(id);
+    if (!source) {
+      return;
+    }
+    const extracted = extractSpssOutputForAi(source.rawHtml);
+    if (!extracted.content) {
+      void vscode.window.showInformationMessage(
+        'The selected run contains no statistical tables or text to explain. Figures and system metadata are skipped.',
+      );
+      return;
+    }
+    const question = buildOutputExplanationQuestion(
+      extracted.content,
+      this.aiController.responseLanguage,
+    );
+    this.showAi('chat');
+    await this.aiController.sendQuestionFromEditor(question);
+  }
+
   private async printOutput(id: string): Promise<void> {
     const source = this.outputSource(id);
     if (!source) {
@@ -346,7 +372,7 @@ export class SpssStudioPanel implements vscode.Disposable {
   private outputSource(id: string): { record: ExecutionRecord & { htmlPath: string }; rawHtml: string } | undefined {
     const record = this.outputStore.get(id);
     if (!record?.htmlPath || record.status === 'RUNNING') {
-      void vscode.window.showInformationMessage('The selected run has no HTML output to export or print.');
+      void vscode.window.showInformationMessage('The selected run has no HTML output to explain, export, or print.');
       return undefined;
     }
     const rawHtml = this.outputStore.readHtml(id);
@@ -419,7 +445,7 @@ export class SpssStudioPanel implements vscode.Disposable {
   <main>
     <section id="output-view" class="view active">
       <article id="output-content">
-        <div class="output-actions"><button id="export-output" disabled>Export HTML</button><button id="print-output" disabled>Print</button><button id="toggle-history" type="button" aria-expanded="false">History</button></div>
+        <div class="output-actions"><button id="explain-output" disabled>Explain</button><button id="export-output" disabled>Export</button><button id="print-output" disabled>Print</button><button id="toggle-history" type="button" aria-expanded="false">History</button></div>
         <div id="run-summary" class="summary">No executions yet.</div><div id="spss-output" class="spss-output"></div>
       </article>
       <div id="output-splitter" role="separator" aria-label="Resize run history" aria-orientation="vertical" tabindex="0"></div>
@@ -466,6 +492,13 @@ export class SpssStudioPanel implements vscode.Disposable {
           <div id="history-list" class="history-list"></div>
         </section>
         <section id="page-profiles" class="page profiles-page" hidden>
+          <div class="response-language-setting">
+            <label for="response-language" id="response-language-label"></label>
+            <select id="response-language">
+              <option value="zh-CN" id="response-language-zh"></option>
+              <option value="en" id="response-language-en"></option>
+            </select>
+          </div>
           <aside class="profiles-sidebar">
             <button id="new-profile" type="button"></button>
             <div id="profile-list" class="profile-list"></div>

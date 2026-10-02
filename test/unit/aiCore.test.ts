@@ -1,9 +1,12 @@
 import assert from 'node:assert/strict';
 import {
   buildChatCompletionRequest,
+  buildAssistantInstruction,
   boundConversation,
+  SPSS_ASSISTANT_INSTRUCTION,
   type AiChatMessage,
 } from '../../src/ai/chatProtocol';
+import { buildSyntaxExplanationQuestion } from '../../src/ai/syntaxExplanation';
 import { parseAssistantContent } from '../../src/ai/fencedCode';
 import {
   AI_PROVIDER_PRESETS,
@@ -49,6 +52,29 @@ describe('AI provider presets and URL policy', () => {
 });
 
 describe('AI conversation request boundaries', () => {
+  it('anchors concise answers in SPSS Syntax and applied social statistics', () => {
+    assert.match(SPSS_ASSISTANT_INSTRUCTION, /简体中文/u);
+    assert.match(SPSS_ASSISTANT_INSTRUCTION, /默认回答简洁/u);
+    assert.match(SPSS_ASSISTANT_INSTRUCTION, /spss/iu);
+    assert.ok(SPSS_ASSISTANT_INSTRUCTION.length < 600);
+    const english = buildAssistantInstruction('en');
+    assert.match(english, /entirely in English/iu);
+    assert.match(english, /concise/iu);
+    assert.ok(english.length < 900);
+  });
+
+  it('wraps only the selected syntax in a minimal explanation request', () => {
+    assert.equal(
+      buildSyntaxExplanationQuestion('  FREQUENCIES VARIABLES=age.\n'),
+      '请简要解释以下 SPSS Syntax：\n\n```spss\nFREQUENCIES VARIABLES=age.\n```',
+    );
+    assert.equal(
+      buildSyntaxExplanationQuestion('FREQUENCIES VARIABLES=age.', 'en'),
+      'Briefly explain this SPSS Syntax:\n\n```spss\nFREQUENCIES VARIABLES=age.\n```',
+    );
+    assert.throws(() => buildSyntaxExplanationQuestion('  \n '), /empty/iu);
+  });
+
   it('builds a minimal streamed request containing only system and chat text', () => {
     const request = buildChatCompletionRequest('model-a', [
       { role: 'user', content: 'How do I run FREQUENCIES?' },
@@ -57,11 +83,19 @@ describe('AI conversation request boundaries', () => {
     assert.deepEqual(Object.keys(request).sort(), ['messages', 'model', 'stream']);
     assert.equal(request.stream, true);
     assert.equal(request.messages[0]?.role, 'system');
+    assert.match(request.messages[0].content, /简体中文/u);
     assert.equal(request.messages[1]?.content, 'How do I run FREQUENCIES?');
     const serialized = JSON.stringify(request);
     for (const forbidden of ['file', 'selection', 'variables', 'dataset', 'output', 'workspace']) {
       assert.equal(serialized.includes(`"${forbidden}"`), false);
     }
+  });
+
+  it('uses the shared English response preference when requested', () => {
+    const request = buildChatCompletionRequest('model-a', [
+      { role: 'user', content: '解释 FREQUENCIES。' },
+    ], 'en');
+    assert.match(request.messages[0]?.content ?? '', /entirely in English/iu);
   });
 
   it('drops the oldest complete exchanges when history exceeds limits', () => {

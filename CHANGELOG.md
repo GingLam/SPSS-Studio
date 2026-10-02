@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.7.0 — 2026-10-02
+
+- Replaced the generic AI instruction with a concise applied-social-statistics system prompt that defaults to Simplified Chinese, supports a shared English response preference, produces fenced executable SPSS Syntax when relevant, and briefly covers purpose, variables, assumptions, key options, and interpretation.
+- Added a standard `.sps` editor context action that sends the exact selection—or the scanner-resolved command when there is no selection—directly to Chat without a second Send action.
+- Queued editor-originated explanations until the embedded Chat Webview is ready, blocked parallel sends, and redirected missing-profile or missing-key cases to model management.
+- Preserved the AI privacy boundary: the new action sends no file path, surrounding document, variables, cases, Output, or workspace metadata and never executes the selected syntax.
+- Added Output **Explain** for concise interpretation of statistical headings, tables, footnotes, and text through the current Chat model, using the same Chinese/English preference as editor explanations.
+- Added deterministic local Output reduction that excludes figures, Notes, runtime/provenance fields, command echoes, and file paths before the request, with per-table and total payload limits.
+
 ## 0.6.1 — 2026-10-02
 
 - Collapsed Output run history by default and added a History toggle beside Print so results receive the full panel width until history is requested.

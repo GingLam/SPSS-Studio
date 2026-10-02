@@ -1,5 +1,9 @@
 import type { AiSessionController } from '../ai/aiSessionController';
 import { aiStringsForLanguage, type AiStrings } from '../ai/aiStrings';
+import {
+  DEFAULT_AI_RESPONSE_LANGUAGE,
+  type AiResponseLanguage,
+} from '../ai/chatProtocol';
 import { parseAssistantContent } from '../ai/fencedCode';
 import type { KeyValueStore } from '../ai/providerConfigurationStore';
 import { AI_PROVIDER_PRESETS, providerPreset } from '../ai/providerPresets';
@@ -13,6 +17,7 @@ import {
 } from './aiWebviewProtocol';
 
 const COMPOSER_HEIGHT_KEY = 'spssStudio.ai.composerHeight';
+const RESPONSE_LANGUAGE_KEY = 'spssStudio.ai.responseLanguage';
 const DEFAULT_COMPOSER_HEIGHT = 112;
 
 type MutationMessage = Exclude<AiWebviewToExtensionMessage,
@@ -23,6 +28,7 @@ type MutationMessage = Exclude<AiWebviewToExtensionMessage,
 | { type: 'openProviderHelp' }
 | { type: 'openLink' }
 | { type: 'setComposerHeight' }
+| { type: 'setResponseLanguage' }
 | { type: 'sendQuestion' }>;
 
 export interface SpssAiPanelPlatform {
@@ -40,6 +46,7 @@ export class SpssAiPanelController {
   private postTarget: AiPostMessage | undefined;
   private webviewReady = false;
   private pendingPage: AiPage | undefined;
+  private pendingEditorQuestion: string | undefined;
   private readonly strings: AiStrings;
 
   public constructor(
@@ -60,6 +67,7 @@ export class SpssAiPanelController {
   public detach(): void {
     this.postTarget = undefined;
     this.webviewReady = false;
+    this.pendingEditorQuestion = undefined;
   }
 
   public async showPage(page: AiPage): Promise<void> {
@@ -78,6 +86,41 @@ export class SpssAiPanelController {
     }
   }
 
+  public get responseLanguage(): AiResponseLanguage {
+    return this.uiState.get(RESPONSE_LANGUAGE_KEY) === 'en'
+      ? 'en'
+      : DEFAULT_AI_RESPONSE_LANGUAGE;
+  }
+
+  public async sendQuestionFromEditor(question: string): Promise<void> {
+    await this.initialization;
+    const state = await this.controller.renderState();
+    const activeProfile = state.profiles.profiles.find(
+      (profile) => profile.id === state.profiles.activeProfileId,
+    );
+    if (!activeProfile) {
+      this.platform.showWarning(this.strings.profileEmpty);
+      await this.showPage('profiles');
+      return;
+    }
+    if (!activeProfile.hasApiKey) {
+      this.platform.showWarning(this.strings.apiKeyMissing);
+      await this.showPage('profiles');
+      return;
+    }
+    if (state.busy || this.pendingEditorQuestion !== undefined) {
+      this.platform.showWarning(this.strings.busyWarning);
+      return;
+    }
+    this.pendingPage = 'chat';
+    if (!this.webviewReady) {
+      this.pendingEditorQuestion = question;
+      return;
+    }
+    await this.showPage('chat');
+    await this.sendQuestion(question);
+  }
+
   public async handleMessage(message: AiWebviewToExtensionMessage): Promise<void> {
     if (message.type === 'ready') {
       this.webviewReady = true;
@@ -87,6 +130,11 @@ export class SpssAiPanelController {
         if (this.pendingPage) {
           await this.post({ type: 'showPage', page: this.pendingPage });
           this.pendingPage = undefined;
+        }
+        const pendingQuestion = this.pendingEditorQuestion;
+        this.pendingEditorQuestion = undefined;
+        if (pendingQuestion !== undefined) {
+          await this.sendQuestion(pendingQuestion);
         }
       } catch (error) {
         await this.postOperationError(error);
@@ -117,6 +165,11 @@ export class SpssAiPanelController {
     }
     if (message.type === 'setComposerHeight') {
       await this.uiState.update(COMPOSER_HEIGHT_KEY, Math.round(message.height));
+      return;
+    }
+    if (message.type === 'setResponseLanguage') {
+      await this.uiState.update(RESPONSE_LANGUAGE_KEY, message.language);
+      await this.postRenderState();
       return;
     }
     if (message.type === 'sendQuestion') {
@@ -195,7 +248,7 @@ export class SpssAiPanelController {
         onDelta: (content) => {
           void this.post({ type: 'responseDelta', content });
         },
-      });
+      }, this.responseLanguage);
       await this.postRenderState(this.toViewState(result.state));
       if (result.persistenceWarning) {
         await this.post({
@@ -251,9 +304,15 @@ export class SpssAiPanelController {
             segments: parseAssistantContent(message.content),
           }),
       };
+    const base = {
+      busy: state.busy,
+      responseLanguage: this.responseLanguage,
+      profiles: state.profiles,
+      history: state.history,
+    };
     return currentConversation === undefined
-      ? { busy: state.busy, profiles: state.profiles, history: state.history }
-      : { busy: state.busy, profiles: state.profiles, history: state.history, currentConversation };
+      ? base
+      : { ...base, currentConversation };
   }
 
   private composerHeight(): number {

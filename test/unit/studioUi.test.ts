@@ -10,6 +10,7 @@ describe('SPSS Studio Webview UI contract', () => {
     assert.equal(isWebviewMessage({ type: 'showAi' }), true);
     assert.equal(isWebviewMessage({ type: 'refreshVariables' }), true);
     assert.equal(isWebviewMessage({ type: 'insertVariable', name: 'HouseholdIncome' }), true);
+    assert.equal(isWebviewMessage({ type: 'explainOutput', id: 'run-1' }), true);
     assert.equal(isWebviewMessage({ type: 'exportOutput', id: 'run-1' }), true);
     assert.equal(isWebviewMessage({ type: 'printOutput', id: 'run-1' }), true);
     assert.equal(isWebviewMessage({
@@ -17,6 +18,7 @@ describe('SPSS Studio Webview UI contract', () => {
       requestId: 1, generation: 0,
     }), true);
     assert.equal(isWebviewMessage({ type: 'exportOutput', id: '' }), false);
+    assert.equal(isWebviewMessage({ type: 'explainOutput', id: '' }), false);
     assert.equal(isWebviewMessage({ type: 'insertVariable', name: '' }), false);
     assert.equal(isWebviewMessage({ type: 'insertVariable', name: 'x'.repeat(65) }), false);
     assert.equal(isWebviewMessage({ type: 'requestDatasetPage', offset: -1 }), false);
@@ -49,7 +51,13 @@ describe('SPSS Studio Webview UI contract', () => {
     );
     const script = fs.readFileSync(path.resolve(__dirname, '../../../media/studio.js'), 'utf8');
     const style = fs.readFileSync(path.resolve(__dirname, '../../../media/studio.css'), 'utf8');
-    assert.ok(panelSource.indexOf('id="print-output"') < panelSource.indexOf('id="toggle-history"'));
+    const explain = panelSource.indexOf('id="explain-output"');
+    const exportOutput = panelSource.indexOf('id="export-output"');
+    const print = panelSource.indexOf('id="print-output"');
+    const history = panelSource.indexOf('id="toggle-history"');
+    assert.ok(explain >= 0 && explain < exportOutput && exportOutput < print && print < history);
+    assert.match(panelSource, /id="export-output" disabled>Export<\/button>/u);
+    assert.match(script, /type: 'explainOutput'/u);
     assert.match(panelSource, /id="toggle-history"[^>]*aria-expanded="false"[^>]*>History/u);
     assert.match(script, /historyVisible: false/u);
     assert.match(script, /setHistoryVisible\(!state\.historyVisible\)/u);

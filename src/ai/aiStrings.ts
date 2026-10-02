@@ -5,6 +5,7 @@ export interface AiStrings {
   apiKeyPlaceholder: string;
   apiKeySaved: string;
   baseUrl: string;
+  busyWarning: string;
   cancel: string;
   chatEmpty: string;
   clearAll: string;
@@ -35,6 +36,9 @@ export interface AiStrings {
   open: string;
   profileEmpty: string;
   provider: string;
+  responseLanguage: string;
+  responseLanguageChinese: string;
+  responseLanguageEnglish: string;
   questionPlaceholder: string;
   questions: string;
   rename: string;
@@ -58,6 +62,7 @@ export const AI_STRINGS_EN: AiStrings = {
   apiKeyPlaceholder: 'Leave blank to keep the saved key; enter a new key to replace it',
   apiKeySaved: 'API Key saved securely.',
   baseUrl: 'Base URL',
+  busyWarning: 'Wait for the current AI response or stop it before sending another question.',
   cancel: 'Cancel',
   chatEmpty: 'Ask a question about SPSS Syntax. Only the text typed here is sent to the selected provider.',
   clearAll: 'Clear all history',
@@ -88,6 +93,9 @@ export const AI_STRINGS_EN: AiStrings = {
   open: 'Open',
   profileEmpty: 'Create a model profile to start using SPSS AI.',
   provider: 'Provider',
+  responseLanguage: 'Response language',
+  responseLanguageChinese: 'Chinese (default)',
+  responseLanguageEnglish: 'English',
   questionPlaceholder: 'Ask about SPSS Syntax…',
   questions: 'question(s)',
   rename: 'Rename',
@@ -111,6 +119,7 @@ export const AI_STRINGS_ZH_CN: AiStrings = {
   apiKeyPlaceholder: '留空以保留已保存密钥；输入新密钥可替换',
   apiKeySaved: 'API Key 已安全保存。',
   baseUrl: 'Base URL',
+  busyWarning: '请等待当前 AI 回复完成，或先停止生成，再发送其他问题。',
   cancel: '取消',
   chatEmpty: '请输入有关 SPSS 语法的问题。只有你在此输入的文字会发送给所选模型服务商。',
   clearAll: '清空全部历史',
@@ -141,6 +150,9 @@ export const AI_STRINGS_ZH_CN: AiStrings = {
   open: '打开',
   profileEmpty: '请先创建模型配置，然后使用 SPSS AI。',
   provider: '服务商',
+  responseLanguage: '回答语言',
+  responseLanguageChinese: '中文（默认）',
+  responseLanguageEnglish: 'English',
   questionPlaceholder: '询问 SPSS 语法……',
   questions: '轮提问',
   rename: '重命名',

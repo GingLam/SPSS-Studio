@@ -15,6 +15,7 @@ interface MenuContribution {
 }
 
 interface ExtensionManifest {
+  activationEvents?: string[];
   contributes: {
     commands: CommandContribution[];
     viewsContainers?: {
@@ -23,6 +24,7 @@ interface ExtensionManifest {
     views?: Record<string, Array<{ id: string; name: string; type?: string }>>;
     menus?: {
       'editor/title'?: MenuContribution[];
+      'editor/context'?: MenuContribution[];
     };
     configuration?: {
       properties?: Record<string, unknown>;
@@ -64,5 +66,27 @@ describe('SPSS editor title actions', () => {
       manifest.contributes.configuration?.properties?.['spssStudio.aiAutoReveal'],
       undefined,
     );
+  });
+
+  it('contributes a standard SPSS editor context action that sends syntax to Chat', () => {
+    const manifest = JSON.parse(
+      fs.readFileSync(path.resolve(__dirname, '../../../package.json'), 'utf8'),
+    ) as ExtensionManifest;
+    const commandId = 'spssStudio.explainSyntaxInChat';
+    assert.ok(manifest.contributes.commands.some((command) => command.command === commandId));
+    assert.ok(manifest.activationEvents?.includes(`onCommand:${commandId}`));
+    assert.deepEqual(manifest.contributes.menus?.['editor/context'], [{
+      command: commandId,
+      when: 'editorLangId == spss',
+      group: 'navigation@10',
+    }]);
+    const english = JSON.parse(
+      fs.readFileSync(path.resolve(__dirname, '../../../package.nls.json'), 'utf8'),
+    ) as Record<string, string>;
+    const chinese = JSON.parse(
+      fs.readFileSync(path.resolve(__dirname, '../../../package.nls.zh-cn.json'), 'utf8'),
+    ) as Record<string, string>;
+    assert.equal(english['spssStudio.command.explainSyntaxInChat'], 'Explain in Chat');
+    assert.equal(chinese['spssStudio.command.explainSyntaxInChat'], 'Explain in Chat');
   });
 });

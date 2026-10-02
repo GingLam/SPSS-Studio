@@ -91,6 +91,7 @@
 
   function setOutputActions(record) {
     const enabled = Boolean(record?.hasHtml) && record.status !== 'RUNNING';
+    byId('explain-output').disabled = !enabled;
     byId('export-output').disabled = !enabled;
     byId('print-output').disabled = !enabled;
   }
@@ -307,6 +308,9 @@
   byId('variables-tab').addEventListener('click', () => showTab('variables'));
   byId('ai-tab').addEventListener('click', () => showTab('ai'));
   byId('clear-output').addEventListener('click', () => postStudio({ type: 'clearOutput' }));
+  byId('explain-output').addEventListener('click', () => {
+    if (state.selectedId) postStudio({ type: 'explainOutput', id: state.selectedId });
+  });
   byId('export-output').addEventListener('click', () => {
     if (state.selectedId) postStudio({ type: 'exportOutput', id: state.selectedId });
   });

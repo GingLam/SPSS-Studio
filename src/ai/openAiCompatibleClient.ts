@@ -2,6 +2,7 @@ import {
   boundConversation,
   buildChatCompletionRequest,
   type AiChatMessage,
+  type AiResponseLanguage,
 } from './chatProtocol';
 import {
   buildChatCompletionsUrl,
@@ -14,6 +15,7 @@ export interface StreamChatOptions {
   configuration: AiProviderConfiguration;
   apiKey: string;
   history: readonly AiChatMessage[];
+  responseLanguage?: AiResponseLanguage;
   timeoutMs?: number;
   signal?: AbortSignal;
 }
@@ -54,6 +56,7 @@ export class OpenAiCompatibleClient {
         body: JSON.stringify(buildChatCompletionRequest(
           configuration.model,
           boundConversation(options.history),
+          options.responseLanguage,
         )),
         redirect: 'manual',
         signal: controller.signal,

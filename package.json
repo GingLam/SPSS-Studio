@@ -1,8 +1,8 @@
 {
   "name": "spss-studio",
   "displayName": "SPSS Studio",
-  "description": "SPSS Syntax IntelliSense, Active Dataset tools, native HTML output, and optional OpenAI-compatible assistance.",
-  "version": "0.6.1",
+  "description": "Powerful SPSS Syntax development, execution, interpretation, data management, output, and AI assistance for professional researchers.",
+  "version": "0.7.0",
   "publisher": "jinglin",
   "author": {
     "name": "Jing LIN (林景)",
@@ -47,6 +47,7 @@
     "onCommand:spssStudio.undo",
     "onCommand:spssStudio.runSelection",
     "onCommand:spssStudio.runFile",
+    "onCommand:spssStudio.explainSyntaxInChat",
     "onCommand:spssStudio.startEngine",
     "onCommand:spssStudio.stopEngine",
     "onCommand:spssStudio.restartEngine",
@@ -99,6 +100,10 @@
         "command": "spssStudio.runFile",
         "title": "SPSS: Run File",
         "icon": "$(run-all)"
+      },
+      {
+        "command": "spssStudio.explainSyntaxInChat",
+        "title": "%spssStudio.command.explainSyntaxInChat%"
       },
       {
         "command": "spssStudio.startEngine",
@@ -168,6 +173,13 @@
           "command": "spssStudio.showAi",
           "when": "resourceLangId == spss",
           "group": "navigation@4"
+        }
+      ],
+      "editor/context": [
+        {
+          "command": "spssStudio.explainSyntaxInChat",
+          "when": "editorLangId == spss",
+          "group": "navigation@10"
         }
       ]
     },

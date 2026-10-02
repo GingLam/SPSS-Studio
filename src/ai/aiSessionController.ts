@@ -1,5 +1,9 @@
 import { randomUUID } from 'node:crypto';
-import type { AiChatMessage } from './chatProtocol';
+import {
+  DEFAULT_AI_RESPONSE_LANGUAGE,
+  type AiChatMessage,
+  type AiResponseLanguage,
+} from './chatProtocol';
 import type { ConversationStore } from './conversationStore';
 import { conversationTitleFromQuestion } from './conversationTitle';
 import type {
@@ -61,7 +65,11 @@ export class AiSessionController {
       : { busy: this.busy, profiles, history, currentConversation };
   }
 
-  public async sendQuestion(question: string, callbacks: AiSendCallbacks = {}): Promise<AiSendResult> {
+  public async sendQuestion(
+    question: string,
+    callbacks: AiSendCallbacks = {},
+    responseLanguage: AiResponseLanguage = DEFAULT_AI_RESPONSE_LANGUAGE,
+  ): Promise<AiSendResult> {
     if (this.activeRequest) {
       throw new Error('Wait for the current AI response or stop it before sending another question.');
     }
@@ -99,6 +107,7 @@ export class AiSessionController {
         configuration: resolved.configuration,
         apiKey: resolved.apiKey,
         history: requestHistory,
+        responseLanguage,
         signal: request.controller.signal,
       }, (delta) => {
         if (this.isCurrentRequest(request.id)) {

@@ -1,4 +1,5 @@
 import type { AiStrings } from '../ai/aiStrings';
+import type { AiResponseLanguage } from '../ai/chatProtocol';
 import type { ConversationSummary } from '../ai/conversation';
 import type { AssistantContentSegment } from '../ai/fencedCode';
 import { safeMarkdownUrl } from '../ai/markdown';
@@ -31,6 +32,7 @@ export interface AiDisplayConversation {
 
 export interface AiViewRenderState {
   busy: boolean;
+  responseLanguage: AiResponseLanguage;
   profiles: ModelProfileState;
   history: ConversationSummary[];
   currentConversation?: AiDisplayConversation;
@@ -76,6 +78,7 @@ export type AiWebviewToExtensionMessage =
   | { type: 'openProviderHelp'; providerId: AiProviderId }
   | { type: 'openLink'; url: string }
   | { type: 'setComposerHeight'; height: number }
+  | { type: 'setResponseLanguage'; language: AiResponseLanguage }
   | { type: 'insertCode'; code: string }
   | { type: 'copyCode'; code: string };
 
@@ -102,6 +105,9 @@ export function isAiWebviewMessage(value: unknown): value is AiWebviewToExtensio
       && Number.isFinite(value.height)
       && value.height >= 72
       && value.height <= 2_000;
+  }
+  if (value.type === 'setResponseLanguage') {
+    return value.language === 'zh-CN' || value.language === 'en';
   }
   if (value.type === 'openConversation' || value.type === 'deleteConversation') {
     return boundedString(value.conversationId, 1, 128);

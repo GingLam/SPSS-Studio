@@ -32,7 +32,7 @@ User syntax that ends all OMS requests, calls `FINISH`, or otherwise changes pro
 
 ## Exported output or printing does not open as expected
 
-**Export HTML** writes one sanitized HTML file and embeds local raster charts. If export fails, choose a writable local destination and confirm that the selected run still has HTML output.
+**Export** writes one sanitized HTML file and embeds local raster charts. If export fails, choose a writable local destination and confirm that the selected run still has HTML output.
 
 **Print** opens a temporary print-ready HTML file in the operating system's default browser. Some browsers block the automatic print dialog; press `Ctrl+P` on Windows or `Cmd+P` on macOS in the opened page. SPSS Studio does not silently install a PDF printer or platform-specific print utility.
 
@@ -74,7 +74,7 @@ Use the **Official docs** button in the configuration panel and verify the curre
 
 ## SPSS AI reports an incompatible stream or empty response
 
-Version 0.6.0 requires streamed OpenAI-compatible Chat Completions. Provider-specific native protocols, Responses-only endpoints, tools, and nonstandard event formats are not silently translated. Choose the provider's OpenAI-compatible endpoint or use a compatible gateway.
+SPSS Studio 0.6.0 and later require streamed OpenAI-compatible Chat Completions. Provider-specific native protocols, Responses-only endpoints, tools, and nonstandard event formats are not silently translated. Choose the provider's OpenAI-compatible endpoint or use a compatible gateway.
 
 Only HTTPS endpoints are accepted. Plain HTTP is limited to `localhost`, `127.0.0.1`, and `::1` for local model servers. Redirects are intentionally rejected to avoid forwarding the bearer credential to another origin.
 
@@ -94,4 +94,4 @@ Place the cursor inside the command, not on a blank line or command comment. Exp
 
 ## Windows status
 
-Windows discovery, Registry parsing, paths with spaces, batch launch, bundled-Python fallback, JSONL transport, completion, paging bounds, AI protocol handling, and Webview-independent logic are unit tested. Version 0.6.0 does not claim Windows + SPSS real-machine verification.
+Windows discovery, Registry parsing, paths with spaces, batch launch, bundled-Python fallback, JSONL transport, completion, paging bounds, AI protocol handling, and Webview-independent logic are unit tested. SPSS Studio does not yet claim Windows + SPSS real-machine verification.

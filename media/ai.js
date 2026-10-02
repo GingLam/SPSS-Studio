@@ -32,6 +32,10 @@
     providerHelp: byId('provider-help'),
     providerLabel: byId('provider-label'),
     question: byId('question'),
+    responseLanguage: byId('response-language'),
+    responseLanguageLabel: byId('response-language-label'),
+    responseLanguageZh: byId('response-language-zh'),
+    responseLanguageEn: byId('response-language-en'),
     saveProfile: byId('save-profile'),
     send: byId('send'),
     sendingStatus: byId('sending-status'),
@@ -81,6 +85,7 @@
     elements.question.disabled = busy;
     elements.activeProfile.disabled = busy || state.profiles.profiles.length === 0;
     elements.newChat.disabled = busy;
+    elements.responseLanguage.disabled = busy;
     elements.sendingStatus.textContent = busy ? strings.sending : '';
   }
 
@@ -118,6 +123,9 @@
     elements.newProfile.textContent = strings.newProfile;
     elements.profileNameLabel.textContent = strings.name;
     elements.providerLabel.textContent = strings.provider;
+    elements.responseLanguageLabel.textContent = strings.responseLanguage;
+    elements.responseLanguageZh.textContent = strings.responseLanguageChinese;
+    elements.responseLanguageEn.textContent = strings.responseLanguageEnglish;
     elements.baseUrlLabel.textContent = strings.baseUrl;
     elements.modelLabel.textContent = strings.model;
     elements.apiKeyLabel.textContent = strings.apiKey;
@@ -564,6 +572,7 @@
     }
     populateProviderOptions();
     populateActiveProfile();
+    elements.responseLanguage.value = state.responseLanguage || 'zh-CN';
     renderConversation();
     renderHistory();
     renderProfiles();
@@ -675,6 +684,12 @@
     if (elements.activeProfile.value) {
       vscode.postMessage({ type: 'selectProfile', profileId: elements.activeProfile.value });
     }
+  });
+  elements.responseLanguage.addEventListener('change', () => {
+    vscode.postMessage({
+      type: 'setResponseLanguage',
+      language: elements.responseLanguage.value,
+    });
   });
   elements.send.addEventListener('click', sendQuestion);
   elements.stop.addEventListener('click', () => vscode.postMessage({ type: 'stop' }));

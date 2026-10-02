@@ -4,6 +4,7 @@ import { ConversationStore } from './ai/conversationStore';
 import { migrateLegacyProviderConfiguration } from './ai/modelProfileMigration';
 import { ModelProfileStore } from './ai/modelProfileStore';
 import { OpenAiCompatibleClient } from './ai/openAiCompatibleClient';
+import { explainSelectionOrCurrentCommand } from './commands/aiCommands';
 import {
   restartEngine,
   showStatus,
@@ -204,6 +205,13 @@ export function activate(context: vscode.ExtensionContext): SpssStudioExtensionA
       async () => runSelectionOrCurrentCommand(executionDependencies),
     ),
     vscode.commands.registerCommand('spssStudio.runFile', async () => runFile(executionDependencies)),
+    vscode.commands.registerCommand('spssStudio.explainSyntaxInChat', async () => {
+      await explainSelectionOrCurrentCommand({
+        showChat: () => studioPanel?.showAi('chat'),
+        sendQuestion: (question) => aiPanelController.sendQuestionFromEditor(question),
+        responseLanguage: () => aiPanelController.responseLanguage,
+      });
+    }),
     vscode.commands.registerCommand('spssStudio.startEngine', async () => startEngine(engineDependencies)),
     vscode.commands.registerCommand('spssStudio.stopEngine', async () => stopEngine(engineDependencies)),
     vscode.commands.registerCommand('spssStudio.restartEngine', async () => restartEngine(engineDependencies)),

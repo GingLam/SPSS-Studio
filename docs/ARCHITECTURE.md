@@ -101,6 +101,8 @@ Clear removes only run directories owned by the current `OutputStore`; disposal 
 
 The Output tab gives the selected result the full width by default. A History button beside Print toggles the metadata-only Runs column and its resizable splitter without changing stored execution history. Export and print reuse the same sanitizer. `portableOutput.ts` converts only in-run raster images to data URIs and creates a complete standalone HTML document. Export writes that document through VS Code's save dialog. Print writes a temporary copy and opens it in the system browser because direct Webview printing is not a reliable extension API.
 
+Output Explain follows a separate, text-only path. `outputExplanation.ts` parses the raw IBM HTML locally, removes figures, Notes tables, scripts, styles, command echoes, file paths, and runtime/provenance metadata, then converts the remaining procedure headings, statistical tables, footnotes, warnings, and meaningful text to compact Markdown. It caps each table at 50 rows and the complete extracted content at 30,000 characters before handing the explicit request to the existing Chat controller.
+
 ## Read-only Variables View
 
 The Variables tab consumes `ActiveDatasetInfo.variables`, which is already populated for completion and Data preview. It displays Name, Label, Type, Format, and optional measurement level with client-side row pagination. Double-clicking a Name cell requests editor insertion through the validated cache boundary; other cells have no edit action. It does not add a bridge operation and cannot modify the Active Dataset dictionary.
@@ -118,11 +120,13 @@ The AI browser code is a host-independent module mounted inside that shell. `Sps
 ## OpenAI-compatible AI boundary
 
 ```text
-AI question box
-  -> validated Webview message
+AI question box OR explicit editor/Output Explain action
+  -> validated Webview message, exact selected/current SPSS command,
+     OR locally reduced statistical output text
   -> active conversation in the extension's private global storage
   -> bounded user/assistant request text
-  -> fixed SPSS helper system instruction
+  -> concise applied-social-statistics SPSS system instruction
+     with the shared Chinese/English response preference
   -> OpenAiCompatibleClient
   -> user-configured /chat/completions endpoint
   -> streamed SSE content only
@@ -131,11 +135,11 @@ AI question box
 
 `SpssAiPanelController` attaches to the shared Studio shell and supplies Current Chat, Chat History, and Model Profiles pages inside the fourth Studio tab. A shell-level ready handshake prevents the extension host from posting initial state before the Webview listener exists. The transcript/composer boundary is pointer- and keyboard-adjustable; only its numeric height and the Webview's selected page/profile UI state are persisted as presentation state.
 
-Named model profiles store provider selection, Base URL, model identifier, and active-profile identity in extension `globalState`. Each profile has an independent API Key stored only in `ExtensionContext.secrets`; keys are never returned to the Webview after saving. The blank key field means “preserve the saved key.” Built-in presets cover DeepSeek, Zhipu GLM, Qwen, and Doubao, while the transport remains one provider-neutral Chat Completions implementation. A one-time idempotent migration copies the 0.4.0 single-provider configuration into the profile model without deleting the legacy values first.
+Named model profiles store provider selection, Base URL, model identifier, active-profile identity, and the shared response-language preference in extension `globalState`. Each profile has an independent API Key stored only in `ExtensionContext.secrets`; keys are never returned to the Webview after saving. The blank key field means “preserve the saved key.” Built-in presets cover DeepSeek, Zhipu GLM, Qwen, and Doubao, while the transport remains one provider-neutral Chat Completions implementation. A one-time idempotent migration copies the 0.4.0 single-provider configuration into the profile model without deleting the legacy values first.
 
 The client requires HTTPS except for loopback HTTP endpoints, rejects embedded URL credentials, query strings, and fragments, and uses manual redirect handling so a bearer key is not forwarded to another origin. `AbortController` implements Stop and the request timeout. HTTP failures, cancellation, timeout, malformed SSE, and empty responses remain distinct failures.
 
-The AI payload contains only the fixed system instruction and text entered in the active AI conversation. It has no code path to read the active document, selection, variable cache, cases, SPSS output, filenames, or workspace paths. Successful conversations are stored as a versioned JSON file below `ExtensionContext.globalStorageUri`, shared across all `.sps` documents and workspaces in one local VS Code profile. The store keeps at most 100 conversations, bounds per-conversation messages/content and total bytes, writes through a validated temporary file, keeps a last-known-good backup, and preserves corrupt evidence rather than silently overwriting it. It is deliberately local plaintext, not SecretStorage; API keys are structurally excluded. AI requests are disabled in untrusted workspaces.
+The AI payload contains only the language-specific fixed system instruction and bounded conversation text. Ordinary Chat requests contain only text entered in Chat. The explicit editor Explain command additionally reads and sends only the user's current selection or the command scanner's current SPSS command, wrapped in a minimal explanation request; it does not attach the remaining document, variable cache, cases, filename, or workspace path. Output Explain is the only path that attaches Output, and only after deterministic local reduction to statistical text and tables. Successful conversations are stored as a versioned JSON file below `ExtensionContext.globalStorageUri`, shared across all `.sps` documents and workspaces in one local VS Code profile. The store keeps at most 100 conversations, bounds per-conversation messages/content and total bytes, writes through a validated temporary file, keeps a last-known-good backup, and preserves corrupt evidence rather than silently overwriting it. It is deliberately local plaintext, not SecretStorage; API keys are structurally excluded. AI requests are disabled in untrusted workspaces.
 
 The production packaging command applies a positive allowlist before and after VSIX creation. Extension global storage, chat history, SecretStorage, tests, development notes, Git metadata, and `.superpowers` artifacts cannot enter the archive.
 
