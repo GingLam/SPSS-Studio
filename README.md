@@ -1,8 +1,8 @@
 # SPSS Studio
 
-**SPSS Studio is a powerful SPSS Syntax development, execution, and interpretation environment for Visual Studio Code.** It brings together professional syntax highlighting and completion, a persistent connection to the local IBM SPSS execution engine, dataset and output management, and integrated AI interaction—helping researchers write, run, inspect, and understand statistical analyses efficiently and elegantly while unlocking the full analytical potential of IBM SPSS Statistics.
+**SPSS Studio is an exceptionally powerful integrated environment for developing, executing, and interpreting SPSS Syntax.** It grew out of a vision that its designer, Jing LIN, has carried throughout his years of teaching statistics at university: to bring professional syntax highlighting and completion, connection to and execution through a local IBM SPSS Statistics engine, dataset management and output, and AI-assisted dialogue into one coherent workflow. It helps professional researchers write, run, inspect, and understand SPSS statistical analyses efficiently, conveniently, and elegantly—giving a youthful character to a venerable statistical package with a history of nearly sixty years.
 
-**SPSS Studio 是 Visual Studio Code 中功能强大的 SPSS Syntax 开发、执行与解释环境。** 它将专业语法高亮与补全、本地 IBM SPSS 执行引擎的持久连接、数据集与输出管理以及 AI 交互整合在统一工作流中，帮助专业研究人员以高效、优雅的方式编写、运行、检查和理解统计分析，充分释放 IBM SPSS Statistics 的分析潜力。
+**SPSS Studio 是一个功能极端强大的 SPSS Syntax 集成式开发、执行与解释环境。** 它源于设计者Jing LIN在大学任教统计学课程以来念兹在兹的愿景：将IBM SPSS Statistics软件的专业语法高亮与补全、本地计算引擎链接与执行、数据集管理与输出以及 AI 问答交互和谐地整合在同一工作流中，助力专业研究人员以高效、便捷、优雅的方式编写、运行、检查和理解SPSS统计分析，赋予这个拥有近60年历史的古老统计软件以年轻的气质。
 
 Author：Jing LIN (林景)
 
@@ -14,7 +14,8 @@ Contact：[linjing@nufe.edu.cn](mailto:linjing@nufe.edu.cn)
 
 ## Features
 
-- Generated TextMate highlighting based on a 309-command IBM SPSS Statistics syntax inventory.
+- Generated TextMate highlighting based on a 309-command IBM SPSS Statistics syntax inventory, with distinct command, subcommand, variable, function, format, literal, operator, macro, and comment families.
+- Optional **SPSS Studio Light** and **SPSS Studio Dark** color themes for a complete, contrast-checked syntax palette; installation never changes the user's active theme.
 - Context-aware completion for commands, subcommands, keywords, functions, snippets, and cached Active Dataset variables.
 - Editor-title actions for Undo, Run, and Run All.
 - A persistent, serialized local SPSS backend.
@@ -76,6 +77,8 @@ The reusable SPSS Studio panel opens beside the native `.sps` editor and contain
 
 The **Chat** tab is an SPSS AI question-and-answer tool and does not control the SPSS engine. Its compact header exposes **Current Chat** and **Chat History**; use **Manage Models** to open the model-profile editor without duplicating it as a third navigation tab. The boundary between the transcript and question box can be dragged with the mouse or adjusted from the keyboard. Completed answers render common Markdown structures without accepting model-generated HTML. A concise built-in system instruction grounds replies in executable SPSS Syntax, applied social statistics, assumptions, key options, and result interpretation without claiming that generated syntax was run. Replies default to Simplified Chinese and stay concise unless the user explicitly asks for detail.
 
+Chat is deliberately scoped to SPSS Syntax, IBM SPSS Statistics use, statistical methods implemented in SPSS, and SPSS output interpretation. Clearly unrelated requests receive a short boundary notice rather than a general-purpose answer. This instruction-level boundary reduces off-topic responses but is not a security guarantee against every possible model behavior.
+
 In an `.sps` editor, right-click a selection and choose **Explain in Chat**. With no selection, the command scanner sends the complete SPSS command or structural block at the cursor. The Studio panel opens to Chat and submits a concise explanation request immediately; it never executes the selected syntax. If no usable model profile exists, the command opens **Manage Models** instead.
 
 Configure it from **Manage Models** or run **SPSS: Manage AI Model Profiles**:
@@ -84,6 +87,8 @@ Configure it from **Manage Models** or run **SPSS: Manage AI Model Profiles**:
 2. Confirm the prefilled Base URL.
 3. Enter the model identifier supplied by the provider.
 4. Enter an API Key and save. A blank profile name is filled automatically from the provider and model.
+
+Each built-in provider profile also has an **Enable reasoning** checkbox, which is off by default. DeepSeek, Zhipu GLM, and Doubao receive their native `thinking.type` field; Qwen receives `enable_thinking`. Custom OpenAI-compatible profiles keep the checkbox disabled because the extension does not guess provider-specific fields. Whether a particular model supports the selected mode still depends on that provider and model.
 
 Profiles can be renamed, duplicated, deleted, and switched from the panel header. Multiple models—and multiple accounts for the same provider—can coexist. Reopening **Manage Models** always shows the saved non-secret values. The API Key field intentionally stays blank; the status below it indicates whether a key is saved. Switching profiles changes only later requests, while historical answers retain the profile name used to generate them.
 
@@ -175,10 +180,11 @@ Report reproducible defects through [GitHub Issues](https://github.com/GingLam/S
 
 SPSS Studio is not an LSP or a full semantic validator. It does not provide statistical menus, editable Data View cells, variable metadata editing, paper-table generation, or a general SPV viewer. Variables is intentionally read-only, and exported output is HTML rather than SPV. The AI client supports the common streamed OpenAI-compatible Chat Completions contract only; provider-specific tools, search, attachments, and advanced parameters are outside its scope.
 
-## Version History / 更新历史
+## Version History
 
 | Version | Date | Update summary |
 | --- | --- | --- |
+| 0.8.0 | 2026-10-02 | Rebuilt the SPSS syntax color system with optional contrast-checked Light/Dark themes, aligned Chat code blocks to the same taxonomy and palette, constrained Chat to the SPSS/statistics domain, and added per-model provider-native reasoning controls that default to off. |
 | 0.7.0 | 2026-10-02 | Added concise editor and Output explanations, a shared Chinese-default/English response setting, and deterministic local filtering of statistical Output before AI requests. |
 | 0.6.1 | 2026-10-02 | Added collapsible Output history, renamed the fourth Studio tab to Chat, rendered safe structured Markdown, and aligned Chat syntax highlighting with the editor grammar. |
 | 0.6.0 | 2026-10-01 | Consolidated the extension into a two-column editor-and-Studio workflow, embedded Chat as the fourth Studio tab, and added variable insertion from the Variables view. |

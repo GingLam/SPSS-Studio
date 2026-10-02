@@ -254,4 +254,27 @@ describe('legacy AI provider migration', () => {
     assert.equal((await store.state()).profiles.length, 1);
     assert.equal(await secrets.get(legacyProviderSecretKey('qwen')), undefined);
   });
+
+  it('keeps both secrets when the legacy and profile keys do not match', async () => {
+    const { store, values, secrets } = createStore();
+    const profile = await store.create({
+      providerId: 'deepseek',
+      baseUrl: 'https://api.deepseek.com',
+      model: 'deepseek-chat',
+    }, 'profile-key');
+    values.values.set(LEGACY_PROVIDER_CONFIGURATION_KEY, {
+      providerId: 'deepseek',
+      baseUrl: 'https://api.deepseek.com',
+      model: 'deepseek-chat',
+    });
+    secrets.values.set(legacyProviderSecretKey('deepseek'), 'different-legacy-key');
+
+    await assert.rejects(
+      migrateLegacyProviderConfiguration(values, secrets, store),
+      /differs/u,
+    );
+    assert.equal(await secrets.get(profileSecretKey(profile.id)), 'profile-key');
+    assert.equal(await secrets.get(legacyProviderSecretKey('deepseek')), 'different-legacy-key');
+    assert.equal(values.values.get(MODEL_PROFILE_MIGRATION_KEY), undefined);
+  });
 });

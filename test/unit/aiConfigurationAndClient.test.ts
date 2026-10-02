@@ -136,6 +136,38 @@ describe('OpenAI-compatible HTTP client', () => {
     }
   });
 
+  it('adds the selected built-in provider reasoning field to the HTTP body', async () => {
+    let capturedBody = '';
+    const server = http.createServer((request, response) => {
+      request.setEncoding('utf8');
+      request.on('data', (chunk: string) => {
+        capturedBody += chunk;
+      });
+      request.on('end', () => {
+        response.writeHead(200, { 'Content-Type': 'text/event-stream' });
+        response.end('data: {"choices":[{"delta":{"content":"OK"}}]}\n\ndata: [DONE]\n\n');
+      });
+    });
+    const port = await listen(server);
+    try {
+      await new OpenAiCompatibleClient().streamChat({
+        configuration: {
+          providerId: 'deepseek',
+          baseUrl: `http://127.0.0.1:${String(port)}/v1`,
+          model: 'deepseek-chat',
+        },
+        apiKey: 'test-secret',
+        history: [{ role: 'user', content: 'Explain FREQUENCIES.' }],
+        reasoningEnabled: true,
+        timeoutMs: 2_000,
+      }, () => undefined);
+      const body = JSON.parse(capturedBody) as Record<string, unknown>;
+      assert.deepEqual(body.thinking, { type: 'enabled' });
+    } finally {
+      await close(server);
+    }
+  });
+
   it('maps reasoning only through documented provider-native request fields', () => {
     assert.deepEqual(providerReasoningFields('deepseek', false), {
       thinking: { type: 'disabled' },

@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.8.0 — 2026-10-02
+
+- Rebuilt SPSS highlighting around one canonical taxonomy that separates control commands, commands, subcommands, keywords, functions, formats, ordinary/system/scratch/macro variables, strings, numbers, missing-value constants, arithmetic/relational/logical operators, comments, and punctuation.
+- Added optional **SPSS Studio Light** and **SPSS Studio Dark** themes with a contrast-checked low-fatigue palette. Installing or updating the extension does not activate either theme automatically.
+- Generated editor TextMate scopes, Chat token data, Chat presentation rules, and both bundled themes from shared language and highlighting schemas so fenced SPSS blocks follow the editor's classification and exact bundled-theme colors.
+- Added a concise instruction-level Chat boundary for SPSS Syntax, IBM SPSS Statistics use, statistical methods implemented in SPSS, and SPSS output interpretation; clearly unrelated requests receive a short scope notice.
+- Added a per-model **Enable reasoning** setting, disabled by default, using native request fields for DeepSeek, Zhipu GLM, Qwen, and Doubao. Custom compatible profiles do not receive guessed reasoning parameters.
+- Migrated existing model profiles to the new schema with reasoning disabled, preserved their identifiers and keys, and removed the verified legacy single-provider secret after successful migration.
+- Updated the bilingual product introduction and technical documentation for the 0.8.0 release.
+
 ## 0.7.0 — 2026-10-02
 
 - Replaced the generic AI instruction with a concise applied-social-statistics system prompt that defaults to Simplified Chinese, supports a shared English response preference, produces fenced executable SPSS Syntax when relevant, and briefly covers purpose, variables, assumptions, key options, and interpretation.

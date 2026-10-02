@@ -25,9 +25,9 @@ The extension implements editor integration and transport, not statistical algor
 
 ## Static Language Schema
 
-`syntax/spss-language.json` is the single static language source. It contains canonical commands, subcommands, functions, formats, macro directives, system/scratch variables, command-specific subcommands, keywords, and verified snippets. `tools/generate-grammar.mjs` validates the schema and generates both `syntaxes/spss.tmLanguage.json` and `docs/SYNTAX-COVERAGE.md`.
+`syntax/spss-language.json` is the single static language source. It contains canonical commands, subcommands, functions, formats, macro directives, system/scratch variables, command-specific subcommands, keywords, and verified snippets. `syntax/spss-highlighting.json` is the single presentation source for the canonical token taxonomy and Light/Dark palettes. `tools/generate-grammar.mjs` validates both schemas and generates the TextMate grammar, Chat token data and CSS, optional VS Code color themes, and `docs/SYNTAX-COVERAGE.md`.
 
-The TextMate Grammar colors lexical forms; it is not a semantic validator. The completion provider reads the same schema at activation. The SPSS 25 command inventory therefore does not block later-version syntax from running unchanged.
+The taxonomy separates control commands, ordinary commands, subcommands, keywords, functions, formats, ordinary/system/scratch/macro variables, strings, numbers, missing-value constants, arithmetic/relational/logical operators, comments, and punctuation. The bundled **SPSS Studio Light** and **SPSS Studio Dark** themes supply exact contrast-checked colors, while ordinary VS Code themes remain free to style the generated scopes. Installation never activates a theme. The TextMate Grammar is lexical, not a semantic validator; the SPSS 25 command inventory therefore does not block later-version syntax from running unchanged.
 
 ## Completion Context
 
@@ -115,7 +115,7 @@ Before insertion, `htmlSanitizer.ts` removes executable and embedding elements, 
 
 The AI browser code is a host-independent module mounted inside that shell. `SpssAiPanelController` owns the AI state and network boundary without owning another Webview. Model text is parsed into typed Markdown blocks and inline nodes in the extension host; the Webview creates DOM elements without inserting model HTML. Fenced code remains a separate typed segment. Only locally created Insert and Copy buttons can send code-action messages.
 
-`tools/generate-grammar.mjs` also emits `media/spss-syntax-data.js` from the canonical language schema. The Chat code renderer therefore receives the same command, subcommand, function, format, macro, keyword, and system-variable vocabularies as the editor grammar instead of maintaining a second hand-written keyword list.
+`tools/generate-grammar.mjs` also emits `media/spss-syntax-data.js` and `media/spss-theme.css`. The Chat code renderer therefore receives the same vocabulary, token taxonomy, and bundled-theme palette as the editor instead of maintaining a second hand-written keyword or color list.
 
 ## OpenAI-compatible AI boundary
 
@@ -126,7 +126,7 @@ AI question box OR explicit editor/Output Explain action
   -> active conversation in the extension's private global storage
   -> bounded user/assistant request text
   -> concise applied-social-statistics SPSS system instruction
-     with the shared Chinese/English response preference
+     with the shared Chinese/English response preference and an SPSS-domain boundary
   -> OpenAiCompatibleClient
   -> user-configured /chat/completions endpoint
   -> streamed SSE content only
@@ -135,7 +135,9 @@ AI question box OR explicit editor/Output Explain action
 
 `SpssAiPanelController` attaches to the shared Studio shell and supplies Current Chat, Chat History, and Model Profiles pages inside the fourth Studio tab. A shell-level ready handshake prevents the extension host from posting initial state before the Webview listener exists. The transcript/composer boundary is pointer- and keyboard-adjustable; only its numeric height and the Webview's selected page/profile UI state are persisted as presentation state.
 
-Named model profiles store provider selection, Base URL, model identifier, active-profile identity, and the shared response-language preference in extension `globalState`. Each profile has an independent API Key stored only in `ExtensionContext.secrets`; keys are never returned to the Webview after saving. The blank key field means “preserve the saved key.” Built-in presets cover DeepSeek, Zhipu GLM, Qwen, and Doubao, while the transport remains one provider-neutral Chat Completions implementation. A one-time idempotent migration copies the 0.4.0 single-provider configuration into the profile model without deleting the legacy values first.
+Named model profiles store provider selection, Base URL, model identifier, reasoning preference, active-profile identity, and the shared response-language preference in extension `globalState`. Each profile has an independent API Key stored only in `ExtensionContext.secrets`; keys are never returned to the Webview after saving. The blank key field means “preserve the saved key.” Reasoning is off by default. DeepSeek, Zhipu GLM, and Doubao use `thinking.type`; Qwen uses `enable_thinking`; custom providers receive no guessed reasoning field. The transport otherwise remains one provider-neutral Chat Completions implementation.
+
+Schema-v2 profiles migrate in place to schema v3 with reasoning disabled, retaining identifiers and profile secrets. The older single-provider migration is idempotent: it creates or reuses the matching profile, verifies the new secret byte-for-byte, deletes the exact legacy provider secret only after verification, and records completion. The old non-secret configuration may remain in VS Code global state but is never packaged or sent to the Webview.
 
 The client requires HTTPS except for loopback HTTP endpoints, rejects embedded URL credentials, query strings, and fragments, and uses manual redirect handling so a bearer key is not forwarded to another origin. `AbortController` implements Stop and the request timeout. HTTP failures, cancellation, timeout, malformed SSE, and empty responses remain distinct failures.
 

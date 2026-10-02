@@ -78,6 +78,12 @@ SPSS Studio 0.6.0 and later require streamed OpenAI-compatible Chat Completions.
 
 Only HTTPS endpoints are accepted. Plain HTTP is limited to `localhost`, `127.0.0.1`, and `::1` for local model servers. Redirects are intentionally rejected to avoid forwarding the bearer credential to another origin.
 
+## Reasoning mode is unavailable or rejected
+
+Reasoning is configured separately for each model profile and is off by default. DeepSeek, Zhipu GLM, and Doubao use the provider-native `thinking.type` field; Qwen uses `enable_thinking`. The checkbox is intentionally unavailable for Custom OpenAI-compatible profiles because there is no universal request field that can be sent safely to every compatible endpoint.
+
+If a built-in provider returns an HTTP error after reasoning is enabled, first confirm that the selected model currently supports that provider's reasoning option. Disable reasoning for models that do not support it. SPSS Studio does not infer capability from a model name and does not silently retry with a different request body.
+
 ## AI-generated syntax does not run
 
 Insert and Copy transfer the code block exactly without its fence markers or language identifier. They do not validate, save, or execute it. Model output can contain unsupported commands, version-specific options, or ordinary mistakes; inspect the syntax and compare uncertain details with IBM documentation before running it.
