@@ -64,6 +64,8 @@ describe('VSIX package policy', () => {
       'media/spss-syntax-data.js',
       'out/src/extension.js',
       'resources/bridge/spss_bridge.py',
+      'themes/spss-studio-light-color-theme.json',
+      'themes/spss-studio-dark-color-theme.json',
     ];
     assert.deepEqual(policy.assertAllowedSourceFiles(required), required);
     assert.deepEqual(policy.assertAllowedVsixEntries([

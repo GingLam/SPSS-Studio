@@ -64,6 +64,8 @@ export function assertAllowedSourceFiles(values, phase = 'package input') {
     'media/spss-syntax-data.js',
     'out/src/extension.js',
     'resources/bridge/spss_bridge.py',
+    'themes/spss-studio-light-color-theme.json',
+    'themes/spss-studio-dark-color-theme.json',
   ];
   const missing = required.filter((value) => !files.includes(value));
   if (missing.length > 0) {

@@ -10,5 +10,6 @@
 !media/**
 !syntax/**
 !syntaxes/**
+!themes/**
 !resources/bridge/spss_bridge.py
 !out/src/**/*.js
