@@ -108,6 +108,7 @@ export class AiSessionController {
         apiKey: resolved.apiKey,
         history: requestHistory,
         responseLanguage,
+        reasoningEnabled: resolved.profile.reasoningEnabled,
         signal: request.controller.signal,
       }, (delta) => {
         if (this.isCurrentRequest(request.id)) {

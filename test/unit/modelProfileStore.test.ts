@@ -76,6 +76,7 @@ describe('AI model profile storage', () => {
     const state = await store.state();
 
     assert.equal(profile.name, 'DeepSeek · deepseek-chat');
+    assert.equal(profile.reasoningEnabled, false);
     assert.equal(state.activeProfileId, profile.id);
     assert.equal(state.profiles[0]?.hasApiKey, true);
     assert.equal(JSON.stringify(values.values.get(MODEL_PROFILE_INDEX_KEY)).includes('secret-one'), false);
@@ -116,11 +117,14 @@ describe('AI model profile storage', () => {
       providerId: 'qwen',
       baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
       model: 'qwen-max',
+      reasoningEnabled: true,
     });
     const copy = await store.duplicate(first.id);
     await store.select(copy.id);
 
     assert.equal(updated.name, 'Complex Analysis');
+    assert.equal(updated.reasoningEnabled, true);
+    assert.equal(copy.reasoningEnabled, true);
     assert.equal(copy.name, 'Complex Analysis (2)');
     assert.equal(await secrets.get(profileSecretKey(copy.id)), 'qwen-key');
     assert.equal((await store.state()).activeProfileId, copy.id);
@@ -156,6 +160,33 @@ describe('AI model profile storage', () => {
     values.values.set(MODEL_PROFILE_INDEX_KEY, { schemaVersion: 2, profiles: [{ id: '../secret' }] });
     await assert.rejects(store.state(), /invalid|incomplete/iu);
   });
+
+  it('migrates schema v2 profiles with reasoning disabled and preserves their identity', async () => {
+    const { store, values, secrets } = createStore();
+    values.values.set(MODEL_PROFILE_INDEX_KEY, {
+      schemaVersion: 2,
+      activeProfileId: 'legacy-profile',
+      profiles: [{
+        id: 'legacy-profile',
+        name: 'Existing DeepSeek',
+        providerId: 'deepseek',
+        baseUrl: 'https://api.deepseek.com',
+        model: 'deepseek-flash',
+        createdAt: '2026-10-01T00:00:00.000Z',
+        updatedAt: '2026-10-01T00:00:00.000Z',
+      }],
+    });
+    secrets.values.set(profileSecretKey('legacy-profile'), 'existing-key');
+
+    const state = await store.state();
+    assert.equal(state.activeProfileId, 'legacy-profile');
+    assert.equal(state.profiles[0]?.reasoningEnabled, false);
+    assert.equal((await store.resolve()).apiKey, 'existing-key');
+    assert.equal(
+      (values.values.get(MODEL_PROFILE_INDEX_KEY) as { schemaVersion: number }).schemaVersion,
+      3,
+    );
+  });
 });
 
 describe('legacy AI provider migration', () => {
@@ -174,7 +205,7 @@ describe('legacy AI provider migration', () => {
     assert.equal(state.profiles.length, 1);
     assert.equal((await store.resolve(state.profiles[0]?.id)).apiKey, 'legacy-key');
     assert.equal(values.values.get(MODEL_PROFILE_MIGRATION_KEY), true);
-    assert.equal(await secrets.get(legacyProviderSecretKey('deepseek')), 'legacy-key');
+    assert.equal(await secrets.get(legacyProviderSecretKey('deepseek')), undefined);
   });
 
   it('marks missing or invalid legacy state without creating a profile', async () => {
@@ -221,5 +252,6 @@ describe('legacy AI provider migration', () => {
 
     assert.equal(await migrateLegacyProviderConfiguration(values, secrets, store), 'migrated');
     assert.equal((await store.state()).profiles.length, 1);
+    assert.equal(await secrets.get(legacyProviderSecretKey('qwen')), undefined);
   });
 });

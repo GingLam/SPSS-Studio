@@ -8,7 +8,7 @@ import { validateProviderConfiguration, type AiProviderConfiguration } from './p
 import { MODEL_PROFILE_INDEX_KEY, profileSecretKey } from './modelProfile';
 import type { ModelProfileStore } from './modelProfileStore';
 
-export const MODEL_PROFILE_MIGRATION_KEY = 'spssStudio.ai.modelProfiles.migratedFromV1';
+export const MODEL_PROFILE_MIGRATION_KEY = 'spssStudio.ai.modelProfiles.migratedFromV1AndCleaned';
 
 export type ModelProfileMigrationResult =
   | 'already-complete'
@@ -49,15 +49,28 @@ export async function migrateLegacyProviderConfiguration(
 
   const oldKey = await secrets.get(legacyProviderSecretKey(legacy.providerId));
   const newSecretKey = profileSecretKey(target.id);
-  if (oldKey && !await secrets.get(newSecretKey)) {
-    await secrets.store(newSecretKey, oldKey);
+  if (oldKey) {
+    const currentKey = await secrets.get(newSecretKey);
+    if (!currentKey) {
+      await secrets.store(newSecretKey, oldKey);
+    } else if (currentKey !== oldKey) {
+      throw new Error('The legacy AI key differs from the saved model-profile key.');
+    }
   }
 
   const verifiedIndex = values.get(MODEL_PROFILE_INDEX_KEY);
   const verifiedState = await profiles.state();
   const verifiedProfile = verifiedState.profiles.find((profile) => profile.id === target.id);
-  if (!verifiedIndex || !verifiedProfile || (oldKey && !verifiedProfile.hasApiKey)) {
+  const verifiedSecret = oldKey ? await secrets.get(newSecretKey) : undefined;
+  if (!verifiedIndex || !verifiedProfile || (oldKey && verifiedSecret !== oldKey)) {
     throw new Error('The legacy AI provider configuration could not be verified after migration.');
+  }
+  if (oldKey) {
+    const legacySecret = legacyProviderSecretKey(legacy.providerId);
+    await secrets.delete(legacySecret);
+    if (await secrets.get(legacySecret)) {
+      throw new Error('The verified legacy AI key could not be removed.');
+    }
   }
   await values.update(MODEL_PROFILE_MIGRATION_KEY, true);
   return 'migrated';

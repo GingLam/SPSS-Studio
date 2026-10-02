@@ -57,6 +57,7 @@ describe('embedded SPSS AI panel controller', () => {
             providerId: 'deepseek' as const,
             baseUrl: 'https://api.deepseek.com',
             model: 'deepseek-chat',
+            reasoningEnabled: false,
             createdAt: '2026-10-02T00:00:00.000Z',
             updatedAt: '2026-10-02T00:00:00.000Z',
             hasApiKey: true,

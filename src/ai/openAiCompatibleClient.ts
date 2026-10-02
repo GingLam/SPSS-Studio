@@ -6,6 +6,7 @@ import {
 } from './chatProtocol';
 import {
   buildChatCompletionsUrl,
+  providerReasoningFields,
   validateProviderConfiguration,
   type AiProviderConfiguration,
 } from './providerPresets';
@@ -16,6 +17,7 @@ export interface StreamChatOptions {
   apiKey: string;
   history: readonly AiChatMessage[];
   responseLanguage?: AiResponseLanguage;
+  reasoningEnabled?: boolean;
   timeoutMs?: number;
   signal?: AbortSignal;
 }
@@ -53,11 +55,14 @@ export class OpenAiCompatibleClient {
           Authorization: `Bearer ${apiKey}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(buildChatCompletionRequest(
-          configuration.model,
-          boundConversation(options.history),
-          options.responseLanguage,
-        )),
+        body: JSON.stringify({
+          ...buildChatCompletionRequest(
+            configuration.model,
+            boundConversation(options.history),
+            options.responseLanguage,
+          ),
+          ...providerReasoningFields(configuration.providerId, options.reasoningEnabled ?? false),
+        }),
         redirect: 'manual',
         signal: controller.signal,
       });

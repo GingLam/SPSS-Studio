@@ -22,6 +22,7 @@ export interface AiStrings {
   duplicate: string;
   history: string;
   historyEmpty: string;
+  enableReasoning: string;
   insert: string;
   insertRequiresEditor: string;
   inserted: string;
@@ -39,6 +40,7 @@ export interface AiStrings {
   responseLanguage: string;
   responseLanguageChinese: string;
   responseLanguageEnglish: string;
+  reasoningUnavailable: string;
   questionPlaceholder: string;
   questions: string;
   rename: string;
@@ -79,6 +81,7 @@ export const AI_STRINGS_EN: AiStrings = {
   duplicate: 'Duplicate',
   history: 'Chat History',
   historyEmpty: 'No saved conversations yet.',
+  enableReasoning: 'Enable reasoning (may use more time and tokens)',
   insert: 'Insert',
   insertRequiresEditor: 'Open an SPSS syntax editor before inserting AI-generated code.',
   inserted: 'Inserted',
@@ -96,6 +99,7 @@ export const AI_STRINGS_EN: AiStrings = {
   responseLanguage: 'Response language',
   responseLanguageChinese: 'Chinese (default)',
   responseLanguageEnglish: 'English',
+  reasoningUnavailable: 'Automatic reasoning control is unavailable for custom providers.',
   questionPlaceholder: 'Ask about SPSS Syntax…',
   questions: 'question(s)',
   rename: 'Rename',
@@ -136,6 +140,7 @@ export const AI_STRINGS_ZH_CN: AiStrings = {
   duplicate: '复制配置',
   history: '历史对话',
   historyEmpty: '尚无历史对话。',
+  enableReasoning: '开启推理（可能增加等待时间和 Token 消耗）',
   insert: '插入',
   insertRequiresEditor: '请先打开 SPSS 语法编辑器，再插入 AI 生成的代码。',
   inserted: '已插入',
@@ -153,6 +158,7 @@ export const AI_STRINGS_ZH_CN: AiStrings = {
   responseLanguage: '回答语言',
   responseLanguageChinese: '中文（默认）',
   responseLanguageEnglish: 'English',
+  reasoningUnavailable: '自定义服务商不支持自动配置推理参数。',
   questionPlaceholder: '询问 SPSS 语法……',
   questions: '轮提问',
   rename: '重命名',

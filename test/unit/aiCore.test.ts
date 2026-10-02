@@ -55,11 +55,15 @@ describe('AI conversation request boundaries', () => {
   it('anchors concise answers in SPSS Syntax and applied social statistics', () => {
     assert.match(SPSS_ASSISTANT_INSTRUCTION, /简体中文/u);
     assert.match(SPSS_ASSISTANT_INSTRUCTION, /默认回答简洁/u);
+    assert.match(SPSS_ASSISTANT_INSTRUCTION, /明显无关的问题，仅回复/u);
+    assert.match(SPSS_ASSISTANT_INSTRUCTION, /超出 SPSS Studio Chat 的支持范围/u);
     assert.match(SPSS_ASSISTANT_INSTRUCTION, /spss/iu);
     assert.ok(SPSS_ASSISTANT_INSTRUCTION.length < 600);
     const english = buildAssistantInstruction('en');
     assert.match(english, /entirely in English/iu);
     assert.match(english, /concise/iu);
+    assert.match(english, /clearly unrelated request/iu);
+    assert.match(english, /outside SPSS Studio Chat’s scope/iu);
     assert.ok(english.length < 900);
   });
 

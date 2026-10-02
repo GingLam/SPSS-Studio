@@ -32,6 +32,9 @@
     providerHelp: byId('provider-help'),
     providerLabel: byId('provider-label'),
     question: byId('question'),
+    reasoningEnabled: byId('reasoning-enabled'),
+    reasoningEnabledLabel: byId('reasoning-enabled-label'),
+    reasoningStatus: byId('reasoning-status'),
     responseLanguage: byId('response-language'),
     responseLanguageLabel: byId('response-language-label'),
     responseLanguageZh: byId('response-language-zh'),
@@ -63,6 +66,7 @@
   };
   let currentAssistant;
   let composerHeight = 112;
+  let profileFormEnabled = false;
 
   function persistUiState() {
     const next = { page: currentPage };
@@ -87,6 +91,7 @@
     elements.newChat.disabled = busy;
     elements.responseLanguage.disabled = busy;
     elements.sendingStatus.textContent = busy ? strings.sending : '';
+    updateReasoningControl();
   }
 
   function showPage(page) {
@@ -126,6 +131,7 @@
     elements.responseLanguageLabel.textContent = strings.responseLanguage;
     elements.responseLanguageZh.textContent = strings.responseLanguageChinese;
     elements.responseLanguageEn.textContent = strings.responseLanguageEnglish;
+    elements.reasoningEnabledLabel.textContent = strings.enableReasoning;
     elements.baseUrlLabel.textContent = strings.baseUrl;
     elements.modelLabel.textContent = strings.model;
     elements.apiKeyLabel.textContent = strings.apiKey;
@@ -491,9 +497,20 @@
   }
 
   function setProfileFormEnabled(enabled) {
+    profileFormEnabled = enabled;
     for (const control of elements.profileForm.querySelectorAll('input, select, button')) {
       control.disabled = !enabled || state.busy;
     }
+    updateReasoningControl();
+  }
+
+  function updateReasoningControl() {
+    const preset = presetById(elements.provider.value);
+    const supported = Boolean(preset) && preset.reasoningControl !== 'none';
+    elements.reasoningEnabled.disabled = !profileFormEnabled || state.busy || !supported;
+    elements.reasoningStatus.textContent = profileFormEnabled && !supported
+      ? strings.reasoningUnavailable
+      : '';
   }
 
   function selectedProfile() {
@@ -507,6 +524,7 @@
       elements.baseUrl.value = '';
       elements.model.value = '';
       elements.apiKey.value = '';
+      elements.reasoningEnabled.checked = false;
       elements.keyStatus.textContent = strings.profileEmpty;
       setProfileFormEnabled(false);
       return;
@@ -519,6 +537,7 @@
       elements.baseUrl.value = preset?.baseUrl || '';
       elements.model.value = '';
       elements.apiKey.value = '';
+      elements.reasoningEnabled.checked = false;
       elements.keyStatus.textContent = strings.apiKeyMissing;
     } else {
       elements.profileName.value = profile.name;
@@ -526,12 +545,14 @@
       elements.baseUrl.value = profile.baseUrl;
       elements.model.value = profile.model;
       elements.apiKey.value = '';
+      elements.reasoningEnabled.checked = profile.reasoningEnabled;
       elements.keyStatus.textContent = profile.hasApiKey
         ? strings.apiKeySaved
         : strings.apiKeyMissing;
     }
     const preset = presetById(elements.provider.value);
     elements.model.placeholder = preset?.modelPlaceholder || '';
+    updateReasoningControl();
     const hasProfile = Boolean(profile) && !creatingProfile;
     elements.duplicateProfile.disabled = state.busy || !hasProfile;
     elements.makeActive.disabled = state.busy
@@ -599,6 +620,7 @@
       providerId: elements.provider.value,
       baseUrl: elements.baseUrl.value.trim(),
       model: elements.model.value.trim(),
+      reasoningEnabled: elements.reasoningEnabled.checked,
       apiKey: elements.apiKey.value,
     };
     if (creatingProfile) {
@@ -719,6 +741,10 @@
       elements.baseUrl.value = preset.baseUrl;
       elements.model.placeholder = preset.modelPlaceholder;
     }
+    if (preset?.reasoningControl === 'none') {
+      elements.reasoningEnabled.checked = false;
+    }
+    updateReasoningControl();
   });
   elements.duplicateProfile.addEventListener('click', () => {
     if (selectedProfileId) {

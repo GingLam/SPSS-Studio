@@ -57,6 +57,7 @@ interface ProfileFields {
   providerId: AiProviderId;
   baseUrl: string;
   model: string;
+  reasoningEnabled: boolean;
   apiKey?: string;
 }
 
@@ -145,6 +146,7 @@ export function profileDraftFromMessage(
     providerId: message.providerId,
     baseUrl: message.baseUrl,
     model: message.model,
+    reasoningEnabled: message.reasoningEnabled,
     ...(message.name === undefined ? {} : { name: message.name }),
   };
 }
@@ -154,6 +156,7 @@ function validProfileFields(value: Record<string, unknown>): boolean {
     && isAiProviderId(value.providerId)
     && boundedString(value.baseUrl, 1, 4_096)
     && boundedString(value.model, 1, 1_024)
+    && typeof value.reasoningEnabled === 'boolean'
     && (value.apiKey === undefined || boundedString(value.apiKey, 0, 16_384));
 }
 

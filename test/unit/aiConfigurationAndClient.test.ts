@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import http from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { OpenAiCompatibleClient } from '../../src/ai/openAiCompatibleClient';
+import { providerReasoningFields } from '../../src/ai/providerPresets';
 import {
   ProviderConfigurationStore,
   type KeyValueStore,
@@ -133,5 +134,28 @@ describe('OpenAI-compatible HTTP client', () => {
     } finally {
       await close(server);
     }
+  });
+
+  it('maps reasoning only through documented provider-native request fields', () => {
+    assert.deepEqual(providerReasoningFields('deepseek', false), {
+      thinking: { type: 'disabled' },
+    });
+    assert.deepEqual(providerReasoningFields('deepseek', true), {
+      thinking: { type: 'enabled' },
+    });
+    assert.deepEqual(providerReasoningFields('zhipu', false), {
+      thinking: { type: 'disabled' },
+    });
+    assert.deepEqual(providerReasoningFields('qwen', false), {
+      enable_thinking: false,
+    });
+    assert.deepEqual(providerReasoningFields('qwen', true), {
+      enable_thinking: true,
+    });
+    assert.deepEqual(providerReasoningFields('doubao', true), {
+      thinking: { type: 'enabled' },
+    });
+    assert.deepEqual(providerReasoningFields('custom', true), {});
+    assert.deepEqual(providerReasoningFields('custom', false), {});
   });
 });

@@ -33,6 +33,10 @@ export class ModelProfileStore {
 
   public async state(): Promise<ModelProfileState> {
     const index = this.readIndex();
+    const stored = this.values.get(MODEL_PROFILE_INDEX_KEY) as { schemaVersion?: unknown } | undefined;
+    if (stored?.schemaVersion !== undefined && stored.schemaVersion !== MODEL_PROFILE_SCHEMA_VERSION) {
+      await this.values.update(MODEL_PROFILE_INDEX_KEY, index);
+    }
     const profiles = await Promise.all(index.profiles.map(async (profile) => ({
       ...profile,
       hasApiKey: Boolean(await this.secrets.get(profileSecretKey(profile.id))),
@@ -53,6 +57,7 @@ export class ModelProfileStore {
       providerId: validated.providerId,
       baseUrl: validated.baseUrl,
       model: validated.model,
+      reasoningEnabled: validated.reasoningEnabled,
       createdAt: timestamp,
       updatedAt: timestamp,
     };
@@ -76,6 +81,7 @@ export class ModelProfileStore {
       providerId: validated.providerId,
       baseUrl: validated.baseUrl,
       model: validated.model,
+      reasoningEnabled: validated.reasoningEnabled,
       updatedAt: this.now().toISOString(),
     };
     await this.writeIndex({
@@ -94,6 +100,7 @@ export class ModelProfileStore {
       providerId: existing.providerId,
       baseUrl: existing.baseUrl,
       model: existing.model,
+      reasoningEnabled: existing.reasoningEnabled,
     });
     const key = await this.secrets.get(profileSecretKey(existing.id));
     if (key) {

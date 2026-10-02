@@ -29,6 +29,7 @@ describe('SPSS AI Webview contract', () => {
       baseUrl: 'https://api.deepseek.com',
       model: 'deepseek-model',
       apiKey: '',
+      reasoningEnabled: false,
     }), true);
     assert.equal(isAiWebviewMessage({
       type: 'saveProfile',
@@ -37,6 +38,7 @@ describe('SPSS AI Webview contract', () => {
       providerId: 'qwen',
       baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
       model: 'qwen-plus',
+      reasoningEnabled: true,
     }), true);
     assert.equal(isAiWebviewMessage({ type: 'setComposerHeight', height: 180 }), true);
     assert.equal(isAiWebviewMessage({ type: 'setResponseLanguage', language: 'zh-CN' }), true);
@@ -50,6 +52,13 @@ describe('SPSS AI Webview contract', () => {
       model: 'model',
     }), false);
     assert.equal(isAiWebviewMessage({ type: 'setComposerHeight', height: 20 }), false);
+    assert.equal(isAiWebviewMessage({
+      type: 'createProfile',
+      providerId: 'deepseek',
+      baseUrl: 'https://api.deepseek.com',
+      model: 'deepseek-flash',
+      reasoningEnabled: 'yes',
+    }), false);
     assert.equal(isAiWebviewMessage(Object.create({ type: 'ready' }) as unknown), false);
     assert.equal(isAiWebviewMessage({ type: 'executeCode', code: 'DELETE EVERYTHING' }), false);
   });
@@ -98,6 +107,9 @@ describe('SPSS AI Webview contract', () => {
     assert.match(panel, /id="manage-profiles"/u);
     assert.match(panel, /id="page-profiles"/u);
     assert.match(panel, /id="response-language"/u);
+    assert.match(panel, /id="reasoning-enabled"/u);
+    assert.match(script, /reasoningEnabled: elements\.reasoningEnabled\.checked/u);
+    assert.match(script, /reasoningControl !== 'none'/u);
     assert.match(script, /manageProfiles\.addEventListener\('click', \(\) => showPage\('profiles'\)\)/u);
     assert.match(panel, /role="separator"/u);
     assert.match(panel, /aria-orientation="horizontal"/u);

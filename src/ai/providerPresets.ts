@@ -6,6 +6,7 @@ export interface AiProviderPreset {
   baseUrl: string;
   modelPlaceholder: string;
   helpUrl: string;
+  reasoningControl: 'thinking-type' | 'enable-thinking' | 'none';
 }
 
 export interface AiProviderConfiguration {
@@ -21,6 +22,7 @@ export const AI_PROVIDER_PRESETS: readonly AiProviderPreset[] = [
     baseUrl: 'https://api.deepseek.com',
     modelPlaceholder: 'Enter a model ID from the DeepSeek console',
     helpUrl: 'https://api-docs.deepseek.com/',
+    reasoningControl: 'thinking-type',
   },
   {
     id: 'zhipu',
@@ -28,6 +30,7 @@ export const AI_PROVIDER_PRESETS: readonly AiProviderPreset[] = [
     baseUrl: 'https://open.bigmodel.cn/api/paas/v4',
     modelPlaceholder: 'Enter a GLM model ID',
     helpUrl: 'https://docs.bigmodel.cn/',
+    reasoningControl: 'thinking-type',
   },
   {
     id: 'qwen',
@@ -35,6 +38,7 @@ export const AI_PROVIDER_PRESETS: readonly AiProviderPreset[] = [
     baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
     modelPlaceholder: 'For example: qwen-plus',
     helpUrl: 'https://help.aliyun.com/zh/model-studio/base-url',
+    reasoningControl: 'enable-thinking',
   },
   {
     id: 'doubao',
@@ -42,6 +46,7 @@ export const AI_PROVIDER_PRESETS: readonly AiProviderPreset[] = [
     baseUrl: 'https://ark.cn-beijing.volces.com/api/v3',
     modelPlaceholder: 'Enter a ModelArk model or endpoint ID',
     helpUrl: 'https://docs.volcengine.com/docs/ark/compatible-with-openai-sdk',
+    reasoningControl: 'thinking-type',
   },
   {
     id: 'custom',
@@ -49,6 +54,7 @@ export const AI_PROVIDER_PRESETS: readonly AiProviderPreset[] = [
     baseUrl: '',
     modelPlaceholder: 'Enter the provider model ID',
     helpUrl: 'https://platform.openai.com/docs/api-reference/chat',
+    reasoningControl: 'none',
   },
 ] as const;
 
@@ -82,6 +88,20 @@ export function validateProviderConfiguration(
 
 export function buildChatCompletionsUrl(baseUrl: string): string {
   return `${normalizeBaseUrl(baseUrl)}/chat/completions`;
+}
+
+export function providerReasoningFields(
+  providerId: AiProviderId,
+  enabled: boolean,
+): Record<string, unknown> {
+  const control = providerPreset(providerId).reasoningControl;
+  if (control === 'thinking-type') {
+    return { thinking: { type: enabled ? 'enabled' : 'disabled' } };
+  }
+  if (control === 'enable-thinking') {
+    return { enable_thinking: enabled };
+  }
+  return {};
 }
 
 function normalizeBaseUrl(value: string): string {

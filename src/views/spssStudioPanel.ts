@@ -511,6 +511,8 @@ export class SpssStudioPanel implements vscode.Disposable {
             <label class="wide"><span id="base-url-label"></span><input id="base-url" type="url" autocomplete="off"></label>
             <label><span id="model-label"></span><input id="model" type="text" autocomplete="off"></label>
             <label><span id="api-key-label"></span><input id="api-key" type="password" autocomplete="off"></label>
+            <label class="reasoning-setting wide"><input id="reasoning-enabled" type="checkbox"><span id="reasoning-enabled-label"></span></label>
+            <div id="reasoning-status" class="key-status wide"></div>
             <div id="key-status" class="key-status wide"></div>
             <div class="profile-actions wide">
               <button id="save-profile" type="submit"></button>

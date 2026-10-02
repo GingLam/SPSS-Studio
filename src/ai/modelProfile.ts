@@ -5,7 +5,8 @@ import {
   type AiProviderId,
 } from './providerPresets';
 
-export const MODEL_PROFILE_SCHEMA_VERSION = 2;
+export const MODEL_PROFILE_SCHEMA_VERSION = 3;
+export const PREVIOUS_MODEL_PROFILE_SCHEMA_VERSION = 2;
 export const MODEL_PROFILE_INDEX_KEY = 'spssStudio.ai.modelProfiles';
 export const MODEL_PROFILE_SECRET_PREFIX = 'spssStudio.ai.profile.';
 
@@ -15,6 +16,7 @@ export interface ModelProfile {
   providerId: AiProviderId;
   baseUrl: string;
   model: string;
+  reasoningEnabled: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -31,6 +33,7 @@ export interface ModelProfileIndex {
 
 export interface ModelProfileDraft extends AiProviderConfiguration {
   name?: string;
+  reasoningEnabled?: boolean;
 }
 
 export interface ModelProfileState {
@@ -48,13 +51,19 @@ export function defaultModelProfileName(configuration: AiProviderConfiguration):
   return `${providerPreset(configuration.providerId).label} · ${configuration.model.trim()}`;
 }
 
-export function validateModelProfileDraft(draft: ModelProfileDraft): ModelProfileDraft & { name: string } {
+export function validateModelProfileDraft(
+  draft: ModelProfileDraft,
+): ModelProfileDraft & { name: string; reasoningEnabled: boolean } {
   const configuration = validateProviderConfiguration(draft);
   const name = (draft.name?.trim() || defaultModelProfileName(configuration)).trim();
   if (name.length > 120) {
     throw new Error('The AI model profile name must not exceed 120 characters.');
   }
-  return { ...configuration, name };
+  const reasoningEnabled = draft.reasoningEnabled ?? false;
+  if (typeof reasoningEnabled !== 'boolean') {
+    throw new Error('The AI model reasoning setting must be a boolean.');
+  }
+  return { ...configuration, name, reasoningEnabled };
 }
 
 export function profileSecretKey(profileId: string): string {
@@ -76,10 +85,17 @@ export function parseModelProfileIndex(value: unknown): ModelProfileIndex | unde
     throw new Error('Stored AI model profiles are invalid.');
   }
   const candidate = value as Record<string, unknown>;
-  if (candidate.schemaVersion !== MODEL_PROFILE_SCHEMA_VERSION || !Array.isArray(candidate.profiles)) {
+  if (
+    (candidate.schemaVersion !== MODEL_PROFILE_SCHEMA_VERSION
+      && candidate.schemaVersion !== PREVIOUS_MODEL_PROFILE_SCHEMA_VERSION)
+    || !Array.isArray(candidate.profiles)
+  ) {
     throw new Error('Stored AI model profiles use an unsupported format.');
   }
-  const profiles = candidate.profiles.map(parseModelProfile);
+  const profiles = candidate.profiles.map((profile) => parseModelProfile(
+    profile,
+    candidate.schemaVersion as typeof MODEL_PROFILE_SCHEMA_VERSION | typeof PREVIOUS_MODEL_PROFILE_SCHEMA_VERSION,
+  ));
   const ids = new Set(profiles.map((profile) => profile.id));
   if (ids.size !== profiles.length) {
     throw new Error('Stored AI model profiles contain duplicate ids.');
@@ -93,7 +109,10 @@ export function parseModelProfileIndex(value: unknown): ModelProfileIndex | unde
     : { schemaVersion: MODEL_PROFILE_SCHEMA_VERSION, activeProfileId, profiles };
 }
 
-function parseModelProfile(value: unknown): ModelProfile {
+function parseModelProfile(
+  value: unknown,
+  schemaVersion: typeof MODEL_PROFILE_SCHEMA_VERSION | typeof PREVIOUS_MODEL_PROFILE_SCHEMA_VERSION,
+): ModelProfile {
   if (typeof value !== 'object' || value === null) {
     throw new Error('Stored AI model profile is invalid.');
   }
@@ -104,6 +123,7 @@ function parseModelProfile(value: unknown): ModelProfile {
     || typeof candidate.providerId !== 'string'
     || typeof candidate.baseUrl !== 'string'
     || typeof candidate.model !== 'string'
+    || (schemaVersion === MODEL_PROFILE_SCHEMA_VERSION && typeof candidate.reasoningEnabled !== 'boolean')
     || typeof candidate.createdAt !== 'string'
     || typeof candidate.updatedAt !== 'string'
   ) {
@@ -114,6 +134,9 @@ function parseModelProfile(value: unknown): ModelProfile {
     providerId: candidate.providerId as AiProviderId,
     baseUrl: candidate.baseUrl,
     model: candidate.model,
+    reasoningEnabled: schemaVersion === MODEL_PROFILE_SCHEMA_VERSION
+      ? candidate.reasoningEnabled as boolean
+      : false,
   });
   if (!isIsoDate(candidate.createdAt) || !isIsoDate(candidate.updatedAt)) {
     throw new Error('Stored AI model profile timestamps are invalid.');
@@ -124,6 +147,7 @@ function parseModelProfile(value: unknown): ModelProfile {
     providerId: validated.providerId,
     baseUrl: validated.baseUrl,
     model: validated.model,
+    reasoningEnabled: validated.reasoningEnabled,
     createdAt: candidate.createdAt,
     updatedAt: candidate.updatedAt,
   };

@@ -555,6 +555,18 @@
   grid-column: 1 / -1;
 }
 
+.profile-form .reasoning-setting {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.profile-form .reasoning-setting input {
+  width: auto;
+  height: auto;
+  padding: 0;
+}
+
 .profile-actions {
   flex-wrap: wrap;
   padding-top: 4px;
