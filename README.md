@@ -1,8 +1,8 @@
 # SPSS Studio
 
-**SPSS Studio is an exceptionally powerful integrated environment for developing, executing, and interpreting SPSS Syntax.** It grew out of a vision that its designer, Jing LIN, has carried throughout his years of teaching statistics at university: to bring professional syntax highlighting and completion, connection to and execution through a local IBM SPSS Statistics engine, dataset management and output, and AI-assisted dialogue into one coherent workflow. It helps professional researchers write, run, inspect, and understand SPSS statistical analyses efficiently, conveniently, and elegantly—giving a youthful character to a venerable statistical package with a history of nearly sixty years.
+**SPSS Studio is an exceptionally powerful integrated development, execution, and interpretation environment for IBM SPSS Statistics.** It grew out of a vision that its designer, Jing LIN, has pursued ever since he began teaching statistics courses at university: to integrate the software's professional syntax highlighting and completion, computational-engine connectivity and execution, dataset management and analysis, and AI-assisted question answering into a unified workflow, enabling professional researchers to conduct statistical analyses efficiently, conveniently, and elegantly. Its designer believes that **SPSS Studio** will infuse this venerable, nearly sixty-year-old statistical package with a youthful spirit.
 
-**SPSS Studio 是一个功能极端强大的 SPSS Syntax 集成式开发、执行与解释环境。** 它源于设计者Jing LIN在大学任教统计学课程以来念兹在兹的愿景：将IBM SPSS Statistics软件的专业语法高亮与补全、本地计算引擎链接与执行、数据集管理与输出以及 AI 问答交互和谐地整合在同一工作流中，助力专业研究人员以高效、便捷、优雅的方式编写、运行、检查和理解SPSS统计分析，赋予这个拥有近60年历史的古老统计软件以年轻的气质。
+**SPSS Studio 是一个功能极端强大的IBM SPSS Statistics集成式开发、执行与解释环境。** 它源于设计者Jing LIN在大学讲授统计学课程以来念兹在兹的愿景：将该软件的专业语法高亮与补全、计算引擎链接与执行、数据集管理与分析以及 AI 问答交互，和谐地整合在统一的工作流中，助力专业研究人员以高效、便捷、优雅的方式执行统计分析。设计者相信，**SPSS Studio**将赋予这个拥有近60年历史的古老统计软件以年轻的气质。
 
 Author：Jing LIN (林景)
 
