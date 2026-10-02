@@ -60,7 +60,13 @@ describe('SPSS language manifest and generated grammar', () => {
   });
 
   it('generates Chat highlighting vocabulary from the same language manifest', () => {
-    const context = { window: {} as { SPSS_SYNTAX_DATA?: Record<string, string[]> } };
+    const context = {
+      window: {} as {
+        SPSS_SYNTAX_DATA?: Record<string, string[]> & {
+          palettes?: Record<'light' | 'dark', Record<string, { foreground: string }>>;
+        };
+      },
+    };
     vm.runInNewContext(
       fs.readFileSync(path.join(projectRoot, 'media', 'spss-syntax-data.js'), 'utf8'),
       context,
@@ -85,6 +91,41 @@ describe('SPSS language manifest and generated grammar', () => {
       JSON.stringify((fullManifest.completion as { keywords: string[] }).keywords),
     );
     assert.ok(data.functions?.length && data.functions.length >= (fullManifest.functions as string[]).length);
+    assert.ok(data.tokenFamilies?.includes('command-control'));
+    assert.ok(data.tokenFamilies?.includes('operator-logical'));
+    assert.ok(data.palettes?.light && data.palettes.dark);
+  });
+
+  it('generates complete Light and Dark themes from the canonical highlighting schema', () => {
+    const highlighting = JSON.parse(
+      fs.readFileSync(path.join(projectRoot, 'syntax', 'spss-highlighting.json'), 'utf8'),
+    ) as {
+      backgrounds: Record<'light' | 'dark', string>;
+      families: Array<{
+        id: string;
+        scopes: string[];
+        light: { foreground: string; fontStyle?: string };
+        dark: { foreground: string; fontStyle?: string };
+      }>;
+    };
+    assert.equal(new Set(highlighting.families.map((family) => family.id)).size, highlighting.families.length);
+    assert.ok(highlighting.families.length >= 19);
+    for (const variant of ['light', 'dark'] as const) {
+      const theme = JSON.parse(fs.readFileSync(
+        path.join(projectRoot, 'themes', `spss-studio-${variant}-color-theme.json`),
+        'utf8',
+      )) as { type: string; colors: Record<string, string>; tokenColors: Array<{ scope: string[] }> };
+      assert.equal(theme.type, variant);
+      assert.equal(theme.colors['editor.background'], highlighting.backgrounds[variant]);
+      const scopes = new Set(theme.tokenColors.flatMap((rule) => rule.scope));
+      for (const family of highlighting.families) {
+        assert.ok(family.scopes.some((scope) => scopes.has(scope)), `${variant}: ${family.id}`);
+        assert.ok(
+          contrastRatio(family[variant].foreground, highlighting.backgrounds[variant]) >= 4.5,
+          `${variant}: ${family.id} has insufficient contrast`,
+        );
+      }
+    }
   });
 
   it('uses valid language configuration without treating multiplication as a line comment', () => {
@@ -102,3 +143,16 @@ describe('SPSS language manifest and generated grammar', () => {
     assert.match('End Program.', end);
   });
 });
+
+function contrastRatio(left: string, right: string): number {
+  const values = [relativeLuminance(left), relativeLuminance(right)].sort((a, b) => b - a);
+  return ((values[0] ?? 0) + 0.05) / ((values[1] ?? 0) + 0.05);
+}
+
+function relativeLuminance(value: string): number {
+  const channels = [1, 3, 5].map((offset) => Number.parseInt(value.slice(offset, offset + 2), 16) / 255);
+  const linear = channels.map((channel) => channel <= 0.03928
+    ? channel / 12.92
+    : ((channel + 0.055) / 1.055) ** 2.4);
+  return (0.2126 * (linear[0] ?? 0)) + (0.7152 * (linear[1] ?? 0)) + (0.0722 * (linear[2] ?? 0));
+}

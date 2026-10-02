@@ -713,12 +713,12 @@
       }
     },
     "subcommand": {
-      "match": "(?i)(^|\\s)(/)(\\s*)([A-Z][A-Z0-9_-]*)",
+      "match": "(?i)(^|\\s)(/)([A-Z][A-Z0-9_-]*)",
       "captures": {
         "2": {
           "name": "punctuation.definition.subcommand.spss"
         },
-        "4": {
+        "3": {
           "name": "keyword.other.subcommand.spss"
         }
       }

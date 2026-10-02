@@ -5,11 +5,16 @@ import { fileURLToPath } from 'node:url';
 
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const manifestPath = path.join(projectRoot, 'syntax', 'spss-language.json');
+const highlightingPath = path.join(projectRoot, 'syntax', 'spss-highlighting.json');
 const grammarPath = path.join(projectRoot, 'syntaxes', 'spss.tmLanguage.json');
 const coveragePath = path.join(projectRoot, 'docs', 'SYNTAX-COVERAGE.md');
 const webviewSyntaxPath = path.join(projectRoot, 'media', 'spss-syntax-data.js');
+const webviewThemePath = path.join(projectRoot, 'media', 'spss-theme.css');
+const lightThemePath = path.join(projectRoot, 'themes', 'spss-studio-light-color-theme.json');
+const darkThemePath = path.join(projectRoot, 'themes', 'spss-studio-dark-color-theme.json');
 
 const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+const highlighting = JSON.parse(fs.readFileSync(highlightingPath, 'utf8'));
 
 function assertUnique(name, values) {
   if (!Array.isArray(values) || values.length === 0) {
@@ -47,6 +52,19 @@ assertUnique('completion.snippets labels', manifest.completion.snippets.map((sni
 
 if (manifest.commands.length < 300) {
   throw new Error(`Expected at least 300 canonical commands, found ${manifest.commands.length}.`);
+}
+
+if (!highlighting.backgrounds || !highlighting.foregrounds || !Array.isArray(highlighting.families)) {
+  throw new Error('The SPSS highlighting schema is incomplete.');
+}
+assertUnique('highlighting family ids', highlighting.families.map((family) => family.id));
+for (const family of highlighting.families) {
+  assertUnique(`highlighting.${family.id}.scopes`, family.scopes);
+  for (const variant of ['light', 'dark']) {
+    if (!/^#[0-9A-F]{6}$/u.test(family[variant]?.foreground ?? '')) {
+      throw new Error(`highlighting.${family.id}.${variant} must define an uppercase hex foreground.`);
+    }
+  }
 }
 
 function escapeRegex(value) {
@@ -281,10 +299,10 @@ const grammar = {
       captures: { 2: { name: 'keyword.other.command.generic.spss' } },
     },
     subcommand: {
-      match: '(?i)(^|\\s)(/)(\\s*)([A-Z][A-Z0-9_-]*)',
+      match: '(?i)(^|\\s)(/)([A-Z][A-Z0-9_-]*)',
       captures: {
         2: { name: 'punctuation.definition.subcommand.spss' },
-        4: { name: 'keyword.other.subcommand.spss' },
+        3: { name: 'keyword.other.subcommand.spss' },
       },
     },
     'macro-directive': {
@@ -373,8 +391,23 @@ const webviewSyntax = {
   structuralKeywords: manifest.structuralKeywords,
   completionKeywords: manifest.completion.keywords,
   systemVariables: manifest.systemVariables,
+  tokenFamilies: highlighting.families.map((family) => family.id),
+  palettes: {
+    light: Object.fromEntries(highlighting.families.map((family) => [family.id, family.light])),
+    dark: Object.fromEntries(highlighting.families.map((family) => [family.id, family.dark])),
+  },
 };
 const renderedWebviewSyntax = `(() => {\n  'use strict';\n  window.SPSS_SYNTAX_DATA = ${JSON.stringify(webviewSyntax, null, 2)};\n})();\n`;
+const cssVariables = (variant) => highlighting.families
+  .map((family) => `  --spss-${family.id}-foreground: ${family[variant].foreground};`)
+  .join('\n');
+const cssRules = highlighting.families.map((family) => {
+  const fontStyle = family.light.fontStyle ?? family.dark.fontStyle ?? '';
+  const italic = fontStyle.split(/\s+/u).includes('italic') ? 'italic' : 'normal';
+  const weight = fontStyle.split(/\s+/u).includes('bold') ? '600' : '400';
+  return `.syntax-token.${family.id} {\n  color: var(--spss-${family.id}-foreground);\n  font-style: ${italic};\n  font-weight: ${weight};\n}`;
+}).join('\n\n');
+const renderedWebviewTheme = `:root,\n+body.vscode-light,\n+body.vscode-high-contrast-light {\n+${cssVariables('light')}\n+}\n+\n+body.vscode-dark,\n+body.vscode-high-contrast {\n+${cssVariables('dark')}\n+}\n+\n+${cssRules}\n+`;
 const coverage = `# SPSS Syntax Coverage
 
 > This file is generated from \`syntax/spss-language.json\`. Do not maintain a second command list here.
@@ -419,26 +452,60 @@ ${manifest.commands.join('\n')}
 \`\`\`
 `;
 
+function renderTheme(variant) {
+  const name = variant === 'light' ? 'SPSS Studio Light' : 'SPSS Studio Dark';
+  return `${JSON.stringify({
+    $schema: 'vscode://schemas/color-theme',
+    name,
+    type: variant,
+    semanticHighlighting: true,
+    colors: {
+      'editor.background': highlighting.backgrounds[variant],
+      'editor.foreground': highlighting.foregrounds[variant],
+    },
+    tokenColors: highlighting.families.map((family) => ({
+      name: `SPSS ${family.id}`,
+      scope: family.scopes,
+      settings: family[variant],
+    })),
+  }, null, 2)}\n`;
+}
+
+const renderedLightTheme = renderTheme('light');
+const renderedDarkTheme = renderTheme('dark');
+
 if (process.argv.includes('--check')) {
   const existing = fs.existsSync(grammarPath) ? fs.readFileSync(grammarPath, 'utf8') : '';
   const existingCoverage = fs.existsSync(coveragePath) ? fs.readFileSync(coveragePath, 'utf8') : '';
   const existingWebviewSyntax = fs.existsSync(webviewSyntaxPath)
     ? fs.readFileSync(webviewSyntaxPath, 'utf8')
     : '';
+  const existingWebviewTheme = fs.existsSync(webviewThemePath)
+    ? fs.readFileSync(webviewThemePath, 'utf8')
+    : '';
+  const existingLightTheme = fs.existsSync(lightThemePath) ? fs.readFileSync(lightThemePath, 'utf8') : '';
+  const existingDarkTheme = fs.existsSync(darkThemePath) ? fs.readFileSync(darkThemePath, 'utf8') : '';
   if (
     existing !== rendered
     || existingCoverage !== coverage
     || existingWebviewSyntax !== renderedWebviewSyntax
+    || existingWebviewTheme !== renderedWebviewTheme
+    || existingLightTheme !== renderedLightTheme
+    || existingDarkTheme !== renderedDarkTheme
   ) {
-    process.stderr.write('Generated TextMate grammar, Chat syntax data, or syntax coverage is missing or stale. Run npm run generate:grammar.\n');
+    process.stderr.write('Generated TextMate grammar, Chat syntax data, themes, or syntax coverage is missing or stale. Run npm run generate:grammar.\n');
     process.exitCode = 1;
   }
 } else {
   fs.mkdirSync(path.dirname(grammarPath), { recursive: true });
   fs.mkdirSync(path.dirname(coveragePath), { recursive: true });
   fs.mkdirSync(path.dirname(webviewSyntaxPath), { recursive: true });
+  fs.mkdirSync(path.dirname(lightThemePath), { recursive: true });
   fs.writeFileSync(grammarPath, rendered, 'utf8');
   fs.writeFileSync(coveragePath, coverage, 'utf8');
   fs.writeFileSync(webviewSyntaxPath, renderedWebviewSyntax, 'utf8');
-  process.stdout.write(`Generated ${path.relative(projectRoot, grammarPath)}, ${path.relative(projectRoot, webviewSyntaxPath)}, and ${path.relative(projectRoot, coveragePath)} from ${manifest.commands.length} canonical commands.\n`);
+  fs.writeFileSync(webviewThemePath, renderedWebviewTheme, 'utf8');
+  fs.writeFileSync(lightThemePath, renderedLightTheme, 'utf8');
+  fs.writeFileSync(darkThemePath, renderedDarkTheme, 'utf8');
+  process.stdout.write(`Generated ${path.relative(projectRoot, grammarPath)}, ${path.relative(projectRoot, webviewSyntaxPath)}, both SPSS Studio themes, and ${path.relative(projectRoot, coveragePath)} from ${manifest.commands.length} canonical commands.\n`);
 }

@@ -4,8 +4,6 @@
   window.createSpssTokenizer = (syntaxData) => {
     const upperSet = (values) => new Set((values || []).map((value) => String(value).toUpperCase()));
     const controlCommands = upperSet(syntaxData.controlCommands);
-    const subcommands = upperSet(syntaxData.subcommands);
-    const functions = upperSet(syntaxData.functions);
     const macroDirectives = upperSet(syntaxData.macroDirectives);
     const systemVariables = upperSet(syntaxData.systemVariables);
     const ordinaryKeywords = upperSet([
@@ -36,7 +34,7 @@
     }
 
     const commandPatterns = [
-      ...phrasePatterns(syntaxData.controlCommands || [], 'control'),
+      ...phrasePatterns(syntaxData.controlCommands || [], 'command-control'),
       ...phrasePatterns(
         (syntaxData.commands || []).filter((command) => !controlCommands.has(String(command).toUpperCase())),
         'command',
@@ -152,23 +150,25 @@
             const nextCharacter = remainder.slice(value.length).trimStart()[0];
             let type = 'variable';
             if (macroDirectives.has(upper)) {
-              type = 'macro';
+              type = 'macro-directive';
             } else if (value.startsWith('!')) {
-              type = 'macro-variable';
+              type = 'variable-macro';
             } else if (systemVariables.has(upper) || value.startsWith('$')) {
-              type = 'system-variable';
+              type = 'variable-system';
             } else if (value.startsWith('#')) {
-              type = 'scratch-variable';
+              type = 'variable-scratch';
             } else if (afterSlash) {
-              type = subcommands.has(upper) ? 'subcommand' : 'subcommand-generic';
+              type = 'subcommand';
             } else if (formatPatterns.some((pattern) => pattern.test(value))) {
               type = 'format';
-            } else if (functions.has(upper) || nextCharacter === '(') {
+            } else if (nextCharacter === '(') {
               type = 'function';
             } else if (missingKeywords.has(upper)) {
-              type = 'missing';
-            } else if (logicalKeywords.has(upper) || relationalKeywords.has(upper)) {
-              type = 'operator';
+              type = 'constant-missing';
+            } else if (logicalKeywords.has(upper)) {
+              type = 'operator-logical';
+            } else if (relationalKeywords.has(upper)) {
+              type = 'operator-relational';
             } else if (ordinaryKeywords.has(upper)) {
               type = 'keyword';
             } else if (firstWord) {
@@ -181,11 +181,23 @@
             continue;
           }
 
+          if (/^\/[A-Z]/iu.test(remainder)) {
+            pushToken(tokens, 'punctuation', '/');
+            cursor += 1;
+            afterSlash = true;
+            continue;
+          }
           const operator = remainder.match(/^(?:<=|>=|~=|<>|\*\*|[=<>+*/&|~-])/u);
           if (operator) {
-            pushToken(tokens, 'operator', operator[0]);
+            const content = operator[0];
+            const type = /^(?:<=|>=|~=|<>|=|<|>)$/u.test(content)
+              ? 'operator-relational'
+              : /^(?:&|\||~)$/u.test(content)
+                ? 'operator-logical'
+                : 'operator-arithmetic';
+            pushToken(tokens, type, content);
             cursor += operator[0].length;
-            afterSlash = operator[0] === '/';
+            afterSlash = false;
             continue;
           }
           pushToken(tokens, 'punctuation', remainder[0]);

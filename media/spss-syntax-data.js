@@ -770,6 +770,167 @@
     "$TIME",
     "$LENGTH",
     "$WIDTH"
-  ]
+  ],
+  "tokenFamilies": [
+    "command-control",
+    "command",
+    "subcommand",
+    "keyword",
+    "function",
+    "format",
+    "variable",
+    "variable-system",
+    "variable-scratch",
+    "variable-macro",
+    "macro-directive",
+    "string",
+    "number",
+    "constant-missing",
+    "operator-arithmetic",
+    "operator-relational",
+    "operator-logical",
+    "comment",
+    "punctuation"
+  ],
+  "palettes": {
+    "light": {
+      "command-control": {
+        "foreground": "#7A1F73",
+        "fontStyle": "bold"
+      },
+      "command": {
+        "foreground": "#005A9C",
+        "fontStyle": "bold"
+      },
+      "subcommand": {
+        "foreground": "#006B60",
+        "fontStyle": "bold"
+      },
+      "keyword": {
+        "foreground": "#9C4A00"
+      },
+      "function": {
+        "foreground": "#7A4E00"
+      },
+      "format": {
+        "foreground": "#00685E"
+      },
+      "variable": {
+        "foreground": "#27364B"
+      },
+      "variable-system": {
+        "foreground": "#653C96",
+        "fontStyle": "italic"
+      },
+      "variable-scratch": {
+        "foreground": "#843765",
+        "fontStyle": "italic"
+      },
+      "variable-macro": {
+        "foreground": "#853053",
+        "fontStyle": "italic"
+      },
+      "macro-directive": {
+        "foreground": "#8A2450",
+        "fontStyle": "bold"
+      },
+      "string": {
+        "foreground": "#943814"
+      },
+      "number": {
+        "foreground": "#5145A8"
+      },
+      "constant-missing": {
+        "foreground": "#A13A00",
+        "fontStyle": "bold"
+      },
+      "operator-arithmetic": {
+        "foreground": "#A3261F"
+      },
+      "operator-relational": {
+        "foreground": "#7C367E"
+      },
+      "operator-logical": {
+        "foreground": "#006457",
+        "fontStyle": "bold"
+      },
+      "comment": {
+        "foreground": "#53645D",
+        "fontStyle": "italic"
+      },
+      "punctuation": {
+        "foreground": "#5F6875"
+      }
+    },
+    "dark": {
+      "command-control": {
+        "foreground": "#FF82D8",
+        "fontStyle": "bold"
+      },
+      "command": {
+        "foreground": "#66B7FF",
+        "fontStyle": "bold"
+      },
+      "subcommand": {
+        "foreground": "#4DD5C4",
+        "fontStyle": "bold"
+      },
+      "keyword": {
+        "foreground": "#F5A65B"
+      },
+      "function": {
+        "foreground": "#FFD166"
+      },
+      "format": {
+        "foreground": "#63D6BF"
+      },
+      "variable": {
+        "foreground": "#D7DEE8"
+      },
+      "variable-system": {
+        "foreground": "#C7A0FF",
+        "fontStyle": "italic"
+      },
+      "variable-scratch": {
+        "foreground": "#FF9BCB",
+        "fontStyle": "italic"
+      },
+      "variable-macro": {
+        "foreground": "#FF9ABE",
+        "fontStyle": "italic"
+      },
+      "macro-directive": {
+        "foreground": "#FF85B8",
+        "fontStyle": "bold"
+      },
+      "string": {
+        "foreground": "#F5A97F"
+      },
+      "number": {
+        "foreground": "#C3B5FF"
+      },
+      "constant-missing": {
+        "foreground": "#FF9D66",
+        "fontStyle": "bold"
+      },
+      "operator-arithmetic": {
+        "foreground": "#FF8A80"
+      },
+      "operator-relational": {
+        "foreground": "#E59AFF"
+      },
+      "operator-logical": {
+        "foreground": "#65D6C3",
+        "fontStyle": "bold"
+      },
+      "comment": {
+        "foreground": "#9AA7A1",
+        "fontStyle": "italic"
+      },
+      "punctuation": {
+        "foreground": "#AAB1BD"
+      }
+    }
+  }
 };
 })();

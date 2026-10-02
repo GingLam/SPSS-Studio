@@ -1,0 +1,126 @@
+{
+  "backgrounds": {
+    "light": "#FAFAF8",
+    "dark": "#1E1F22"
+  },
+  "foregrounds": {
+    "light": "#27364B",
+    "dark": "#D7DEE8"
+  },
+  "families": [
+    {
+      "id": "command-control",
+      "scopes": ["keyword.control.spss"],
+      "light": { "foreground": "#7A1F73", "fontStyle": "bold" },
+      "dark": { "foreground": "#FF82D8", "fontStyle": "bold" }
+    },
+    {
+      "id": "command",
+      "scopes": ["keyword.other.command.spss", "keyword.other.command.generic.spss"],
+      "light": { "foreground": "#005A9C", "fontStyle": "bold" },
+      "dark": { "foreground": "#66B7FF", "fontStyle": "bold" }
+    },
+    {
+      "id": "subcommand",
+      "scopes": ["keyword.other.subcommand.spss"],
+      "light": { "foreground": "#006B60", "fontStyle": "bold" },
+      "dark": { "foreground": "#4DD5C4", "fontStyle": "bold" }
+    },
+    {
+      "id": "keyword",
+      "scopes": ["keyword.other.spss"],
+      "light": { "foreground": "#9C4A00" },
+      "dark": { "foreground": "#F5A65B" }
+    },
+    {
+      "id": "function",
+      "scopes": ["support.function.spss"],
+      "light": { "foreground": "#7A4E00" },
+      "dark": { "foreground": "#FFD166" }
+    },
+    {
+      "id": "format",
+      "scopes": ["support.type.format.spss"],
+      "light": { "foreground": "#00685E" },
+      "dark": { "foreground": "#63D6BF" }
+    },
+    {
+      "id": "variable",
+      "scopes": ["variable.other.spss"],
+      "light": { "foreground": "#27364B" },
+      "dark": { "foreground": "#D7DEE8" }
+    },
+    {
+      "id": "variable-system",
+      "scopes": ["variable.language.system.spss"],
+      "light": { "foreground": "#653C96", "fontStyle": "italic" },
+      "dark": { "foreground": "#C7A0FF", "fontStyle": "italic" }
+    },
+    {
+      "id": "variable-scratch",
+      "scopes": ["variable.other.scratch.spss"],
+      "light": { "foreground": "#843765", "fontStyle": "italic" },
+      "dark": { "foreground": "#FF9BCB", "fontStyle": "italic" }
+    },
+    {
+      "id": "variable-macro",
+      "scopes": ["variable.other.macro.spss"],
+      "light": { "foreground": "#853053", "fontStyle": "italic" },
+      "dark": { "foreground": "#FF9ABE", "fontStyle": "italic" }
+    },
+    {
+      "id": "macro-directive",
+      "scopes": ["keyword.control.macro.spss"],
+      "light": { "foreground": "#8A2450", "fontStyle": "bold" },
+      "dark": { "foreground": "#FF85B8", "fontStyle": "bold" }
+    },
+    {
+      "id": "string",
+      "scopes": ["string.quoted.single.spss", "string.quoted.double.spss", "constant.character.escape.spss"],
+      "light": { "foreground": "#943814" },
+      "dark": { "foreground": "#F5A97F" }
+    },
+    {
+      "id": "number",
+      "scopes": ["constant.numeric.spss", "constant.numeric.function-modifier.spss"],
+      "light": { "foreground": "#5145A8" },
+      "dark": { "foreground": "#C3B5FF" }
+    },
+    {
+      "id": "constant-missing",
+      "scopes": ["constant.language.missing.spss"],
+      "light": { "foreground": "#A13A00", "fontStyle": "bold" },
+      "dark": { "foreground": "#FF9D66", "fontStyle": "bold" }
+    },
+    {
+      "id": "operator-arithmetic",
+      "scopes": ["keyword.operator.arithmetic.spss"],
+      "light": { "foreground": "#A3261F" },
+      "dark": { "foreground": "#FF8A80" }
+    },
+    {
+      "id": "operator-relational",
+      "scopes": ["keyword.operator.relational.spss"],
+      "light": { "foreground": "#7C367E" },
+      "dark": { "foreground": "#E59AFF" }
+    },
+    {
+      "id": "operator-logical",
+      "scopes": ["keyword.operator.logical.spss"],
+      "light": { "foreground": "#006457", "fontStyle": "bold" },
+      "dark": { "foreground": "#65D6C3", "fontStyle": "bold" }
+    },
+    {
+      "id": "comment",
+      "scopes": ["comment.line.command.spss", "comment.block.spss"],
+      "light": { "foreground": "#53645D", "fontStyle": "italic" },
+      "dark": { "foreground": "#9AA7A1", "fontStyle": "italic" }
+    },
+    {
+      "id": "punctuation",
+      "scopes": ["punctuation.definition.comment.begin.spss", "punctuation.definition.comment.end.spss", "punctuation.definition.string.begin.spss", "punctuation.definition.string.end.spss", "punctuation.definition.subcommand.spss", "punctuation.terminator.statement.spss", "punctuation.separator.spss", "punctuation.section.brackets.spss"],
+      "light": { "foreground": "#5F6875" },
+      "dark": { "foreground": "#AAB1BD" }
+    }
+  ]
+}

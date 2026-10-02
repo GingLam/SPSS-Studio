@@ -29,6 +29,7 @@ interface ExtensionManifest {
     configuration?: {
       properties?: Record<string, unknown>;
     };
+    themes?: Array<{ label: string; uiTheme: string; path: string }>;
   };
 }
 
@@ -88,5 +89,27 @@ describe('SPSS editor title actions', () => {
     ) as Record<string, string>;
     assert.equal(english['spssStudio.command.explainSyntaxInChat'], 'Explain in Chat');
     assert.equal(chinese['spssStudio.command.explainSyntaxInChat'], 'Explain in Chat');
+  });
+
+  it('contributes optional SPSS Studio Light and Dark themes without activating either one', () => {
+    const manifest = JSON.parse(
+      fs.readFileSync(path.resolve(__dirname, '../../../package.json'), 'utf8'),
+    ) as ExtensionManifest;
+    assert.deepEqual(manifest.contributes.themes, [
+      {
+        label: 'SPSS Studio Light',
+        uiTheme: 'vs',
+        path: './themes/spss-studio-light-color-theme.json',
+      },
+      {
+        label: 'SPSS Studio Dark',
+        uiTheme: 'vs-dark',
+        path: './themes/spss-studio-dark-color-theme.json',
+      },
+    ]);
+    assert.equal(
+      (manifest.contributes.configuration?.properties ?? {})['workbench.colorTheme'],
+      undefined,
+    );
   });
 });

@@ -416,6 +416,7 @@ export class SpssStudioPanel implements vscode.Disposable {
     const nonce = randomBytes(16).toString('base64');
     const studioCss = webview.asWebviewUri(vscode.Uri.joinPath(mediaRoot, 'studio.css'));
     const aiCss = webview.asWebviewUri(vscode.Uri.joinPath(mediaRoot, 'ai.css'));
+    const syntaxThemeCss = webview.asWebviewUri(vscode.Uri.joinPath(mediaRoot, 'spss-theme.css'));
     const syntaxDataScript = webview.asWebviewUri(vscode.Uri.joinPath(mediaRoot, 'spss-syntax-data.js'));
     const highlighterScript = webview.asWebviewUri(vscode.Uri.joinPath(mediaRoot, 'spss-highlighter.js'));
     const aiScript = webview.asWebviewUri(vscode.Uri.joinPath(mediaRoot, 'ai.js'));
@@ -435,6 +436,7 @@ export class SpssStudioPanel implements vscode.Disposable {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link href="${studioCss.toString()}" rel="stylesheet">
   <link href="${aiCss.toString()}" rel="stylesheet">
+  <link href="${syntaxThemeCss.toString()}" rel="stylesheet">
   <title>SPSS Studio</title>
 </head>
 <body>

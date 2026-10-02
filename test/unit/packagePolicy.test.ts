@@ -29,6 +29,8 @@ describe('VSIX package policy', () => {
       'out/src/ai/modelProfileStore.js',
       'resources/bridge/spss_bridge.py',
       'syntaxes/spss.tmLanguage.json',
+      'themes/spss-studio-light-color-theme.json',
+      'themes/spss-studio-dark-color-theme.json',
     ];
     for (const value of allowed) {
       assert.equal(policy.isAllowedSourceFile(value), true, value);

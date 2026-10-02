@@ -1,0 +1,205 @@
+{
+  "$schema": "vscode://schemas/color-theme",
+  "name": "SPSS Studio Dark",
+  "type": "dark",
+  "semanticHighlighting": true,
+  "colors": {
+    "editor.background": "#1E1F22",
+    "editor.foreground": "#D7DEE8"
+  },
+  "tokenColors": [
+    {
+      "name": "SPSS command-control",
+      "scope": [
+        "keyword.control.spss"
+      ],
+      "settings": {
+        "foreground": "#FF82D8",
+        "fontStyle": "bold"
+      }
+    },
+    {
+      "name": "SPSS command",
+      "scope": [
+        "keyword.other.command.spss",
+        "keyword.other.command.generic.spss"
+      ],
+      "settings": {
+        "foreground": "#66B7FF",
+        "fontStyle": "bold"
+      }
+    },
+    {
+      "name": "SPSS subcommand",
+      "scope": [
+        "keyword.other.subcommand.spss"
+      ],
+      "settings": {
+        "foreground": "#4DD5C4",
+        "fontStyle": "bold"
+      }
+    },
+    {
+      "name": "SPSS keyword",
+      "scope": [
+        "keyword.other.spss"
+      ],
+      "settings": {
+        "foreground": "#F5A65B"
+      }
+    },
+    {
+      "name": "SPSS function",
+      "scope": [
+        "support.function.spss"
+      ],
+      "settings": {
+        "foreground": "#FFD166"
+      }
+    },
+    {
+      "name": "SPSS format",
+      "scope": [
+        "support.type.format.spss"
+      ],
+      "settings": {
+        "foreground": "#63D6BF"
+      }
+    },
+    {
+      "name": "SPSS variable",
+      "scope": [
+        "variable.other.spss"
+      ],
+      "settings": {
+        "foreground": "#D7DEE8"
+      }
+    },
+    {
+      "name": "SPSS variable-system",
+      "scope": [
+        "variable.language.system.spss"
+      ],
+      "settings": {
+        "foreground": "#C7A0FF",
+        "fontStyle": "italic"
+      }
+    },
+    {
+      "name": "SPSS variable-scratch",
+      "scope": [
+        "variable.other.scratch.spss"
+      ],
+      "settings": {
+        "foreground": "#FF9BCB",
+        "fontStyle": "italic"
+      }
+    },
+    {
+      "name": "SPSS variable-macro",
+      "scope": [
+        "variable.other.macro.spss"
+      ],
+      "settings": {
+        "foreground": "#FF9ABE",
+        "fontStyle": "italic"
+      }
+    },
+    {
+      "name": "SPSS macro-directive",
+      "scope": [
+        "keyword.control.macro.spss"
+      ],
+      "settings": {
+        "foreground": "#FF85B8",
+        "fontStyle": "bold"
+      }
+    },
+    {
+      "name": "SPSS string",
+      "scope": [
+        "string.quoted.single.spss",
+        "string.quoted.double.spss",
+        "constant.character.escape.spss"
+      ],
+      "settings": {
+        "foreground": "#F5A97F"
+      }
+    },
+    {
+      "name": "SPSS number",
+      "scope": [
+        "constant.numeric.spss",
+        "constant.numeric.function-modifier.spss"
+      ],
+      "settings": {
+        "foreground": "#C3B5FF"
+      }
+    },
+    {
+      "name": "SPSS constant-missing",
+      "scope": [
+        "constant.language.missing.spss"
+      ],
+      "settings": {
+        "foreground": "#FF9D66",
+        "fontStyle": "bold"
+      }
+    },
+    {
+      "name": "SPSS operator-arithmetic",
+      "scope": [
+        "keyword.operator.arithmetic.spss"
+      ],
+      "settings": {
+        "foreground": "#FF8A80"
+      }
+    },
+    {
+      "name": "SPSS operator-relational",
+      "scope": [
+        "keyword.operator.relational.spss"
+      ],
+      "settings": {
+        "foreground": "#E59AFF"
+      }
+    },
+    {
+      "name": "SPSS operator-logical",
+      "scope": [
+        "keyword.operator.logical.spss"
+      ],
+      "settings": {
+        "foreground": "#65D6C3",
+        "fontStyle": "bold"
+      }
+    },
+    {
+      "name": "SPSS comment",
+      "scope": [
+        "comment.line.command.spss",
+        "comment.block.spss"
+      ],
+      "settings": {
+        "foreground": "#9AA7A1",
+        "fontStyle": "italic"
+      }
+    },
+    {
+      "name": "SPSS punctuation",
+      "scope": [
+        "punctuation.definition.comment.begin.spss",
+        "punctuation.definition.comment.end.spss",
+        "punctuation.definition.string.begin.spss",
+        "punctuation.definition.string.end.spss",
+        "punctuation.definition.subcommand.spss",
+        "punctuation.terminator.statement.spss",
+        "punctuation.separator.spss",
+        "punctuation.section.brackets.spss"
+      ],
+      "settings": {
+        "foreground": "#AAB1BD"
+      }
+    }
+  ]
+}

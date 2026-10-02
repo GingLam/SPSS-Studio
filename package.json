@@ -85,6 +85,18 @@
         }
       }
     ],
+    "themes": [
+      {
+        "label": "SPSS Studio Light",
+        "uiTheme": "vs",
+        "path": "./themes/spss-studio-light-color-theme.json"
+      },
+      {
+        "label": "SPSS Studio Dark",
+        "uiTheme": "vs-dark",
+        "path": "./themes/spss-studio-dark-color-theme.json"
+      }
+    ],
     "commands": [
       {
         "command": "spssStudio.undo",

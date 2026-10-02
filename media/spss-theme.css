@@ -1,0 +1,161 @@
+:root,
++body.vscode-light,
++body.vscode-high-contrast-light {
++  --spss-command-control-foreground: #7A1F73;
+  --spss-command-foreground: #005A9C;
+  --spss-subcommand-foreground: #006B60;
+  --spss-keyword-foreground: #9C4A00;
+  --spss-function-foreground: #7A4E00;
+  --spss-format-foreground: #00685E;
+  --spss-variable-foreground: #27364B;
+  --spss-variable-system-foreground: #653C96;
+  --spss-variable-scratch-foreground: #843765;
+  --spss-variable-macro-foreground: #853053;
+  --spss-macro-directive-foreground: #8A2450;
+  --spss-string-foreground: #943814;
+  --spss-number-foreground: #5145A8;
+  --spss-constant-missing-foreground: #A13A00;
+  --spss-operator-arithmetic-foreground: #A3261F;
+  --spss-operator-relational-foreground: #7C367E;
+  --spss-operator-logical-foreground: #006457;
+  --spss-comment-foreground: #53645D;
+  --spss-punctuation-foreground: #5F6875;
++}
++
++body.vscode-dark,
++body.vscode-high-contrast {
++  --spss-command-control-foreground: #FF82D8;
+  --spss-command-foreground: #66B7FF;
+  --spss-subcommand-foreground: #4DD5C4;
+  --spss-keyword-foreground: #F5A65B;
+  --spss-function-foreground: #FFD166;
+  --spss-format-foreground: #63D6BF;
+  --spss-variable-foreground: #D7DEE8;
+  --spss-variable-system-foreground: #C7A0FF;
+  --spss-variable-scratch-foreground: #FF9BCB;
+  --spss-variable-macro-foreground: #FF9ABE;
+  --spss-macro-directive-foreground: #FF85B8;
+  --spss-string-foreground: #F5A97F;
+  --spss-number-foreground: #C3B5FF;
+  --spss-constant-missing-foreground: #FF9D66;
+  --spss-operator-arithmetic-foreground: #FF8A80;
+  --spss-operator-relational-foreground: #E59AFF;
+  --spss-operator-logical-foreground: #65D6C3;
+  --spss-comment-foreground: #9AA7A1;
+  --spss-punctuation-foreground: #AAB1BD;
++}
++
++.syntax-token.command-control {
+  color: var(--spss-command-control-foreground);
+  font-style: normal;
+  font-weight: 600;
+}
+
+.syntax-token.command {
+  color: var(--spss-command-foreground);
+  font-style: normal;
+  font-weight: 600;
+}
+
+.syntax-token.subcommand {
+  color: var(--spss-subcommand-foreground);
+  font-style: normal;
+  font-weight: 600;
+}
+
+.syntax-token.keyword {
+  color: var(--spss-keyword-foreground);
+  font-style: normal;
+  font-weight: 400;
+}
+
+.syntax-token.function {
+  color: var(--spss-function-foreground);
+  font-style: normal;
+  font-weight: 400;
+}
+
+.syntax-token.format {
+  color: var(--spss-format-foreground);
+  font-style: normal;
+  font-weight: 400;
+}
+
+.syntax-token.variable {
+  color: var(--spss-variable-foreground);
+  font-style: normal;
+  font-weight: 400;
+}
+
+.syntax-token.variable-system {
+  color: var(--spss-variable-system-foreground);
+  font-style: italic;
+  font-weight: 400;
+}
+
+.syntax-token.variable-scratch {
+  color: var(--spss-variable-scratch-foreground);
+  font-style: italic;
+  font-weight: 400;
+}
+
+.syntax-token.variable-macro {
+  color: var(--spss-variable-macro-foreground);
+  font-style: italic;
+  font-weight: 400;
+}
+
+.syntax-token.macro-directive {
+  color: var(--spss-macro-directive-foreground);
+  font-style: normal;
+  font-weight: 600;
+}
+
+.syntax-token.string {
+  color: var(--spss-string-foreground);
+  font-style: normal;
+  font-weight: 400;
+}
+
+.syntax-token.number {
+  color: var(--spss-number-foreground);
+  font-style: normal;
+  font-weight: 400;
+}
+
+.syntax-token.constant-missing {
+  color: var(--spss-constant-missing-foreground);
+  font-style: normal;
+  font-weight: 600;
+}
+
+.syntax-token.operator-arithmetic {
+  color: var(--spss-operator-arithmetic-foreground);
+  font-style: normal;
+  font-weight: 400;
+}
+
+.syntax-token.operator-relational {
+  color: var(--spss-operator-relational-foreground);
+  font-style: normal;
+  font-weight: 400;
+}
+
+.syntax-token.operator-logical {
+  color: var(--spss-operator-logical-foreground);
+  font-style: normal;
+  font-weight: 600;
+}
+
+.syntax-token.comment {
+  color: var(--spss-comment-foreground);
+  font-style: italic;
+  font-weight: 400;
+}
+
+.syntax-token.punctuation {
+  color: var(--spss-punctuation-foreground);
+  font-style: normal;
+  font-weight: 400;
+}
++

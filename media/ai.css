@@ -356,61 +356,6 @@
   font-size: var(--vscode-editor-font-size);
 }
 
-.syntax-token.control,
-.syntax-token.command {
-  color: var(--vscode-symbolIcon-keywordForeground, #c586c0);
-  font-weight: 600;
-}
-
-.syntax-token.subcommand,
-.syntax-token.subcommand-generic,
-.syntax-token.keyword,
-.syntax-token.macro {
-  color: var(--vscode-symbolIcon-propertyForeground, #9cdcfe);
-}
-
-.syntax-token.function {
-  color: var(--vscode-symbolIcon-functionForeground, #dcdcaa);
-}
-
-.syntax-token.format {
-  color: var(--vscode-symbolIcon-typeParameterForeground, #4ec9b0);
-}
-
-.syntax-token.string {
-  color: var(--vscode-symbolIcon-stringForeground, #ce9178);
-}
-
-.syntax-token.number {
-  color: var(--vscode-symbolIcon-numberForeground, #b5cea8);
-}
-
-.syntax-token.variable,
-.syntax-token.macro-variable,
-.syntax-token.scratch-variable,
-.syntax-token.system-variable {
-  color: var(--vscode-symbolIcon-variableForeground, var(--vscode-editor-foreground));
-}
-
-.syntax-token.system-variable,
-.syntax-token.scratch-variable {
-  font-style: italic;
-}
-
-.syntax-token.missing {
-  color: var(--vscode-symbolIcon-constantForeground, #4fc1ff);
-}
-
-.syntax-token.comment {
-  color: var(--vscode-descriptionForeground);
-  font-style: italic;
-}
-
-.syntax-token.operator,
-.syntax-token.punctuation {
-  color: var(--vscode-symbolIcon-operatorForeground, var(--vscode-editor-foreground));
-}
-
 .splitter {
   position: relative;
   z-index: 2;

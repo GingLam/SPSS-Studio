@@ -16,6 +16,8 @@ interface SyntaxData {
   formats: string[];
   macroDirectives: string[];
   systemVariables: string[];
+  tokenFamilies: string[];
+  palettes: Record<'light' | 'dark', Record<string, { foreground: string; fontStyle?: string }>>;
 }
 
 describe('Chat SPSS syntax highlighter', () => {
@@ -52,7 +54,11 @@ describe('Chat SPSS syntax highlighter', () => {
         assert.equal(first.content, command, command);
         assert.equal(
           first.type,
-          macros.has(command) ? 'macro' : controls.has(command) ? 'control' : 'command',
+          macros.has(command)
+            ? 'macro-directive'
+            : controls.has(command)
+              ? 'command-control'
+              : 'command',
           command,
         );
       }
@@ -77,20 +83,75 @@ describe('Chat SPSS syntax highlighter', () => {
     }
     for (const directive of data.macroDirectives) {
       assert.ok(tokenize(`${directive} value.`).some(
-        (token) => token.type === 'macro' && token.content.toUpperCase() === directive,
+        (token) => token.type === 'macro-directive' && token.content.toUpperCase() === directive,
       ), directive);
     }
     for (const variable of data.systemVariables) {
       assert.ok(tokenize(`COMPUTE x=${variable}.`).some(
-        (token) => token.type === 'system-variable' && token.content.toUpperCase() === variable,
+        (token) => token.type === 'variable-system' && token.content.toUpperCase() === variable,
       ), variable);
     }
   });
 
   it('keeps raw embedded bodies plain and recognizes surrounding delimiters', () => {
     const tokens = tokenize('BEGIN DATA.\n1 2 3\nEND DATA.');
-    assert.ok(tokens.some((token) => token.type === 'control' && token.content === 'BEGIN DATA'));
+    assert.ok(tokens.some((token) => token.type === 'command-control' && token.content === 'BEGIN DATA'));
     assert.ok(tokens.some((token) => token.type === 'plain' && token.content.includes('1 2 3')));
-    assert.ok(tokens.some((token) => token.type === 'control' && token.content === 'END DATA'));
+    assert.ok(tokens.some((token) => token.type === 'command-control' && token.content === 'END DATA'));
+  });
+
+  it('distinguishes the complete editor token taxonomy', () => {
+    const tokens = tokenize([
+      'DO IF income >= 1000 AND NOT MISSING(income).',
+      '  COMPUTE #delta = MEAN(income, 2) / 4.',
+      '  RECODE income (SYSMIS=0).',
+      'END IF.',
+      'REGRESSION /DEPENDENT income /METHOD=ENTER education.',
+      "FORMATS income(F8.2). TITLE 'Example'.",
+      'COMPUTE flagged = $SYSMIS.',
+      '!LET !target = income.',
+      '/* note */',
+    ].join('\n'));
+    const observed = new Set(tokens.map((token) => token.type));
+    for (const family of [
+      'command-control',
+      'command',
+      'subcommand',
+      'keyword',
+      'function',
+      'format',
+      'variable',
+      'variable-system',
+      'variable-scratch',
+      'variable-macro',
+      'macro-directive',
+      'string',
+      'number',
+      'constant-missing',
+      'operator-arithmetic',
+      'operator-relational',
+      'operator-logical',
+      'comment',
+      'punctuation',
+    ]) {
+      assert.ok(observed.has(family), `Missing Chat token family ${family}`);
+    }
+  });
+
+  it('does not classify arithmetic division as a slash subcommand', () => {
+    const tokens = tokenize('COMPUTE ratio = income / household_size.');
+    assert.ok(tokens.some((token) => token.type === 'operator-arithmetic' && token.content === '/'));
+    assert.ok(tokens.some((token) => token.type === 'variable' && token.content === 'household_size'));
+    assert.ok(!tokens.some(
+      (token) => token.type === 'subcommand' && token.content.toUpperCase() === 'HOUSEHOLD_SIZE',
+    ));
+  });
+
+  it('ships complete Light and Dark presentation for every token family', () => {
+    assert.ok(data.tokenFamilies.length >= 19);
+    for (const family of data.tokenFamilies) {
+      assert.match(data.palettes.light[family]?.foreground ?? '', /^#[0-9A-F]{6}$/u, family);
+      assert.match(data.palettes.dark[family]?.foreground ?? '', /^#[0-9A-F]{6}$/u, family);
+    }
   });
 });

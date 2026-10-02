@@ -111,6 +111,10 @@ describe('SPSS AI Webview contract', () => {
   it('distinguishes chat roles and highlights SPSS code without unsafe HTML rendering', () => {
     const script = fs.readFileSync(path.resolve(__dirname, '../../../media/ai.js'), 'utf8');
     const style = fs.readFileSync(path.resolve(__dirname, '../../../media/ai.css'), 'utf8');
+    const syntaxStyle = fs.readFileSync(
+      path.resolve(__dirname, '../../../media/spss-theme.css'),
+      'utf8',
+    );
 
     assert.match(script, /if \(role === 'assistant'\)/u);
     assert.doesNotMatch(script, /role === 'user'\s*\?\s*strings\.user/u);
@@ -121,8 +125,10 @@ describe('SPSS AI Webview contract', () => {
     assert.match(script, /isSpssLanguage\(segment\.language\)/u);
     assert.match(style, /--vscode-inputOption-activeBackground/u);
     assert.match(style, /\.code-block[\s\S]*--vscode-editor-background/u);
-    assert.match(style, /\.syntax-token\.keyword/u);
-    assert.match(style, /\.syntax-token\.comment/u);
+    assert.match(syntaxStyle, /\.syntax-token\.keyword/u);
+    assert.match(syntaxStyle, /\.syntax-token\.comment/u);
+    assert.match(syntaxStyle, /\.syntax-token\.command-control/u);
+    assert.match(syntaxStyle, /\.syntax-token\.operator-logical/u);
     assert.match(style, /\.code-actions button/u);
     assert.match(style, /--vscode-button-background/u);
   });

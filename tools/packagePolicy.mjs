@@ -15,6 +15,7 @@ const ASSET_PATTERNS = [
   /^media\/(?:[^/]+\.(?:css|js))$/u,
   /^syntax\/(?:[^/]+\.json)$/u,
   /^syntaxes\/(?:[^/]+\.json)$/u,
+  /^themes\/(?:[^/]+\.json)$/u,
   /^out\/src\/(?:.+\.js)$/u,
 ];
 
