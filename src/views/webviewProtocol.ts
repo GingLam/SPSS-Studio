@@ -1,6 +1,8 @@
 import type { ActiveDatasetInfo, DatasetPage, DatasetPageRequest, EngineState } from '../spss/types';
 import type { ExecutionMetadata } from './outputStore';
 
+const MAX_VARIABLE_NAMES_PER_MESSAGE = 100_000;
+
 export interface DatasetPageUiRequest extends DatasetPageRequest {
   requestId: number;
   generation: number;
@@ -17,7 +19,8 @@ export type ExtensionToWebviewMessage =
   | { type: 'showData' }
   | { type: 'showVariables' }
   | { type: 'showAi' }
-  | { type: 'outputCleared' };
+  | { type: 'outputCleared' }
+  | { type: 'variableExploreFinished' };
 
 export type WebviewToExtensionMessage =
   | { type: 'selectExecution'; id: string }
@@ -40,6 +43,9 @@ export type WebviewToExtensionMessage =
   | { type: 'exportOutput'; id: string }
   | { type: 'printOutput'; id: string }
   | { type: 'insertVariable'; name: string }
+  | { type: 'copyVariables'; names: string[] }
+  | { type: 'insertVariables'; names: string[] }
+  | { type: 'exploreVariables'; names: string[] }
   | { type: 'clearOutput' };
 
 export function isWebviewMessage(value: unknown): value is WebviewToExtensionMessage {
@@ -57,6 +63,9 @@ export function isWebviewMessage(value: unknown): value is WebviewToExtensionMes
   if (type === 'insertVariable') {
     return typeof message.name === 'string' && message.name.length > 0 && message.name.length <= 64;
   }
+  if (type === 'copyVariables' || type === 'insertVariables' || type === 'exploreVariables') {
+    return validVariableNames(message.names);
+  }
   if (type !== 'requestDatasetPage') {
     return false;
   }
@@ -65,6 +74,13 @@ export function isWebviewMessage(value: unknown): value is WebviewToExtensionMes
     return false;
   }
   return Number(message.limit) > 0 && Number(message.variableLimit) > 0 && Number(message.variableLimit) <= 200;
+}
+
+function validVariableNames(value: unknown): value is string[] {
+  return Array.isArray(value)
+    && value.length > 0
+    && value.length <= MAX_VARIABLE_NAMES_PER_MESSAGE
+    && value.every((name) => typeof name === 'string' && name.length > 0 && name.length <= 64);
 }
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {

@@ -6,7 +6,13 @@ import {
   buildOutputExplanationQuestion,
   extractSpssOutputForAi,
 } from '../ai/outputExplanation';
-import type { ActiveDatasetInfo, DatasetPage, EngineState } from '../spss/types';
+import { buildVariableExploreQuestion } from '../ai/variableExplore';
+import type {
+  ActiveDatasetInfo,
+  DatasetPage,
+  EngineState,
+  VariableProfiles,
+} from '../spss/types';
 import { sanitizeSpssHtml } from './htmlSanitizer';
 import { normalizeVariableWindow } from './dataViewportState';
 import type { AiPage, ExtensionToAiWebviewMessage } from './aiWebviewProtocol';
@@ -27,6 +33,9 @@ export interface SpssStudioPanelCallbacks {
   refreshData: () => Promise<void>;
   refreshVariables: () => Promise<void>;
   insertVariable: (name: string) => Promise<void>;
+  copyVariables: (names: string[]) => Promise<void>;
+  insertVariables: (names: string[]) => Promise<void>;
+  exploreVariables: (names: string[]) => Promise<VariableProfiles>;
   clearOutput: () => void;
 }
 
@@ -234,6 +243,12 @@ export class SpssStudioPanel implements vscode.Disposable {
         void this.printOutput(message.id);
       } else if (message.type === 'insertVariable') {
         void this.callbacks.insertVariable(message.name);
+      } else if (message.type === 'copyVariables') {
+        void this.runVariableAction(() => this.callbacks.copyVariables(message.names), 'copy variables');
+      } else if (message.type === 'insertVariables') {
+        void this.runVariableAction(() => this.callbacks.insertVariables(message.names), 'insert variables');
+      } else if (message.type === 'exploreVariables') {
+        void this.exploreVariables(message.names);
       } else {
         this.callbacks.clearOutput();
       }
@@ -330,7 +345,10 @@ export class SpssStudioPanel implements vscode.Disposable {
     if (!source) {
       return;
     }
-    const extracted = extractSpssOutputForAi(source.rawHtml);
+    const extracted = extractSpssOutputForAi(
+      source.rawHtml,
+      this.aiController.responseLanguage,
+    );
     if (!extracted.content) {
       void vscode.window.showInformationMessage(
         'The selected run contains no statistical tables or text to explain. Figures and system metadata are skipped.',
@@ -342,7 +360,37 @@ export class SpssStudioPanel implements vscode.Disposable {
       this.aiController.responseLanguage,
     );
     this.showAi('chat');
-    await this.aiController.sendQuestionFromEditor(question);
+    await this.aiController.sendQuestionFromEditor(question, 'outputExplain');
+  }
+
+  private async runVariableAction(action: () => Promise<void>, label: string): Promise<void> {
+    try {
+      await action();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      void vscode.window.showErrorMessage(`Could not ${label}: ${message}`);
+    }
+  }
+
+  private async exploreVariables(names: string[]): Promise<void> {
+    try {
+      if (names.length > 20) {
+        void vscode.window.showWarningMessage('Explore can process at most 20 variables at a time. Reduce the selection.');
+        return;
+      }
+      const profiles = await vscode.window.withProgress({
+        location: vscode.ProgressLocation.Window,
+        title: 'SPSS Studio: preparing variable summaries…',
+      }, () => this.callbacks.exploreVariables(names));
+      const question = buildVariableExploreQuestion(profiles, this.aiController.responseLanguage);
+      this.showAi('chat');
+      await this.aiController.sendQuestionFromEditor(question, 'variableExplore');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      void vscode.window.showErrorMessage(`Could not explore SPSS variables: ${message}`);
+    } finally {
+      void this.postStudio({ type: 'variableExploreFinished' });
+    }
   }
 
   private async printOutput(id: string): Promise<void> {
@@ -459,8 +507,8 @@ export class SpssStudioPanel implements vscode.Disposable {
       <div class="pager"><button id="previous-page">Previous rows</button><span id="page-summary">—</span><button id="next-page">Next rows</button><label>Rows <select id="page-size"><option>25</option><option>50</option><option selected>100</option><option>200</option><option>500</option></select></label></div>
     </section>
     <section id="variables-view" class="view">
-      <div class="data-toolbar"><div id="variables-summary">No Active Dataset.</div><button id="refresh-variables">Refresh</button></div>
-      <div class="table-scroll"><table id="variables-table"><thead><tr><th>#</th><th>Name</th><th>Label</th><th>Type</th><th>Format</th><th>Measure</th></tr></thead><tbody></tbody></table></div>
+      <div class="data-toolbar variables-toolbar"><div id="variables-summary">No Active Dataset.</div><div class="variables-actions"><span id="variables-selection">0 selected</span><button id="copy-variables" disabled>Copy</button><button id="insert-variables" disabled>Insert</button><button id="refresh-variables">Refresh</button><span class="explore-control"><button id="explore-variables" disabled>Explore</button><button id="explore-help" class="explore-help" type="button" aria-label="About Variable Explore" aria-expanded="false">?</button><span id="explore-help-popover" class="explore-help-popover" role="tooltip" hidden>Explore sends selected variables' metadata and bounded summaries to Chat; with no selection, it uses the first 10 variables.</span></span></div></div>
+      <div class="table-scroll"><table id="variables-table"><thead><tr><th class="variable-checkbox-column" aria-label="Variable selection"></th><th>#</th><th>Name</th><th>Label</th><th>Type</th><th>Format</th><th>Measure</th></tr></thead><tbody></tbody></table></div>
       <div class="pager"><button id="previous-variable-page">Previous variables</button><span id="variable-page-summary">—</span><button id="next-variable-page">Next variables</button><label>Rows <select id="variable-page-size"><option>25</option><option>50</option><option selected>100</option><option>200</option><option>500</option></select></label></div>
     </section>
     <section id="ai-view" class="view">

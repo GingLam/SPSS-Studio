@@ -1,6 +1,13 @@
 export type EngineState = 'stopped' | 'starting' | 'ready' | 'running' | 'error';
 
-export type BridgeOperation = 'ping' | 'status' | 'run' | 'datasetInfo' | 'datasetPage' | 'shutdown';
+export type BridgeOperation =
+  | 'ping'
+  | 'status'
+  | 'run'
+  | 'datasetInfo'
+  | 'datasetPage'
+  | 'variableProfiles'
+  | 'shutdown';
 
 export type ExecutionStatus =
   | 'SUCCESS'
@@ -51,6 +58,69 @@ export interface DatasetPageRequest {
   variableLimit: number;
 }
 
+export interface VariableProfileValueLabel {
+  value: DatasetCell;
+  label: string;
+}
+
+export interface VariableProfileCategory {
+  value: DatasetCell;
+  frequency: number;
+  label?: string;
+}
+
+export interface CategoricalVariableSummary {
+  kind: 'categorical';
+  validN: number;
+  missingN: number;
+  distinctCount?: number;
+  distinctCountAtLeast?: number;
+  approximate: boolean;
+  topValues: VariableProfileCategory[];
+}
+
+export interface ContinuousVariableSummary {
+  kind: 'continuous';
+  validN: number;
+  missingN: number;
+  minimum?: number;
+  maximum?: number;
+  mean?: number;
+  standardDeviation?: number;
+}
+
+export interface TemporalVariableSummary {
+  kind: 'temporal';
+  validN: number;
+  missingN: number;
+  earliest?: string;
+  latest?: string;
+}
+
+export type VariableProfileSummary =
+  | CategoricalVariableSummary
+  | ContinuousVariableSummary
+  | TemporalVariableSummary;
+
+export interface SpssVariableProfile extends SpssVariableMetadata {
+  valueLabels: VariableProfileValueLabel[];
+  valueLabelsTruncated: boolean;
+  summary: VariableProfileSummary;
+}
+
+export interface VariableProfilesRequest {
+  variableNames: string[];
+}
+
+export interface VariableProfiles {
+  datasetName: string;
+  caseCount: number;
+  weightVariable?: string;
+  splitVariables?: string[];
+  filterVariable?: string;
+  profiles: SpssVariableProfile[];
+}
+
 export interface RunOutputTarget {
   runId: string;
   outputDirectory: string;
@@ -66,6 +136,7 @@ export interface BridgeRequest {
   limit?: number;
   variableStart?: number;
   variableLimit?: number;
+  variableNames?: string[];
 }
 
 export interface BridgeResponse {
@@ -81,6 +152,7 @@ export interface BridgeResponse {
   htmlPath?: string | null;
   datasetInfo?: ActiveDatasetInfo;
   datasetPage?: DatasetPage;
+  variableProfiles?: VariableProfiles;
 }
 
 export interface EngineStatus {

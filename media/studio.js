@@ -23,6 +23,9 @@
     pendingData: new Set(),
     variablePageOffset: 0,
     variablePageSize: 100,
+    selectedVariables: new Set(),
+    exploringVariables: false,
+    exploreHelpPinned: false,
     requestId: 0,
     generation: 0,
     historyWidth: Number(savedStudioState.historyWidth) || 240,
@@ -161,6 +164,24 @@
     body.replaceChildren();
     visible.forEach((variable, index) => {
       const row = document.createElement('tr');
+      const selectionCell = document.createElement('td');
+      selectionCell.className = 'variable-checkbox-column';
+      const checkbox = document.createElement('input');
+      checkbox.type = 'checkbox';
+      checkbox.checked = state.selectedVariables.has(variable.name);
+      checkbox.setAttribute('aria-label', `Select ${String(variable.name)}`);
+      checkbox.addEventListener('change', () => {
+        if (checkbox.checked) {
+          state.selectedVariables.add(variable.name);
+        } else {
+          state.selectedVariables.delete(variable.name);
+        }
+        row.classList.toggle('variable-selected', checkbox.checked);
+        updateVariableActions();
+      });
+      selectionCell.append(checkbox);
+      row.append(selectionCell);
+      row.classList.toggle('variable-selected', checkbox.checked);
       appendTextCell(row, String(state.variablePageOffset + index + 1), 'row-number');
       const name = String(variable.name || '—');
       const nameCell = appendTextCell(row, name, 'variable-name');
@@ -182,6 +203,35 @@
     byId('variable-page-summary').textContent = `${first.toLocaleString()}–${last.toLocaleString()} of ${variables.length.toLocaleString()}`;
     byId('previous-variable-page').disabled = state.variablePageOffset <= 0;
     byId('next-variable-page').disabled = state.variablePageOffset + visible.length >= variables.length;
+    updateVariableActions();
+  }
+
+  function selectedVariableNames() {
+    const variables = state.dataset?.active ? state.dataset.variables : [];
+    return variables
+      .filter((variable) => state.selectedVariables.has(variable.name))
+      .map((variable) => variable.name);
+  }
+
+  function updateVariableActions() {
+    const selected = selectedVariableNames();
+    const hasDataset = Boolean(state.dataset?.active && state.dataset.variables.length);
+    const chinese = document.documentElement.lang.toLowerCase().startsWith('zh');
+    byId('variables-selection').textContent = chinese
+      ? `已选择 ${String(selected.length)} 个`
+      : `${String(selected.length)} selected`;
+    byId('copy-variables').disabled = selected.length === 0;
+    byId('insert-variables').disabled = selected.length === 0;
+    byId('explore-variables').disabled = !hasDataset || state.exploringVariables;
+    byId('explore-variables').textContent = state.exploringVariables
+      ? (chinese ? '处理中…' : 'Exploring…')
+      : 'Explore';
+    const help = chinese
+      ? 'Explore 将所选变量的字典信息和受限统计摘要发送到 Chat；未选择时使用前10个变量。'
+      : "Explore sends selected variables' metadata and bounded summaries to Chat; with no selection, it uses the first 10 variables.";
+    byId('explore-help').title = help;
+    byId('explore-help').setAttribute('aria-label', help);
+    byId('explore-help-popover').textContent = help;
   }
 
   function calculateVariableWindow(scrollLeft, viewportWidth, totalVariables) {
@@ -325,6 +375,42 @@
     postStudio({ type: 'refreshData' });
   });
   byId('refresh-variables').addEventListener('click', () => postStudio({ type: 'refreshVariables' }));
+  byId('copy-variables').addEventListener('click', () => {
+    const names = selectedVariableNames();
+    if (names.length) postStudio({ type: 'copyVariables', names });
+  });
+  byId('insert-variables').addEventListener('click', () => {
+    const names = selectedVariableNames();
+    if (names.length) postStudio({ type: 'insertVariables', names });
+  });
+  byId('explore-variables').addEventListener('click', () => {
+    const variables = state.dataset?.active ? state.dataset.variables : [];
+    const selected = selectedVariableNames();
+    const names = selected.length ? selected : variables.slice(0, 10).map((variable) => variable.name);
+    if (!names.length || state.exploringVariables) return;
+    state.exploringVariables = true;
+    updateVariableActions();
+    postStudio({ type: 'exploreVariables', names });
+  });
+  byId('explore-help').addEventListener('click', () => {
+    const popover = byId('explore-help-popover');
+    state.exploreHelpPinned = !state.exploreHelpPinned;
+    popover.hidden = !state.exploreHelpPinned;
+    byId('explore-help').setAttribute('aria-expanded', String(state.exploreHelpPinned));
+  });
+  const exploreControl = byId('explore-help').closest('.explore-control');
+  exploreControl.addEventListener('mouseenter', () => {
+    byId('explore-help-popover').hidden = false;
+  });
+  exploreControl.addEventListener('mouseleave', () => {
+    if (!state.exploreHelpPinned) byId('explore-help-popover').hidden = true;
+  });
+  byId('explore-help').addEventListener('focus', () => {
+    byId('explore-help-popover').hidden = false;
+  });
+  byId('explore-help').addEventListener('blur', () => {
+    if (!state.exploreHelpPinned) byId('explore-help-popover').hidden = true;
+  });
   byId('previous-page').addEventListener('click', () => {
     state.rowOffset = Math.max(0, state.rowOffset - state.pageSize);
     resetDataRequests(false);
@@ -396,6 +482,10 @@
     } else if (message.type === 'datasetMetadata') {
       const revisionChanged = message.revision !== state.datasetRevision;
       state.dataset = message.dataset || undefined;
+      const availableVariables = new Set(state.dataset?.variables.map((variable) => variable.name) || []);
+      state.selectedVariables = new Set(
+        [...state.selectedVariables].filter((name) => availableVariables.has(name)),
+      );
       state.datasetRevision = message.revision;
       if (revisionChanged) {
         state.variablePageOffset = 0;
@@ -440,6 +530,9 @@
       setOutputActions(undefined);
       byId('run-summary').textContent = 'No executions yet.';
       byId('spss-output').replaceChildren();
+    } else if (message.type === 'variableExploreFinished') {
+      state.exploringVariables = false;
+      updateVariableActions();
     }
   });
 

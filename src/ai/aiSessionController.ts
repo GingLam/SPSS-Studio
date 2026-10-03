@@ -1,12 +1,14 @@
 import { randomUUID } from 'node:crypto';
 import {
   DEFAULT_AI_RESPONSE_LANGUAGE,
+  type AiAssistantContext,
   type AiChatMessage,
   type AiResponseLanguage,
 } from './chatProtocol';
 import type { ConversationStore } from './conversationStore';
 import { conversationTitleFromQuestion } from './conversationTitle';
 import type {
+  ConversationQuestionKind,
   StoredConversation,
   StoredConversationMessage,
 } from './conversation';
@@ -14,6 +16,9 @@ import type { ModelProfileDraft } from './modelProfile';
 import type { ModelProfileStore } from './modelProfileStore';
 import type { StreamChatOptions } from './openAiCompatibleClient';
 import type { AiRenderState, AiSendCallbacks, AiSendResult } from './aiRenderState';
+import { appendExploreDisclaimer, isOutOfScopeReply } from './variableExplore';
+
+export type AiQuestionKind = ConversationQuestionKind;
 
 export interface AiChatTransport {
   streamChat(options: StreamChatOptions, onDelta: (delta: string) => void): Promise<string>;
@@ -69,6 +74,7 @@ export class AiSessionController {
     question: string,
     callbacks: AiSendCallbacks = {},
     responseLanguage: AiResponseLanguage = DEFAULT_AI_RESPONSE_LANGUAGE,
+    questionKind: AiQuestionKind = 'manual',
   ): Promise<AiSendResult> {
     if (this.activeRequest) {
       throw new Error('Wait for the current AI response or stop it before sending another question.');
@@ -83,11 +89,13 @@ export class AiSessionController {
       ? undefined
       : state.conversations.find((conversation) => conversation.id === state.activeConversationId);
     const timestamp = this.now().toISOString();
+    const assistantContext = this.assistantContext(current?.context, questionKind);
     const userMessage: StoredConversationMessage = {
       id: this.createId(),
       role: 'user',
       content: normalizedQuestion,
       createdAt: timestamp,
+      questionKind,
     };
     const request: ActiveRequest = {
       id: ++this.requestSequence,
@@ -103,11 +111,12 @@ export class AiSessionController {
         })),
         { role: 'user', content: normalizedQuestion },
       ];
-      const response = await this.transport.streamChat({
+      const rawResponse = await this.transport.streamChat({
         configuration: resolved.configuration,
         apiKey: resolved.apiKey,
         history: requestHistory,
         responseLanguage,
+        assistantContext,
         reasoningEnabled: resolved.profile.reasoningEnabled,
         signal: request.controller.signal,
       }, (delta) => {
@@ -118,6 +127,9 @@ export class AiSessionController {
       if (!this.isCurrentRequest(request.id)) {
         throw new Error('The AI request was cancelled.');
       }
+      const response = assistantContext === 'variableExplore' && !isOutOfScopeReply(rawResponse)
+        ? appendExploreDisclaimer(rawResponse, responseLanguage)
+        : rawResponse;
       const assistantMessage: StoredConversationMessage = {
         id: this.createId(),
         role: 'assistant',
@@ -136,6 +148,7 @@ export class AiSessionController {
           updatedAt: assistantMessage.createdAt,
           lastProfileId: resolved.profile.id,
           lastProfileName: resolved.profile.name,
+          context: assistantContext,
           messages: [userMessage, assistantMessage],
         }
         : {
@@ -143,6 +156,7 @@ export class AiSessionController {
           updatedAt: assistantMessage.createdAt,
           lastProfileId: resolved.profile.id,
           lastProfileName: resolved.profile.name,
+          context: assistantContext,
           messages: [...current.messages, userMessage, assistantMessage],
         };
       let persistenceWarning: string | undefined;
@@ -172,6 +186,19 @@ export class AiSessionController {
   public dispose(): void {
     this.stop();
     this.activeRequest = undefined;
+  }
+
+  private assistantContext(
+    current: StoredConversation['context'],
+    questionKind: AiQuestionKind,
+  ): AiAssistantContext {
+    if (questionKind === 'variableExplore') {
+      return 'variableExplore';
+    }
+    if (questionKind === 'manual' && current === 'variableExplore') {
+      return 'variableExplore';
+    }
+    return 'standard';
   }
 
   public async newChat(): Promise<AiRenderState> {

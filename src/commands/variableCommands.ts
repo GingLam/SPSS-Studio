@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import type { SpssEditorTargetTracker } from '../editor/spssEditorTargetTracker';
-import { cachedVariableName } from '../spss/variableInsertion';
+import { cachedVariableName, orderedCachedVariableNames } from '../spss/variableInsertion';
 import type { VariableCache } from '../spss/variableCache';
 
 export interface VariableCommandDependencies {
@@ -32,4 +32,32 @@ export async function insertCachedVariable(
     return;
   }
   await insertVariable(dependencies, validatedName);
+}
+
+export async function insertCachedVariables(
+  dependencies: VariableCommandDependencies,
+  values: unknown,
+): Promise<void> {
+  const names = orderedCachedVariableNames(dependencies.variableCache.variables, values);
+  if (!names) {
+    void vscode.window.showWarningMessage(
+      'One or more selected variables are no longer available in the current Active Dataset.',
+    );
+    return;
+  }
+  await insertVariable(dependencies, names.join(' '));
+}
+
+export async function copyCachedVariables(
+  variableCache: VariableCache,
+  values: unknown,
+): Promise<void> {
+  const names = orderedCachedVariableNames(variableCache.variables, values);
+  if (!names) {
+    void vscode.window.showWarningMessage(
+      'One or more selected variables are no longer available in the current Active Dataset.',
+    );
+    return;
+  }
+  await vscode.env.clipboard.writeText(names.join(' '));
 }

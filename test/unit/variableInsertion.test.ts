@@ -1,5 +1,8 @@
 import assert from 'node:assert/strict';
-import { cachedVariableName } from '../../src/spss/variableInsertion';
+import {
+  cachedVariableName,
+  orderedCachedVariableNames,
+} from '../../src/spss/variableInsertion';
 import type { SpssVariableMetadata } from '../../src/spss/types';
 
 const variables: SpssVariableMetadata[] = [
@@ -14,5 +17,15 @@ describe('cached variable insertion validation', () => {
     assert.equal(cachedVariableName(variables, 'StaleVariable'), undefined);
     assert.equal(cachedVariableName(variables, ''), undefined);
     assert.equal(cachedVariableName(variables, 1), undefined);
+  });
+
+  it('validates and returns multiple selected variables in dataset order', () => {
+    assert.deepEqual(
+      orderedCachedVariableNames(variables, ['HouseholdIncome', 'Age']),
+      ['Age', 'HouseholdIncome'],
+    );
+    assert.deepEqual(orderedCachedVariableNames(variables, ['Age', 'Age']), ['Age']);
+    assert.equal(orderedCachedVariableNames(variables, ['Age', 'StaleVariable']), undefined);
+    assert.equal(orderedCachedVariableNames(variables, []), undefined);
   });
 });

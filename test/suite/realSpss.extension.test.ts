@@ -52,6 +52,15 @@ describe('SPSS Studio real SPSS Extension Host', () => {
     assert.equal(page.totalCases, 3);
     await vscode.commands.executeCommand('spssStudio.showVariables');
     assert.equal(api.getVariableCount(), 3);
+    const profiles = await api.getVariableProfiles(['age', 'income']);
+    assert.equal(profiles.datasetName, 'ExtensionHostData');
+    assert.deepEqual(profiles.profiles.map((profile) => profile.name), ['age', 'income']);
+    const ageProfile = profiles.profiles[0];
+    assert.ok(ageProfile);
+    assert.equal(ageProfile.summary.kind, 'continuous');
+    assert.equal(ageProfile.summary.validN, 3);
+    assert.equal(ageProfile.summary.missingN, 0);
+    assert.equal(api.getOutputHistoryCount(), 1);
     await vscode.commands.executeCommand('spssStudio.stopEngine');
   });
 });

@@ -10,6 +10,9 @@ describe('SPSS Studio Webview UI contract', () => {
     assert.equal(isWebviewMessage({ type: 'showAi' }), true);
     assert.equal(isWebviewMessage({ type: 'refreshVariables' }), true);
     assert.equal(isWebviewMessage({ type: 'insertVariable', name: 'HouseholdIncome' }), true);
+    assert.equal(isWebviewMessage({ type: 'copyVariables', names: ['Age', 'Income'] }), true);
+    assert.equal(isWebviewMessage({ type: 'insertVariables', names: ['Age', 'Income'] }), true);
+    assert.equal(isWebviewMessage({ type: 'exploreVariables', names: ['Age'] }), true);
     assert.equal(isWebviewMessage({ type: 'explainOutput', id: 'run-1' }), true);
     assert.equal(isWebviewMessage({ type: 'exportOutput', id: 'run-1' }), true);
     assert.equal(isWebviewMessage({ type: 'printOutput', id: 'run-1' }), true);
@@ -21,6 +24,7 @@ describe('SPSS Studio Webview UI contract', () => {
     assert.equal(isWebviewMessage({ type: 'explainOutput', id: '' }), false);
     assert.equal(isWebviewMessage({ type: 'insertVariable', name: '' }), false);
     assert.equal(isWebviewMessage({ type: 'insertVariable', name: 'x'.repeat(65) }), false);
+    assert.equal(isWebviewMessage({ type: 'exploreVariables', names: [] }), false);
     assert.equal(isWebviewMessage({ type: 'requestDatasetPage', offset: -1 }), false);
     assert.equal(isWebviewMessage({ type: 'arbitraryCommand' }), false);
   });
@@ -65,7 +69,7 @@ describe('SPSS Studio Webview UI contract', () => {
     assert.match(style, /#output-view\.history-open #output-history/u);
   });
 
-  it('uses row paging only in Data and five read-only variable attributes', () => {
+  it('uses row paging only in Data and adds compact variable selection actions', () => {
     const panelSource = fs.readFileSync(
       path.resolve(__dirname, '../../../src/views/spssStudioPanel.ts'),
       'utf8',
@@ -76,6 +80,13 @@ describe('SPSS Studio Webview UI contract', () => {
       assert.match(panelSource, new RegExp(`<th>${heading}</th>`, 'u'));
     }
     assert.match(panelSource, /id="variables-table"/u);
+    const copy = panelSource.indexOf('id="copy-variables"');
+    const insert = panelSource.indexOf('id="insert-variables"');
+    const refresh = panelSource.indexOf('id="refresh-variables"');
+    const explore = panelSource.indexOf('id="explore-variables"');
+    assert.ok(copy >= 0 && copy < insert && insert < refresh && refresh < explore);
+    assert.match(panelSource, /class="explore-help"[^>]*>\?<\/button>/u);
+    assert.match(panelSource, /class="variable-checkbox-column"/u);
   });
 
   it('inserts variables only from a double-click on the Name cell', () => {

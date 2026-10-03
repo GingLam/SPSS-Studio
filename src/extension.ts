@@ -19,13 +19,17 @@ import {
 } from './commands/executionCommands';
 import { requireTrustedWorkspace } from './commands/workspaceTrust';
 import { undoLastEdit } from './commands/editorCommands';
-import { insertCachedVariable } from './commands/variableCommands';
+import {
+  copyCachedVariables,
+  insertCachedVariable,
+  insertCachedVariables,
+} from './commands/variableCommands';
 import { SpssEditorTargetTracker } from './editor/spssEditorTargetTracker';
 import { SpssCompletionProvider } from './language/completionProvider';
 import { loadLanguageSchema } from './language/languageSchema';
 import { EngineService, type SpssRuntimeConfiguration } from './spss/engineService';
 import { VariableCache } from './spss/variableCache';
-import type { EngineState } from './spss/types';
+import type { EngineState, VariableProfiles } from './spss/types';
 import { StudioSession } from './studioSession';
 import { OutputStore } from './views/outputStore';
 import { SpssAiPanelController } from './views/spssAiPanelController';
@@ -42,6 +46,7 @@ export interface SpssStudioExtensionApi {
   getVariableCount(): number;
   getSelectedOutput(): { status: string; hasHtml: boolean; renderedLength: number } | undefined;
   getDataPageSummary(): { rows: number; variables: number; totalCases: number } | undefined;
+  getVariableProfiles(names: readonly string[]): Promise<VariableProfiles>;
   outputChannelName: string;
 }
 
@@ -165,6 +170,18 @@ export function activate(context: vscode.ExtensionContext): SpssStudioExtensionA
       }
     },
     insertVariable: async (name) => insertCachedVariable(variableCommandDependencies, name),
+    copyVariables: async (names) => copyCachedVariables(variableCache, names),
+    insertVariables: async (names) => insertCachedVariables(variableCommandDependencies, names),
+    exploreVariables: async (names) => {
+      if (!await requireTrustedWorkspace()) {
+        throw new Error('Variable Explore requires a trusted workspace.');
+      }
+      const current = studioHolder.current;
+      if (!current) {
+        throw new Error('SPSS Studio is not ready.');
+      }
+      return current.variableProfiles(names);
+    },
     clearOutput: () => studioHolder.current?.clearOutput(),
   }, aiPanelController);
   const studio = new StudioSession(
@@ -208,7 +225,7 @@ export function activate(context: vscode.ExtensionContext): SpssStudioExtensionA
     vscode.commands.registerCommand('spssStudio.explainSyntaxInChat', async () => {
       await explainSelectionOrCurrentCommand({
         showChat: () => studioPanel?.showAi('chat'),
-        sendQuestion: (question) => aiPanelController.sendQuestionFromEditor(question),
+        sendQuestion: (question) => aiPanelController.sendQuestionFromEditor(question, 'syntaxExplain'),
         responseLanguage: () => aiPanelController.responseLanguage,
       });
     }),
@@ -249,6 +266,7 @@ export function activate(context: vscode.ExtensionContext): SpssStudioExtensionA
         : undefined;
     },
     getDataPageSummary: () => studioPanel?.currentPageSummary,
+    getVariableProfiles: (names) => studio.variableProfiles(names),
     outputChannelName: output.name,
   };
 }

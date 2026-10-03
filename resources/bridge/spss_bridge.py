@@ -10,6 +10,7 @@ import sys
 import time
 import traceback
 import uuid
+from collections import Counter
 from contextlib import redirect_stdout
 
 
@@ -72,6 +73,12 @@ def _normalize_syntax_for_submit(syntax):
 
 
 class SpssBridge(object):
+    _PROFILE_CHUNK_SIZE = 2000
+    _PROFILE_MAX_VARIABLES = 20
+    _PROFILE_MAX_CATEGORIES = 20
+    _PROFILE_MAX_EXACT_DISTINCT = 10000
+    _PROFILE_MAX_VALUE_LABELS = 100
+
     def __init__(self, spss_module, debug=False):
         self.spss = spss_module
         self.debug = debug
@@ -205,6 +212,300 @@ class SpssBridge(object):
         if isinstance(value, bytes):
             return value.decode("utf-8", errors="replace")
         return str(value)
+
+    @staticmethod
+    def _normalized_value(value):
+        if isinstance(value, str):
+            return value.rstrip()
+        return value
+
+    def _missing_spec(self, index):
+        try:
+            result = self._invoke(self.spss.GetVarMissingValues, index)
+            return tuple(result) if result is not None else (0, None, None, None)
+        except Exception as exc:
+            self._diagnostic("Missing-value metadata unavailable for variable {}: {}".format(index, exc))
+            return (0, None, None, None)
+
+    def _is_missing(self, value, missing_spec):
+        if value is None:
+            return True
+        if isinstance(value, float) and not math.isfinite(value):
+            return True
+        normalized = self._normalized_value(value)
+        missing_type = int(missing_spec[0] or 0)
+        values = [self._normalized_value(item) for item in missing_spec[1:4]]
+        if missing_type == 0:
+            return any(item is not None and normalized == item for item in values)
+        lower, upper, discrete = values
+        in_range = lower is not None and upper is not None and lower <= normalized <= upper
+        if missing_type == 1:
+            return in_range
+        if missing_type == 2:
+            return in_range or (discrete is not None and normalized == discrete)
+        return False
+
+    @staticmethod
+    def _mapping_items(value):
+        if value is None:
+            return []
+        data = getattr(value, "data", value)
+        if hasattr(data, "items"):
+            return list(data.items())
+        if hasattr(data, "iteritems"):
+            return list(data.iteritems())
+        return []
+
+    def _value_labels(self, dataset_object, metadata):
+        try:
+            variable = dataset_object.varlist[metadata["name"]]
+            items = self._mapping_items(getattr(variable, "valueLabels", None))
+        except Exception as exc:
+            self._diagnostic("Value labels unavailable for variable {}: {}".format(metadata["name"], exc))
+            items = []
+        items.sort(key=lambda item: str(self._normalized_value(item[0])))
+        labels = [
+            {
+                "value": self._json_cell(self._normalized_value(value)),
+                "label": str(label or "")[:500],
+            }
+            for value, label in items[:self._PROFILE_MAX_VALUE_LABELS]
+        ]
+        lookup = {
+            self._normalized_value(value): str(label or "")[:500]
+            for value, label in items[:self._PROFILE_MAX_VALUE_LABELS]
+        }
+        return labels, len(items) > self._PROFILE_MAX_VALUE_LABELS, lookup
+
+    @staticmethod
+    def _is_temporal_format(format_value):
+        prefix = str(format_value or "").upper().split(".", 1)[0]
+        return prefix.startswith((
+            "DATE", "ADATE", "EDATE", "JDATE", "SDATE", "DATETIME",
+            "TIME", "DTIME", "WKDAY", "MONTH", "MOYR", "QYR", "WKYR",
+        ))
+
+    @staticmethod
+    def _temporal_value(value, format_value):
+        if isinstance(value, datetime.datetime):
+            return value.isoformat(sep=" ")
+        if isinstance(value, (datetime.date, datetime.time)):
+            return value.isoformat()
+        if not isinstance(value, (int, float)) or not math.isfinite(float(value)):
+            return str(value)
+        prefix = str(format_value or "").upper().split(".", 1)[0]
+        seconds = float(value)
+        if prefix.startswith(("TIME", "DTIME")):
+            sign = "-" if seconds < 0 else ""
+            seconds = abs(seconds)
+            hours = int(seconds // 3600)
+            minutes = int((seconds % 3600) // 60)
+            remaining = int(round(seconds % 60))
+            return "{}{:02d}:{:02d}:{:02d}".format(sign, hours, minutes, remaining)
+        try:
+            converted = datetime.datetime(1582, 10, 14) + datetime.timedelta(seconds=seconds)
+            return converted.isoformat(sep=" ")
+        except (OverflowError, ValueError):
+            return str(value)
+
+    @staticmethod
+    def _summary_kind(metadata, has_value_labels):
+        level = str(metadata.get("measurementLevel", "")).strip().lower()
+        if SpssBridge._is_temporal_format(metadata.get("format")):
+            return "temporal"
+        if metadata.get("type", "").startswith("String"):
+            return "categorical"
+        if level in ("nominal", "ordinal") or (not level and has_value_labels):
+            return "categorical"
+        return "continuous"
+
+    def _profile_json_value(self, value):
+        converted = self._json_cell(value)
+        return converted[:500] if isinstance(converted, str) else converted
+
+    @staticmethod
+    def _single_column_values(values):
+        for value in values:
+            if isinstance(value, (list, tuple)) and len(value) == 1:
+                yield value[0]
+            else:
+                yield value
+
+    def _bounded_category_update(self, state, value):
+        if not state["approximate"]:
+            state["counts"][value] += 1
+            if len(state["counts"]) <= self._PROFILE_MAX_EXACT_DISTINCT:
+                return
+            most_common = state["counts"].most_common(self._PROFILE_MAX_CATEGORIES)
+            state["counts"] = Counter(dict(most_common))
+            state["approximate"] = True
+            state["distinctCountAtLeast"] = self._PROFILE_MAX_EXACT_DISTINCT + 1
+            return
+        counts = state["counts"]
+        if value in counts:
+            counts[value] += 1
+            return
+        if len(counts) < self._PROFILE_MAX_CATEGORIES:
+            counts[value] = 1
+            return
+        minimum_value, minimum_count = min(counts.items(), key=lambda item: (item[1], str(item[0])))
+        del counts[minimum_value]
+        counts[value] = minimum_count + 1
+
+    def _profile_variable(self, dataset_object, metadata, total_cases):
+        labels, labels_truncated, label_lookup = self._value_labels(dataset_object, metadata)
+        kind = self._summary_kind(metadata, bool(label_lookup))
+        missing_spec = self._missing_spec(metadata["index"])
+        valid_count = 0
+        missing_count = 0
+        categorical = {
+            "counts": Counter(),
+            "approximate": False,
+        }
+        continuous_count = 0
+        continuous_mean = 0.0
+        continuous_m2 = 0.0
+        minimum = None
+        maximum = None
+        for offset in range(0, total_cases, self._PROFILE_CHUNK_SIZE):
+            end = min(total_cases, offset + self._PROFILE_CHUNK_SIZE)
+            values = dataset_object.cases[slice(offset, end), metadata["index"]]
+            for raw_value in self._single_column_values(values):
+                value = self._normalized_value(raw_value)
+                if self._is_missing(value, missing_spec):
+                    missing_count += 1
+                    continue
+                valid_count += 1
+                if kind == "categorical":
+                    self._bounded_category_update(categorical, value)
+                elif kind == "continuous":
+                    numeric = float(value)
+                    continuous_count += 1
+                    minimum = numeric if minimum is None else min(minimum, numeric)
+                    maximum = numeric if maximum is None else max(maximum, numeric)
+                    delta = numeric - continuous_mean
+                    continuous_mean += delta / continuous_count
+                    continuous_m2 += delta * (numeric - continuous_mean)
+                else:
+                    minimum = value if minimum is None or value < minimum else minimum
+                    maximum = value if maximum is None or value > maximum else maximum
+        if kind == "categorical":
+            top_values = []
+            for value, frequency in sorted(
+                categorical["counts"].items(),
+                key=lambda item: (-item[1], str(item[0])),
+            )[:self._PROFILE_MAX_CATEGORIES]:
+                entry = {
+                    "value": self._profile_json_value(value),
+                    "frequency": int(frequency),
+                }
+                label = label_lookup.get(value)
+                if label:
+                    entry["label"] = label
+                top_values.append(entry)
+            summary = {
+                "kind": "categorical",
+                "validN": valid_count,
+                "missingN": missing_count,
+                "approximate": bool(categorical["approximate"]),
+                "topValues": top_values,
+            }
+            if categorical["approximate"]:
+                summary["distinctCountAtLeast"] = categorical["distinctCountAtLeast"]
+            else:
+                summary["distinctCount"] = len(categorical["counts"])
+        elif kind == "continuous":
+            summary = {
+                "kind": "continuous",
+                "validN": valid_count,
+                "missingN": missing_count,
+            }
+            if continuous_count:
+                summary.update({
+                    "minimum": minimum,
+                    "maximum": maximum,
+                    "mean": continuous_mean,
+                })
+                if continuous_count > 1:
+                    summary["standardDeviation"] = math.sqrt(continuous_m2 / (continuous_count - 1))
+        else:
+            summary = {
+                "kind": "temporal",
+                "validN": valid_count,
+                "missingN": missing_count,
+            }
+            if minimum is not None:
+                summary["earliest"] = self._temporal_value(minimum, metadata.get("format"))
+                summary["latest"] = self._temporal_value(maximum, metadata.get("format"))
+        profile = dict(metadata)
+        profile.update({
+            "valueLabels": labels,
+            "valueLabelsTruncated": labels_truncated,
+            "summary": summary,
+        })
+        return profile
+
+    def variable_profiles(self, variable_names):
+        self.start()
+        started_at = time.monotonic()
+        if not isinstance(variable_names, list):
+            raise ValueError("variableProfiles variableNames must be a list.")
+        if not 1 <= len(variable_names) <= self._PROFILE_MAX_VARIABLES:
+            raise ValueError("variableProfiles requires between 1 and 20 variables.")
+        if any(not isinstance(name, str) or not name for name in variable_names):
+            raise ValueError("variableProfiles names must be non-empty strings.")
+        if len(set(variable_names)) != len(variable_names):
+            raise ValueError("variableProfiles names must be unique.")
+        info_response = self.dataset_info()
+        info = info_response["datasetInfo"]
+        if not info["active"]:
+            raise ValueError("No Active Dataset is available.")
+        by_name = {variable["name"]: variable for variable in info["variables"]}
+        missing_names = [name for name in variable_names if name not in by_name]
+        if missing_names:
+            raise ValueError("Unknown Active Dataset variable: {}".format(missing_names[0]))
+        dataset_object = None
+        data_step_started = False
+        original_name = info["datasetName"]
+        restore_name = original_name if original_name != "*" and re.match(r"^[A-Za-z@#$][A-Za-z0-9_@#$]*$", original_name) else None
+        try:
+            self._invoke(self.spss.StartDataStep)
+            data_step_started = True
+            # Keep SPSS epoch values here so numeric user-missing ranges remain
+            # comparable; temporal values are converted only after aggregation.
+            dataset_object = self._invoke(self.spss.Dataset, cvtDates=False)
+            total_cases = info["caseCount"]
+            if total_cases < 0:
+                total_cases = len(dataset_object.cases)
+            profiles = [
+                self._profile_variable(dataset_object, by_name[name], total_cases)
+                for name in variable_names
+            ]
+        finally:
+            if dataset_object is not None and hasattr(dataset_object, "close"):
+                self._invoke(dataset_object.close)
+            if data_step_started:
+                self._invoke(self.spss.EndDataStep)
+            if restore_name is not None:
+                self._invoke(self.spss.Submit, "DATASET NAME {}.".format(restore_name))
+        response_profiles = {
+            "datasetName": info["datasetName"],
+            "caseCount": total_cases,
+            "profiles": profiles,
+        }
+        for key in ("weightVariable", "splitVariables", "filterVariable"):
+            if key in info:
+                response_profiles[key] = info[key]
+        return {
+            "ok": True,
+            "errorLevel": 0,
+            "output": "",
+            "warnings": [],
+            "error": None,
+            "durationMs": int(round((time.monotonic() - started_at) * 1000)),
+            "engineAlive": self.started,
+            "variableProfiles": response_profiles,
+        }
 
     def dataset_page(self, offset, limit, variable_start, variable_limit):
         self.start()
@@ -418,6 +719,8 @@ class SpssBridge(object):
                 request.get("variableStart", 0),
                 request.get("variableLimit", 50),
             )
+        elif operation == "variableProfiles":
+            response = self.variable_profiles(request.get("variableNames"))
         elif operation == "shutdown":
             response = self.shutdown()
         else:

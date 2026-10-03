@@ -1,7 +1,13 @@
 import * as vscode from 'vscode';
 import type { EngineService, SpssRuntimeConfiguration } from './spss/engineService';
 import { shouldRefreshDatasetMetadata } from './spss/executionResult';
-import type { BridgeResponse, DatasetPageRequest, EngineState, ExecutionStatus } from './spss/types';
+import type {
+  BridgeResponse,
+  DatasetPageRequest,
+  EngineState,
+  ExecutionStatus,
+  VariableProfiles,
+} from './spss/types';
 import type { VariableCache } from './spss/variableCache';
 import { DataPreviewState } from './views/dataPreviewState';
 import type { OutputStore } from './views/outputStore';
@@ -75,6 +81,21 @@ export class StudioSession {
 
   public async refreshVariables(): Promise<void> {
     await this.refreshMetadata(false);
+  }
+
+  public async variableProfiles(variableNames: readonly string[]): Promise<VariableProfiles> {
+    const available = new Map(this.variableCache.variables.map((variable) => [variable.name, variable.index]));
+    const unique = [...new Set(variableNames)];
+    if (unique.length === 0 || unique.length > 20) {
+      throw new Error('Explore requires between 1 and 20 variables.');
+    }
+    for (const name of unique) {
+      if (!available.has(name)) {
+        throw new Error(`Variable ${name} is no longer available in the Active Dataset.`);
+      }
+    }
+    unique.sort((left, right) => (available.get(left) ?? 0) - (available.get(right) ?? 0));
+    return this.engine.variableProfiles(unique, this.getConfiguration());
   }
 
   public async requestDatasetPage(request: DatasetPageRequest | DatasetPageUiRequest): Promise<void> {

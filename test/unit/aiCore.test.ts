@@ -102,6 +102,18 @@ describe('AI conversation request boundaries', () => {
     assert.match(request.messages[0]?.content ?? '', /entirely in English/iu);
   });
 
+  it('adds compact variable-exploration rules only in Explore context', () => {
+    const standard = buildAssistantInstruction('zh-CN');
+    const explore = buildAssistantInstruction('zh-CN', 'variableExplore');
+    assert.doesNotMatch(standard, /VARIABLE_EXPLORE/u);
+    assert.match(explore, /VARIABLE_EXPLORE/u);
+    assert.match(explore, /超过3个变量/u);
+    const request = buildChatCompletionRequest('model-a', [
+      { role: 'user', content: '## Variable Explore' },
+    ], 'en', 'variableExplore');
+    assert.match(request.messages[0]?.content ?? '', /For more than three variables/u);
+  });
+
   it('drops the oldest complete exchanges when history exceeds limits', () => {
     const history: AiChatMessage[] = [
       { role: 'user', content: 'u1' }, { role: 'assistant', content: 'a1' },

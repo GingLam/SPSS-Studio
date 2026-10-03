@@ -2,6 +2,7 @@ import {
   boundConversation,
   buildChatCompletionRequest,
   type AiChatMessage,
+  type AiAssistantContext,
   type AiResponseLanguage,
 } from './chatProtocol';
 import {
@@ -17,6 +18,7 @@ export interface StreamChatOptions {
   apiKey: string;
   history: readonly AiChatMessage[];
   responseLanguage?: AiResponseLanguage;
+  assistantContext?: AiAssistantContext;
   reasoningEnabled?: boolean;
   timeoutMs?: number;
   signal?: AbortSignal;
@@ -60,6 +62,7 @@ export class OpenAiCompatibleClient {
             configuration.model,
             boundConversation(options.history),
             options.responseLanguage,
+            options.assistantContext,
           ),
           ...providerReasoningFields(configuration.providerId, options.reasoningEnabled ?? false),
         }),

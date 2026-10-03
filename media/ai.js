@@ -381,7 +381,7 @@
     }
     for (const message of conversation.messages) {
       const body = createMessage(message.role, message.profileName);
-      if (message.role === 'assistant') {
+      if (message.segments) {
         renderSegments(body, message.segments || []);
       } else {
         body.textContent = message.content || '';
@@ -786,7 +786,7 @@
       showPage(message.page);
     } else if (message.type === 'responseStarted') {
       const userBody = createMessage('user');
-      userBody.textContent = message.question;
+      renderSegments(userBody, message.segments || []);
       currentAssistant = createMessage('assistant');
       currentAssistant.classList.add('streaming');
       setBusy(true);

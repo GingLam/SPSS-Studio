@@ -1,4 +1,4 @@
-import type { AiSessionController } from '../ai/aiSessionController';
+import type { AiQuestionKind, AiSessionController } from '../ai/aiSessionController';
 import { aiStringsForLanguage, type AiStrings } from '../ai/aiStrings';
 import {
   DEFAULT_AI_RESPONSE_LANGUAGE,
@@ -46,7 +46,7 @@ export class SpssAiPanelController {
   private postTarget: AiPostMessage | undefined;
   private webviewReady = false;
   private pendingPage: AiPage | undefined;
-  private pendingEditorQuestion: string | undefined;
+  private pendingEditorQuestion: { question: string; kind: AiQuestionKind } | undefined;
   private readonly strings: AiStrings;
 
   public constructor(
@@ -92,7 +92,10 @@ export class SpssAiPanelController {
       : DEFAULT_AI_RESPONSE_LANGUAGE;
   }
 
-  public async sendQuestionFromEditor(question: string): Promise<void> {
+  public async sendQuestionFromEditor(
+    question: string,
+    kind: Exclude<AiQuestionKind, 'manual'> = 'syntaxExplain',
+  ): Promise<void> {
     await this.initialization;
     const state = await this.controller.renderState();
     const activeProfile = state.profiles.profiles.find(
@@ -114,11 +117,11 @@ export class SpssAiPanelController {
     }
     this.pendingPage = 'chat';
     if (!this.webviewReady) {
-      this.pendingEditorQuestion = question;
+      this.pendingEditorQuestion = { question, kind };
       return;
     }
     await this.showPage('chat');
-    await this.sendQuestion(question);
+    await this.sendQuestion(question, kind);
   }
 
   public async handleMessage(message: AiWebviewToExtensionMessage): Promise<void> {
@@ -134,7 +137,7 @@ export class SpssAiPanelController {
         const pendingQuestion = this.pendingEditorQuestion;
         this.pendingEditorQuestion = undefined;
         if (pendingQuestion !== undefined) {
-          await this.sendQuestion(pendingQuestion);
+          await this.sendQuestion(pendingQuestion.question, pendingQuestion.kind);
         }
       } catch (error) {
         await this.postOperationError(error);
@@ -173,7 +176,7 @@ export class SpssAiPanelController {
       return;
     }
     if (message.type === 'sendQuestion') {
-      await this.sendQuestion(message.question.trim());
+      await this.sendQuestion(message.question.trim(), 'manual');
       return;
     }
     await this.handleMutation(message);
@@ -236,19 +239,23 @@ export class SpssAiPanelController {
     }
   }
 
-  private async sendQuestion(question: string): Promise<void> {
+  private async sendQuestion(question: string, kind: AiQuestionKind): Promise<void> {
     if (!await this.platform.requireTrustedWorkspace(this.strings)) {
       return;
     }
     try {
       const result = await this.controller.sendQuestion(question, {
         onStarted: (content) => {
-          void this.post({ type: 'responseStarted', question: content });
+          void this.post({
+            type: 'responseStarted',
+            question: content,
+            segments: parseAssistantContent(content),
+          });
         },
         onDelta: (content) => {
           void this.post({ type: 'responseDelta', content });
         },
-      }, this.responseLanguage);
+      }, this.responseLanguage, kind);
       await this.postRenderState(this.toViewState(result.state));
       if (result.persistenceWarning) {
         await this.post({
@@ -295,6 +302,7 @@ export class SpssAiPanelController {
             role: 'user',
             createdAt: message.createdAt,
             content: message.content,
+            segments: parseAssistantContent(message.content),
           }
           : {
             id: message.id,

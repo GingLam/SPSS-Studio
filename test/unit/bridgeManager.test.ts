@@ -48,6 +48,31 @@ function responseFor(request: BridgeRequest): BridgeResponse {
         rows: [[20], [30]],
       },
     } : {}),
+    ...(request.op === 'variableProfiles' ? {
+      variableProfiles: {
+        datasetName: 'DataSet1',
+        caseCount: 2,
+        profiles: [{
+          index: 0,
+          name: 'age',
+          label: 'Age',
+          type: 'Numeric',
+          format: 'F8.0',
+          measurementLevel: 'scale',
+          valueLabels: [],
+          valueLabelsTruncated: false,
+          summary: {
+            kind: 'continuous' as const,
+            validN: 2,
+            missingN: 0,
+            minimum: 20,
+            maximum: 30,
+            mean: 25,
+            standardDeviation: Math.sqrt(50),
+          },
+        }],
+      },
+    } : {}),
   };
 }
 
@@ -240,6 +265,7 @@ describe('BridgeManager', () => {
     const running = manager.run('LONG PROCEDURE.', outputTarget);
     const metadata = manager.datasetInfo();
     const page = manager.datasetPage({ offset: 0, limit: 100, variableStart: 0, variableLimit: 50 });
+    const profiles = manager.variableProfiles(['age']);
     await new Promise((resolve) => setImmediate(resolve));
     assert.equal(process.requests.filter((request) => request.op === 'datasetInfo').length, 0);
     assert.ok(heldRun);
@@ -247,9 +273,12 @@ describe('BridgeManager', () => {
     await running;
     assert.equal((await metadata).variableCount, 1);
     assert.deepEqual((await page).rows, [[20], [30]]);
+    assert.equal((await profiles).profiles[0]?.summary.kind, 'continuous');
+    const profileRequest = process.requests.find((request) => request.op === 'variableProfiles');
+    assert.deepEqual(profileRequest?.variableNames, ['age']);
     assert.deepEqual(
-      process.requests.filter((request) => ['run', 'datasetInfo', 'datasetPage'].includes(request.op)).map((request) => request.op),
-      ['run', 'datasetInfo', 'datasetPage'],
+      process.requests.filter((request) => ['run', 'datasetInfo', 'datasetPage', 'variableProfiles'].includes(request.op)).map((request) => request.op),
+      ['run', 'datasetInfo', 'datasetPage', 'variableProfiles'],
     );
   });
 });

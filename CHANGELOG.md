@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.9.0 — 2026-10-03
+
+- Replaced flat-text Output extraction with structural native-HTML parsing that preserves row spans, column spans, layered headers, row labels, and footnotes as aligned Markdown tables for Chat interpretation.
+- Kept Output Explain privacy boundaries and payload limits: figures, Notes, runtime and provenance fields, command echoes, file paths, scripts, and styles remain excluded; tables remain capped at 50 body rows and requests at 30,000 characters.
+- Added a Variables checkbox column plus dataset-ordered **Copy** and undoable multi-cursor **Insert** actions.
+- Added Variables **Explore**, using the selected variables or the first 10 when none are selected, with a hard maximum of 20 variables per request and a compact superscript help control.
+- Added a serialized read-only SPSS bridge operation for bounded variable profiles: dictionary metadata, up to 100 value labels, up to 20 categorical values with frequencies, continuous summaries, and temporal bounds. Raw case rows are never sent to the model, and high-cardinality categorical summaries are marked approximate.
+- Added measurement-aware Explore guidance for one, two to three, and more than three variables, retained the Explore context for manual follow-ups, and appended a deterministic localized analysis disclaimer to every successful Explore response.
+- Preserved compatibility with existing local Chat histories by extending the version-1 conversation format with optional context metadata.
+
 ## 0.8.1 — 2026-10-03
 
 - Refined the English and Chinese product introduction for the final Marketplace presentation.

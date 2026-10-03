@@ -19,9 +19,9 @@ Contact：[linjing@nufe.edu.cn](mailto:linjing@nufe.edu.cn)
 - Context-aware completion for commands, subcommands, keywords, functions, snippets, and cached Active Dataset variables.
 - Editor-title actions for Undo, Run, and Run All.
 - A persistent, serialized local SPSS backend.
-- Native OMS HTML output with run history, concise AI interpretation of statistical tables and text, safe standalone HTML export, and browser-based printing.
+- Native OMS HTML output with run history, structurally aligned Markdown tables for concise AI interpretation, safe standalone HTML export, and browser-based printing.
 - Read-only Data and Variables views for the current Active Dataset.
-- A read-only Variables table whose Name cells can be double-clicked to insert the exact cached variable at the last `.sps` cursor position.
+- A read-only Variables table with multi-selection, Copy, Insert, and bounded AI-assisted Explore actions; Name cells can also be double-clicked for immediate insertion.
 - A lightweight SPSS AI question-and-answer workspace embedded in the fourth SPSS Studio tab, **Chat**, with multiple DeepSeek, Zhipu GLM, Qwen, Doubao, and custom OpenAI-compatible model profiles.
 - Insert and Copy controls on every AI response code block; generated code is never run automatically.
 - Automatic IBM SPSS Statistics discovery on macOS and Windows, with manual path overrides.
@@ -56,7 +56,7 @@ SPSS Studio expands leading TAB indentation on SPSS command lines only at the fi
 
 Each execution uses one private, uniquely tagged, short-lived OMS HTML destination. The selected result initially receives the full Output width. Use **History** beside **Print** to show or hide the resizable Runs column on the right.
 
-- **Explain** sends a locally cleaned, text-only representation of the selected run's statistical headings, tables, footnotes, and meaningful text to the current Chat model for a concise interpretation. Figures, Notes, command echoes, paths, and run metadata are excluded.
+- **Explain** structurally converts the selected run's native SPSS HTML tables—including row spans, column spans, layered headers, and footnotes—into aligned Markdown before sending them to the current Chat model. Figures, Notes, command echoes, paths, and run metadata are excluded.
 - **Export** saves the selected output as a sanitized, self-contained HTML file.
 - **Print** opens a print-ready copy in the default browser.
 - **SPSS: Clear Output** removes output files from the current extension session without changing the Active Dataset.
@@ -69,7 +69,15 @@ Execution statuses are `SUCCESS`, `SUCCESS_NO_OUTPUT`, `WARNING`, `ERROR`, `ENGI
 
 **SPSS: Show Data** opens a read-only view of the current Active Dataset. Rows are paged, while variables are available through continuous horizontal scrolling. The bridge never calls `fetchall` and limits each request to 500 rows and 200 variables.
 
-**SPSS: Show Variables** displays variable order, Name, Label, Type, Format, and Measure. It reuses metadata already cached for completion and Data preview and does not modify the SPSS data dictionary. Double-click a cell in the **Name** column to insert that exact cached variable at the most recently used `.sps` selection. Other cells are read-only and do not insert text. The insertion is one ordinary, undoable editor operation; it does not save or execute syntax.
+**SPSS: Show Variables** displays variable order, Name, Label, Type, Format, and Measure. It reuses metadata already cached for completion and Data preview and does not modify the SPSS data dictionary.
+
+- Select variables with the checkbox column. **Copy** writes their names to the clipboard in dataset order, separated by spaces. **Insert** places the same list at every current `.sps` cursor or selection as one undoable editor operation.
+- Double-click a cell in the **Name** column to insert that exact cached variable at the most recently used `.sps` selection. Other cells remain read-only.
+- **Explore** sends the selected variables to the current Chat; with no selection, it uses the first 10 variables. One request accepts at most 20 variables. The local SPSS bridge sends no raw case rows: it builds bounded profiles containing dictionary metadata, up to 100 value labels, up to 20 observed categories with frequencies, or compact continuous/date summaries. Very high-cardinality categorical counts are explicitly approximate.
+
+Explore is bounded, but it is not zero-disclosure: observed categorical or string values can themselves contain sensitive text. Review the variables before using Explore and do not send sensitive values to a provider that is not authorized to receive them.
+
+Variable Explore is measurement-aware. For one variable, Chat proposes descriptive syntax and next steps. For two or three variables, it proposes only statistically appropriate crosstabs, plots, correlations, or regression syntax and states its assumptions. For more than three variables, it first proposes possible themes and asks the user to clarify the intended analysis. Explore replies always end with a short reminder that these are suggestions rather than formal results.
 
 ## SPSS AI
 
@@ -110,7 +118,7 @@ Every fenced code block in an assistant response has high-contrast **Insert** an
 
 Insert performs one ordinary, undoable text edit. It does not save or execute the syntax.
 
-The API Key is stored in VS Code `SecretStorage`, not in `settings.json`, logs, chat history, the repository, or the VSIX. Each request contains a fixed SPSS-assistant system instruction, bounded text from the active conversation, and content the user explicitly submits. **Explain in Chat** sends only the exact selection or resolved current command inside a minimal explanation prompt. Output **Explain** sends a local Markdown conversion capped at 50 rows per table and 30,000 characters in total; it removes Notes tables, runtime/provenance metadata, command echoes, file paths, scripts, styles, and every figure before the request is built. Ordinary Chat requests do not attach the rest of the SPS file, variables, cases, Output, filenames, or workspace paths.
+The API Key is stored in VS Code `SecretStorage`, not in `settings.json`, logs, chat history, the repository, or the VSIX. Each request contains a fixed SPSS-assistant system instruction, bounded text from the active conversation, and content the user explicitly submits. **Explain in Chat** sends only the exact selection or resolved current command inside a minimal explanation prompt. Output **Explain** sends a local Markdown conversion capped at 50 rows per table and 30,000 characters in total; it removes Notes tables, runtime/provenance metadata, command echoes, file paths, scripts, styles, and every figure before the request is built. Variable **Explore** is the only dataset-aware AI action: it sends only the selected variables' bounded profiles described above, never raw case rows, and caps the final prompt at 30,000 characters. Ordinary Chat requests do not attach the rest of the SPS file, variables, cases, Output, filenames, or workspace paths.
 
 Up to 100 conversations are saved as plain text in this extension's private local global-storage directory. The same history is available for all `.sps` files and workspaces in the same local VS Code profile; no file or folder is created beside an `.sps` document. History is not placed in Settings Sync and is not packaged in the VSIX. **New Chat** starts a blank conversation without deleting older history. Individual conversations can be opened, renamed, or deleted; clearing all history requires two confirmations.
 
@@ -184,6 +192,7 @@ SPSS Studio is not an LSP or a full semantic validator. It does not provide stat
 
 | Version | Date | Update summary |
 | --- | --- | --- |
+| 0.9.0 | 2026-10-03 | Rebuilt Output Explain table extraction around native HTML structure, added Variables multi-selection with Copy and multi-cursor Insert, and introduced privacy-bounded, measurement-aware Variable Explore in Chat. |
 | 0.8.1 | 2026-10-03 | Refined the bilingual product introduction for the final Marketplace presentation; functional behavior is unchanged from 0.8.0. |
 | 0.8.0 | 2026-10-02 | Rebuilt the SPSS syntax color system with optional contrast-checked Light/Dark themes, aligned Chat code blocks to the same taxonomy and palette, constrained Chat to the SPSS/statistics domain, and added per-model provider-native reasoning controls that default to off. |
 | 0.7.0 | 2026-10-02 | Added concise editor and Output explanations, a shared Chinese-default/English response setting, and deterministic local filtering of statistical Output before AI requests. |

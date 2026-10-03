@@ -47,7 +47,7 @@ export type ExtensionToAiWebviewMessage =
     strings: AiStrings;
   }
   | { type: 'showPage'; page: AiPage }
-  | { type: 'responseStarted'; question: string }
+  | { type: 'responseStarted'; question: string; segments: AssistantContentSegment[] }
   | { type: 'responseDelta'; content: string }
   | { type: 'requestFailed'; message: string; cancelled: boolean; question: string }
   | { type: 'operationMessage'; message: string; error: boolean };

@@ -15,6 +15,7 @@ import type {
   EngineState,
   EngineStatus,
   RunOutputTarget,
+  VariableProfiles,
 } from './types';
 
 export interface BridgeProcess extends EventEmitter {
@@ -247,6 +248,16 @@ export class BridgeManager {
       throw new Error(response.error ?? 'SPSS did not return the requested dataset page.');
     }
     return response.datasetPage;
+  }
+
+  public async variableProfiles(variableNames: readonly string[]): Promise<VariableProfiles> {
+    const response = await this.enqueueOperation('variableProfiles', {
+      variableNames: [...variableNames],
+    });
+    if (!response.ok || !response.variableProfiles) {
+      throw new Error(response.error ?? 'SPSS did not return variable profiles.');
+    }
+    return response.variableProfiles;
   }
 
   public async stop(): Promise<void> {

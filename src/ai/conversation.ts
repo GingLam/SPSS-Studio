@@ -2,6 +2,9 @@ import type { AiProviderId } from './providerPresets';
 
 export const CONVERSATION_SCHEMA_VERSION = 1;
 
+export type ConversationContext = 'standard' | 'variableExplore';
+export type ConversationQuestionKind = 'manual' | 'syntaxExplain' | 'outputExplain' | 'variableExplore';
+
 export interface StoredConversationMessage {
   id: string;
   role: 'user' | 'assistant';
@@ -11,6 +14,7 @@ export interface StoredConversationMessage {
   profileName?: string;
   providerId?: AiProviderId;
   model?: string;
+  questionKind?: ConversationQuestionKind;
 }
 
 export interface StoredConversation {
@@ -22,6 +26,7 @@ export interface StoredConversation {
   lastProfileName?: string;
   messages: StoredConversationMessage[];
   truncated?: boolean;
+  context?: ConversationContext;
 }
 
 export interface ConversationFile {
@@ -109,6 +114,9 @@ function parseConversation(value: unknown): StoredConversation {
   if (candidate.truncated !== undefined && typeof candidate.truncated !== 'boolean') {
     throw new Error('Stored AI conversation truncation state is invalid.');
   }
+  if (candidate.context !== undefined && candidate.context !== 'standard' && candidate.context !== 'variableExplore') {
+    throw new Error('Stored AI conversation context is invalid.');
+  }
   return {
     id: candidate.id,
     title: candidate.title,
@@ -118,6 +126,7 @@ function parseConversation(value: unknown): StoredConversation {
     ...(candidate.lastProfileId === undefined ? {} : { lastProfileId: candidate.lastProfileId as string }),
     ...(candidate.lastProfileName === undefined ? {} : { lastProfileName: candidate.lastProfileName as string }),
     ...(candidate.truncated === true ? { truncated: true } : {}),
+    ...(candidate.context === undefined ? {} : { context: candidate.context }),
   };
 }
 
@@ -140,6 +149,15 @@ function parseMessage(value: unknown): StoredConversationMessage {
       throw new Error(`Stored AI conversation message ${key} is invalid.`);
     }
   }
+  if (
+    candidate.questionKind !== undefined
+    && candidate.questionKind !== 'manual'
+    && candidate.questionKind !== 'syntaxExplain'
+    && candidate.questionKind !== 'outputExplain'
+    && candidate.questionKind !== 'variableExplore'
+  ) {
+    throw new Error('Stored AI conversation question kind is invalid.');
+  }
   return {
     id: candidate.id,
     role: candidate.role,
@@ -149,6 +167,9 @@ function parseMessage(value: unknown): StoredConversationMessage {
     ...(candidate.profileName === undefined ? {} : { profileName: candidate.profileName as string }),
     ...(candidate.providerId === undefined ? {} : { providerId: candidate.providerId as AiProviderId }),
     ...(candidate.model === undefined ? {} : { model: candidate.model as string }),
+    ...(candidate.questionKind === undefined
+      ? {}
+      : { questionKind: candidate.questionKind }),
   };
 }
 

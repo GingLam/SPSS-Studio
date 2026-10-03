@@ -10,6 +10,7 @@ import type {
   EngineState,
   EngineStatus,
   RunOutputTarget,
+  VariableProfiles,
 } from './types';
 
 export interface SpssRuntimeConfiguration {
@@ -131,6 +132,13 @@ export class EngineService {
     configuration: SpssRuntimeConfiguration,
   ): Promise<DatasetPage> {
     return (await this.readyManager(configuration)).datasetPage(page);
+  }
+
+  public async variableProfiles(
+    variableNames: readonly string[],
+    configuration: SpssRuntimeConfiguration,
+  ): Promise<VariableProfiles> {
+    return (await this.readyManager(configuration)).variableProfiles(variableNames);
   }
 
   public async stop(): Promise<void> {

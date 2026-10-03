@@ -28,8 +28,8 @@ class FakeSpss(object):
         self.raise_on_user = None
         self.write_output = True
         self.variables = [
-            {"name": "age", "label": "Age", "type": 0, "format": "F8.0", "level": "scale"},
-            {"name": "group", "label": "Group", "type": 8, "format": "A8", "level": "nominal"},
+            {"name": "age", "label": "Age", "type": 0, "format": "F8.0", "level": "scale", "labels": {}},
+            {"name": "group", "label": "Group", "type": 8, "format": "A8", "level": "nominal", "labels": {"A": "Treatment"}},
         ]
         self.rows = [[20.0, "A"], [None, ""]]
         self.data_step_count = 0
@@ -93,6 +93,9 @@ class FakeSpss(object):
     def GetWeightVar(self):
         return ""
 
+    def GetVarMissingValues(self, index):
+        return (0, "", None, None) if index == 1 else (0, None, None, None)
+
     def GetSplitVariableNames(self):
         return []
 
@@ -105,6 +108,19 @@ class FakeSpss(object):
     def Dataset(self, cvtDates=False):
         owner = self
 
+        class FakeValueLabels(object):
+            def __init__(self, values):
+                self.data = values
+
+        class FakeVariable(object):
+            def __init__(self, values):
+                self.valueLabels = FakeValueLabels(values)
+
+        class FakeVarList(object):
+            def __getitem__(self, name):
+                variable = next(item for item in owner.variables if item["name"] == name)
+                return FakeVariable(variable["labels"])
+
         class FakeCases(object):
             def __getitem__(self, key):
                 case_slice, variable_slice = key
@@ -112,6 +128,7 @@ class FakeSpss(object):
 
         class FakeDataset(object):
             cases = FakeCases()
+            varlist = FakeVarList()
 
             def close(self):
                 owner.dataset_close_count += 1
@@ -239,6 +256,50 @@ class SpssBridgeTests(unittest.TestCase):
         self.assertEqual(fake.data_step_count, 0)
         self.assertEqual(fake.dataset_close_count, 1)
         self.assertEqual(fake.ActiveDataset(), "DataSet1")
+
+    def test_variable_profiles_are_bounded_read_only_summaries(self):
+        fake = FakeSpss()
+        bridge = BRIDGE_MODULE.SpssBridge(fake)
+        response = bridge.handle({
+            "id": "profiles", "op": "variableProfiles", "variableNames": ["age", "group"],
+        })
+        profiles = response["variableProfiles"]["profiles"]
+
+        self.assertEqual([profile["name"] for profile in profiles], ["age", "group"])
+        self.assertEqual(profiles[0]["summary"]["kind"], "continuous")
+        self.assertEqual(profiles[0]["summary"]["validN"], 1)
+        self.assertEqual(profiles[0]["summary"]["missingN"], 1)
+        self.assertEqual(profiles[0]["summary"]["mean"], 20.0)
+        self.assertEqual(profiles[1]["summary"]["kind"], "categorical")
+        self.assertEqual(profiles[1]["summary"]["topValues"], [
+            {"value": "A", "frequency": 1, "label": "Treatment"},
+        ])
+        self.assertEqual(profiles[1]["valueLabels"], [{"value": "A", "label": "Treatment"}])
+        self.assertFalse(fake.cvt_dates)
+        self.assertEqual(fake.data_step_count, 0)
+        self.assertEqual(fake.dataset_close_count, 1)
+        self.assertEqual(fake.ActiveDataset(), "DataSet1")
+
+    def test_variable_profiles_validate_names_and_limit(self):
+        bridge = BRIDGE_MODULE.SpssBridge(FakeSpss())
+        with self.assertRaisesRegex(ValueError, "Unknown Active Dataset variable"):
+            bridge.handle({"id": "missing", "op": "variableProfiles", "variableNames": ["missing"]})
+        with self.assertRaisesRegex(ValueError, "between 1 and 20"):
+            bridge.handle({
+                "id": "many", "op": "variableProfiles",
+                "variableNames": ["v{}".format(index) for index in range(21)],
+            })
+
+    def test_user_missing_value_formats_follow_spss_module_contract(self):
+        bridge = BRIDGE_MODULE.SpssBridge(FakeSpss())
+
+        self.assertTrue(bridge._is_missing(9, (0, 0, 9, 99)))
+        self.assertFalse(bridge._is_missing(5, (0, 0, 9, 99)))
+        self.assertTrue(bridge._is_missing(50, (1, 9, 99, None)))
+        self.assertFalse(bridge._is_missing(8, (1, 9, 99, None)))
+        self.assertTrue(bridge._is_missing(50, (2, 9, 99, 0)))
+        self.assertTrue(bridge._is_missing(0, (2, 9, 99, 0)))
+        self.assertFalse(bridge._is_missing(8, (2, 9, 99, 0)))
 
     def test_ping_status_and_shutdown(self):
         fake = FakeSpss()

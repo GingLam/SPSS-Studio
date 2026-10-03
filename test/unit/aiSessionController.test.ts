@@ -7,6 +7,7 @@ import { ConversationStore } from '../../src/ai/conversationStore';
 import { ModelProfileStore } from '../../src/ai/modelProfileStore';
 import type { StreamChatOptions } from '../../src/ai/openAiCompatibleClient';
 import type { KeyValueStore, SecretValueStore } from '../../src/ai/providerConfigurationStore';
+import { exploreDisclaimer } from '../../src/ai/variableExplore';
 
 class MemoryValues implements KeyValueStore {
   public readonly values = new Map<string, unknown>();
@@ -176,5 +177,38 @@ describe('AI session controller', () => {
     rejectRequest?.(new Error('network failed'));
     await assert.rejects(sending, /network failed/u);
     assert.equal((await controller.renderState()).history.length, 0);
+  });
+
+  it('keeps Explore follow-ups in context and appends one deterministic disclaimer', async () => {
+    const { controller, profiles, transport } = await fixture();
+    await profiles.create({
+      name: 'Explore model',
+      providerId: 'deepseek',
+      baseUrl: 'https://api.deepseek.com',
+      model: 'deepseek-chat',
+    }, 'secret-key');
+    transport.response = '建议先运行 FREQUENCIES。';
+
+    const first = await controller.sendQuestion(
+      '## Variable Explore\n\n### education',
+      {},
+      'zh-CN',
+      'variableExplore',
+    );
+    assert.equal(transport.requests[0]?.assistantContext, 'variableExplore');
+    assert.equal(first.response.endsWith(exploreDisclaimer()), true);
+    assert.equal(first.state.currentConversation?.context, 'variableExplore');
+    const firstMessage = first.state.currentConversation.messages[0];
+    assert.ok(firstMessage);
+    assert.equal(firstMessage.questionKind, 'variableExplore');
+
+    const followUp = await controller.sendQuestion('下一步如何绘图？');
+    assert.equal(transport.requests[1]?.assistantContext, 'variableExplore');
+    assert.equal(followUp.response.endsWith(exploreDisclaimer()), true);
+
+    const syntax = await controller.sendQuestion('解释语法。', {}, 'zh-CN', 'syntaxExplain');
+    assert.equal(transport.requests[2]?.assistantContext, 'standard');
+    assert.equal(syntax.response.endsWith(exploreDisclaimer()), false);
+    assert.equal(syntax.state.currentConversation?.context, 'standard');
   });
 });
