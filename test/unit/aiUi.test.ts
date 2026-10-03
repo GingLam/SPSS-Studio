@@ -20,6 +20,10 @@ describe('SPSS AI Webview contract', () => {
     assert.equal(isAiWebviewMessage({ type: 'selectProfile', profileId: 'profile-1' }), true);
     assert.equal(isAiWebviewMessage({ type: 'insertCode', code: 'FREQUENCIES VARIABLES=age.' }), true);
     assert.equal(isAiWebviewMessage({ type: 'copyCode', code: 'FREQUENCIES VARIABLES=age.' }), true);
+    assert.equal(isAiWebviewMessage({ type: 'runCode', language: 'spss', code: 'FREQUENCIES VARIABLES=age.' }), true);
+    assert.equal(isAiWebviewMessage({ type: 'runCode', language: 'sps', code: 'DESCRIPTIVES VARIABLES=age.' }), true);
+    assert.equal(isAiWebviewMessage({ type: 'runCode', language: 'python', code: 'print(1)' }), false);
+    assert.equal(isAiWebviewMessage({ type: 'runCode', language: 'spss', code: '' }), false);
     assert.equal(isAiWebviewMessage({ type: 'openLink', url: 'https://www.ibm.com/docs/' }), true);
     assert.equal(isAiWebviewMessage({ type: 'openLink', url: 'javascript:alert(1)' }), false);
     assert.equal(isAiWebviewMessage({
@@ -70,6 +74,7 @@ describe('SPSS AI Webview contract', () => {
     assert.match(script, /textContent/u);
     assert.match(script, /strings\.insert/u);
     assert.match(script, /strings\.copy/u);
+    assert.match(script, /strings\.run/u);
     assert.match(script, /window\.createSpssAiModule/u);
     assert.match(script, /return \{ handleMessage, resize, showPage \}/u);
     assert.doesNotMatch(script, /acquireVsCodeApi|window\.addEventListener\('message'/u);
@@ -81,6 +86,29 @@ describe('SPSS AI Webview contract', () => {
     assert.match(script, /type: 'setResponseLanguage'/u);
     assert.match(script, /function renderMarkdownBlocks/u);
     assert.match(script, /type: 'openLink'/u);
+    assert.match(script, /type: 'runCode'/u);
+  });
+
+  it('orders SPSS code actions as Copy, Insert, Run and omits Run for other languages', () => {
+    const script = fs.readFileSync(path.resolve(__dirname, '../../../media/ai.js'), 'utf8');
+    const renderStart = script.indexOf('function renderSegments');
+    const renderEnd = script.indexOf('function renderConversation', renderStart);
+    const render = script.slice(renderStart, renderEnd);
+    assert.ok(render.indexOf('const copy =') < render.indexOf('const insert ='));
+    assert.ok(render.indexOf('const insert =') < render.indexOf('const run ='));
+    assert.match(render, /actions\.append\(copy, insert\)/u);
+    assert.match(render, /if \(isSpssLanguage\(segment\.language\)\) \{[\s\S]*const run =[\s\S]*actions\.append\(run\)/u);
+    assert.match(render, /type: 'runCode', language: segment\.language\.toLowerCase\(\), code: segment\.content/u);
+  });
+
+  it('routes Run through the Studio execution queue and reveals Output when execution starts', () => {
+    const extension = fs.readFileSync(path.resolve(__dirname, '../../../src/extension.ts'), 'utf8');
+    const panel = fs.readFileSync(
+      path.resolve(__dirname, '../../../src/views/spssStudioPanel.ts'),
+      'utf8',
+    );
+    assert.match(extension, /runCode: async \(code\)[\s\S]*current\.execute\(code, 'Run Chat Code'\)/u);
+    assert.match(panel, /executionStarted\(record: ExecutionRecord\): void \{\s*this\.showOutput\(\)/u);
   });
 
   it('declares one restrictive Studio shell content security policy', () => {
@@ -94,7 +122,7 @@ describe('SPSS AI Webview contract', () => {
     assert.doesNotMatch(panel, /script-src[^\n]*unsafe-inline/u);
   });
 
-  it('keeps model profiles behind Manage Models and exposes an adjustable composer boundary', () => {
+  it('keeps model profiles behind Setting and exposes an adjustable composer boundary', () => {
     const panel = fs.readFileSync(
       path.resolve(__dirname, '../../../src/views/spssStudioPanel.ts'),
       'utf8',

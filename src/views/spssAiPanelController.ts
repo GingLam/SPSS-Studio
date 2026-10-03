@@ -25,6 +25,7 @@ type MutationMessage = Exclude<AiWebviewToExtensionMessage,
 | { type: 'stop' }
 | { type: 'insertCode' }
 | { type: 'copyCode' }
+| { type: 'runCode' }
 | { type: 'openProviderHelp' }
 | { type: 'openLink' }
 | { type: 'setComposerHeight' }
@@ -33,11 +34,13 @@ type MutationMessage = Exclude<AiWebviewToExtensionMessage,
 
 export interface SpssAiPanelPlatform {
   insertCode(code: string): Promise<boolean>;
+  runCode(code: string): Promise<boolean>;
   showWarning(message: string): void;
   writeClipboard(code: string): PromiseLike<void>;
   openExternal(url: string): PromiseLike<boolean>;
   confirm(message: string, action: string): Promise<boolean>;
   requireTrustedWorkspace(strings: AiStrings): Promise<boolean>;
+  requireExecutionTrust(): Promise<boolean>;
 }
 
 type AiPostMessage = (message: ExtensionToAiWebviewMessage) => PromiseLike<boolean> | undefined;
@@ -156,6 +159,15 @@ export class SpssAiPanelController {
     }
     if (message.type === 'copyCode') {
       await this.platform.writeClipboard(message.code);
+      return;
+    }
+    if (message.type === 'runCode') {
+      if (!await this.platform.requireExecutionTrust()) {
+        return;
+      }
+      if (!await this.platform.runCode(message.code)) {
+        this.platform.showWarning(this.strings.runUnavailable);
+      }
       return;
     }
     if (message.type === 'openProviderHelp') {

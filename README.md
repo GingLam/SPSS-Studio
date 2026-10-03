@@ -23,7 +23,7 @@ Contact：[linjing@nufe.edu.cn](mailto:linjing@nufe.edu.cn)
 - Read-only Data and Variables views for the current Active Dataset.
 - A read-only Variables table with Name/Label filtering, persistent multi-selection, Copy, Insert, and bounded AI-assisted Explore actions; Name cells can also be double-clicked for immediate insertion.
 - A lightweight SPSS AI question-and-answer workspace embedded in the fourth SPSS Studio tab, **Chat**, with multiple DeepSeek, Zhipu GLM, Qwen, Doubao, and custom OpenAI-compatible model profiles.
-- Insert and Copy controls on every AI response code block; generated code is never run automatically.
+- Copy and Insert controls on every AI response code block, plus an explicit Run action on SPSS blocks; generated code is never run automatically.
 - Automatic IBM SPSS Statistics discovery on macOS and Windows, with manual path overrides.
 
 ## Requirements
@@ -84,24 +84,24 @@ Variable Explore is measurement-aware. For one variable, Chat proposes descripti
 
 The reusable SPSS Studio panel opens beside the native `.sps` editor and contains four tabs in this order: **Output**, **Data**, **Variables**, and **Chat**. Opening a `.sps` file alone does not open the panel. Running syntax opens **Output**; the Show Data, Show Variables, Show AI Assistant, and Manage AI Model Profiles commands open their corresponding Studio location. The extension does not contribute or automatically reveal a native VS Code bottom-panel view.
 
-The **Chat** tab is an SPSS AI question-and-answer tool and does not control the SPSS engine. Its compact header exposes **Current Chat** and **Chat History**; use **Manage Models** to open the model-profile editor without duplicating it as a third navigation tab. The boundary between the transcript and question box can be dragged with the mouse or adjusted from the keyboard. Completed answers render common Markdown structures without accepting model-generated HTML. A concise built-in system instruction grounds replies in executable SPSS Syntax, applied social statistics, assumptions, key options, and result interpretation without claiming that generated syntax was run. Replies default to Simplified Chinese and stay concise unless the user explicitly asks for detail.
+The **Chat** tab is an SPSS AI question-and-answer tool. Its compact header uses the concise English controls **Current**, **History**, **Active model**, **New**, and **Setting**; model settings use the same compact English convention. The boundary between the transcript and question box can be dragged with the mouse or adjusted from the keyboard. Completed answers render common Markdown structures without accepting model-generated HTML. A concise built-in system instruction grounds replies in executable SPSS Syntax, applied social statistics, assumptions, key options, and result interpretation without claiming that generated syntax was run. Replies default to Simplified Chinese and stay concise unless the user explicitly asks for detail.
 
 Chat is deliberately scoped to SPSS Syntax, IBM SPSS Statistics use, statistical methods implemented in SPSS, and SPSS output interpretation. Clearly unrelated requests receive a short boundary notice rather than a general-purpose answer. This instruction-level boundary reduces off-topic responses but is not a security guarantee against every possible model behavior.
 
-In an `.sps` editor, right-click a selection and choose **Explain in Chat**. With no selection, the command scanner sends the complete SPSS command or structural block at the cursor. The Studio panel opens to Chat and submits a concise explanation request immediately; it never executes the selected syntax. If no usable model profile exists, the command opens **Manage Models** instead.
+In an `.sps` editor, right-click a selection and choose **Explain in Chat**. With no selection, the command scanner sends the complete SPSS command or structural block at the cursor. The Studio panel opens to Chat and submits a concise explanation request immediately; it never executes the selected syntax. If no usable model profile exists, the command opens **Setting** instead.
 
-Configure it from **Manage Models** or run **SPSS: Manage AI Model Profiles**:
+Configure it from **Setting** or run **SPSS: Manage AI Model Profiles**:
 
 1. Create a profile and choose DeepSeek, Zhipu GLM, Qwen, Doubao, or Custom OpenAI-compatible.
 2. Confirm the prefilled Base URL.
 3. Enter the model identifier supplied by the provider.
 4. Enter an API Key and save. A blank profile name is filled automatically from the provider and model.
 
-Each built-in provider profile also has an **Enable reasoning** checkbox, which is off by default. DeepSeek, Zhipu GLM, and Doubao receive their native `thinking.type` field; Qwen receives `enable_thinking`. Custom OpenAI-compatible profiles keep the checkbox disabled because the extension does not guess provider-specific fields. Whether a particular model supports the selected mode still depends on that provider and model.
+Each built-in provider profile also has a **Reasoning** checkbox, which is off by default. DeepSeek, Zhipu GLM, and Doubao receive their native `thinking.type` field; Qwen receives `enable_thinking`. Custom OpenAI-compatible profiles keep the checkbox disabled because the extension does not guess provider-specific fields. Whether a particular model supports the selected mode still depends on that provider and model.
 
-Profiles can be renamed, duplicated, deleted, and switched from the panel header. Multiple models—and multiple accounts for the same provider—can coexist. Reopening **Manage Models** always shows the saved non-secret values. The API Key field intentionally stays blank; the status below it indicates whether a key is saved. Switching profiles changes only later requests, while historical answers retain the profile name used to generate them.
+Profiles can be renamed, duplicated, deleted, and switched from the panel header. Multiple models—and multiple accounts for the same provider—can coexist. Reopening **Setting** always shows the saved non-secret values. The API Key field intentionally stays blank; the status below it indicates whether a key is saved. Switching profiles changes only later requests, while historical answers retain the profile name used to generate them.
 
-**Response language** in **Manage Models** is shared by ordinary Chat questions, **Explain in Chat**, and Output **Explain**. It defaults to **Chinese (default)** and can be changed to **English**. The preference is stored in this extension's global VS Code state rather than in an `.sps` file or workspace folder.
+**Language** in **Setting** is shared by ordinary Chat questions, **Explain in Chat**, and Output **Explain**. It defaults to **Chinese (default)** and can be changed to **English**. The preference is stored in this extension's global VS Code state rather than in an `.sps` file or workspace folder.
 
 Provider model catalogs change independently of the extension, so the model field is intentionally editable. The four built-in presets use these official OpenAI-compatible Base URLs:
 
@@ -112,16 +112,17 @@ Provider model catalogs change independently of the extension, so the model fiel
 | Qwen / Alibaba Cloud Model Studio | `https://dashscope.aliyuncs.com/compatible-mode/v1` |
 | Doubao / Volcano Engine Ark | `https://ark.cn-beijing.volces.com/api/v3` |
 
-Every fenced code block in an assistant response has high-contrast **Insert** and **Copy** actions. Blocks marked `spss` or `sps` use theme-aware highlighting generated from the same SPSS language schema as the editor TextMate Grammar:
+Every fenced code block in an assistant response has high-contrast actions ordered as **Copy** and **Insert**. Blocks identified as SPSS add **Run** as the final action and use theme-aware highlighting generated from the same SPSS language schema as the editor TextMate Grammar:
 
-- **Insert** places the code, without fence markers or the language identifier, at the most recently used `.sps` selection.
 - **Copy** writes the same code to the system clipboard.
+- **Insert** places the code, without fence markers or the language identifier, at the most recently used `.sps` selection.
+- **Run** submits the complete SPSS code block directly to the existing serialized local execution queue without inserting or changing the `.sps` document, then switches Studio to Output as execution starts.
 
-Insert performs one ordinary, undoable text edit. It does not save or execute the syntax.
+Insert performs one ordinary, undoable text edit. It does not save or execute the syntax. Run remains a deliberate user action, requires a trusted workspace, and never runs automatically when a response arrives.
 
 The API Key is stored in VS Code `SecretStorage`, not in `settings.json`, logs, chat history, the repository, or the VSIX. Each request contains a fixed SPSS-assistant system instruction, bounded text from the active conversation, and content the user explicitly submits. **Explain in Chat** sends only the exact selection or resolved current command inside a minimal explanation prompt. Output **Explain** sends a local Markdown conversion capped at 50 rows per table and 30,000 characters in total; it removes Notes tables, runtime/provenance metadata, command echoes, file paths, scripts, styles, and every figure before the request is built. Variable **Explore** is the only dataset-aware AI action: it sends only the selected variables' bounded profiles described above, never raw case rows, and caps the final prompt at 30,000 characters. Ordinary Chat requests do not attach the rest of the SPS file, variables, cases, Output, filenames, or workspace paths.
 
-Up to 100 conversations are saved as plain text in this extension's private local global-storage directory. The same history is available for all `.sps` files and workspaces in the same local VS Code profile; no file or folder is created beside an `.sps` document. History is not placed in Settings Sync and is not packaged in the VSIX. **New Chat** starts a blank conversation without deleting older history. Individual conversations can be opened, renamed, or deleted; clearing all history requires two confirmations.
+Up to 100 conversations are saved as plain text in this extension's private local global-storage directory. The same history is available for all `.sps` files and workspaces in the same local VS Code profile; no file or folder is created beside an `.sps` document. History is not placed in Settings Sync and is not packaged in the VSIX. **New** starts a blank conversation without deleting older history. Individual conversations can be opened, renamed, or deleted; clearing all history requires two confirmations.
 
 Model output is untrusted and can be wrong. Inspect generated syntax before running it. SPSS Studio does not provide model-provider billing, retention, or correctness guarantees.
 
@@ -193,7 +194,7 @@ SPSS Studio is not an LSP or a full semantic validator. It does not provide stat
 
 | Version | Date | Update summary |
 | --- | --- | --- |
-| 1.0.0 | 2026-10-03 | Added case-insensitive Name/Label filtering to Variables, preserved cross-filter selections for Copy/Insert/Explore, shortened paging controls, and strengthened the rendered Chinese Explore responsibility statement. |
+| 1.0.0 | 2026-10-03 | Added Variables Name/Label filtering with persistent selections, compact English Chat and model-setting controls, Copy/Insert/Run actions for SPSS response blocks, shortened paging controls, and a strengthened Explore responsibility statement. |
 | 0.9.0 | 2026-10-03 | Rebuilt Output Explain table extraction around native HTML structure, added Variables multi-selection with Copy and multi-cursor Insert, and introduced privacy-bounded, measurement-aware Variable Explore in Chat. |
 | 0.8.1 | 2026-10-03 | Refined the bilingual product introduction for the final Marketplace presentation; functional behavior is unchanged from 0.8.0. |
 | 0.8.0 | 2026-10-02 | Rebuilt the SPSS syntax color system with optional contrast-checked Light/Dark themes, aligned Chat code blocks to the same taxonomy and palette, constrained Chat to the SPSS/statistics domain, and added per-model provider-native reasoning controls that default to off. |

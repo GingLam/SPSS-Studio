@@ -43,6 +43,49 @@ describe('embedded SPSS AI panel controller', () => {
     assert.deepEqual(copied, ['DESCRIPTIVES VARIABLES=age.']);
   });
 
+  it('runs a complete SPSS code block through a trusted platform port', async () => {
+    const posted: ExtensionToAiWebviewMessage[] = [];
+    const executed: string[] = [];
+    let trustChecks = 0;
+    const controller = createController(posted, {
+      requireExecutionTrust: () => {
+        trustChecks += 1;
+        return Promise.resolve(true);
+      },
+      runCode: (code: string) => {
+        executed.push(code);
+        return Promise.resolve(true);
+      },
+    });
+
+    await controller.handleMessage({
+      type: 'runCode',
+      language: 'spss',
+      code: 'FREQUENCIES VARIABLES=age.\nDESCRIPTIVES VARIABLES=income.',
+    });
+
+    assert.equal(trustChecks, 1);
+    assert.deepEqual(executed, ['FREQUENCIES VARIABLES=age.\nDESCRIPTIVES VARIABLES=income.']);
+  });
+
+  it('does not run a code block when execution trust is denied', async () => {
+    const posted: ExtensionToAiWebviewMessage[] = [];
+    let executed = false;
+    const controller = createController(posted, {
+      requireExecutionTrust: () => Promise.resolve(false),
+      runCode: () => {
+        executed = true;
+        return Promise.resolve(true);
+      },
+    });
+
+    await controller.handleMessage({
+      type: 'runCode', language: 'spss', code: 'FREQUENCIES VARIABLES=age.',
+    });
+
+    assert.equal(executed, false);
+  });
+
   it('queues an editor explanation until the embedded Chat webview is ready', async () => {
     const posted: ExtensionToAiWebviewMessage[] = [];
     const sent: string[] = [];
@@ -134,11 +177,13 @@ function createController(
   } as unknown as AiSessionController;
   const platform: SpssAiPanelPlatform = {
     insertCode: () => Promise.resolve(false),
+    runCode: () => Promise.resolve(false),
     showWarning: () => undefined,
     writeClipboard: () => Promise.resolve(),
     openExternal: () => Promise.resolve(true),
     confirm: () => Promise.resolve(true),
     requireTrustedWorkspace: () => Promise.resolve(true),
+    requireExecutionTrust: () => Promise.resolve(true),
     ...overrides,
   };
   const uiState: KeyValueStore = suppliedUiState ?? {

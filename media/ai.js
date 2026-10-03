@@ -331,13 +331,6 @@
       language.textContent = segment.language || 'code';
       const actions = document.createElement('div');
       actions.className = 'code-actions';
-      const insert = document.createElement('button');
-      insert.type = 'button';
-      insert.textContent = strings.insert;
-      insert.addEventListener('click', () => {
-        vscode.postMessage({ type: 'insertCode', code: segment.content });
-        flashButton(insert, strings.inserted);
-      });
       const copy = document.createElement('button');
       copy.type = 'button';
       copy.textContent = strings.copy;
@@ -345,7 +338,25 @@
         vscode.postMessage({ type: 'copyCode', code: segment.content });
         flashButton(copy, strings.copied);
       });
-      actions.append(insert, copy);
+      const insert = document.createElement('button');
+      insert.type = 'button';
+      insert.textContent = strings.insert;
+      insert.addEventListener('click', () => {
+        vscode.postMessage({ type: 'insertCode', code: segment.content });
+        flashButton(insert, strings.inserted);
+      });
+      actions.append(copy, insert);
+      if (isSpssLanguage(segment.language)) {
+        const run = document.createElement('button');
+        run.type = 'button';
+        run.textContent = strings.run;
+        run.addEventListener('click', () => {
+          vscode.postMessage({
+            type: 'runCode', language: segment.language.toLowerCase(), code: segment.content,
+          });
+        });
+        actions.append(run);
+      }
       header.append(language, actions);
       const code = document.createElement('code');
       if (isSpssLanguage(segment.language)) {

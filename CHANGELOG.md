@@ -7,6 +7,8 @@
 - Made no-selection Explore use the first 10 variables in the current filtered result while preserving the existing 20-variable request limit.
 - Shortened the Variables paging actions to **Previous** and **Next** and kept the filter aligned at the right edge of the paging row.
 - Updated the deterministic Chinese Explore responsibility statement and verified that Chat renders it as bold Markdown followed by the warning symbol.
+- Standardized the Chat header as **Current**, **History**, **Active model**, **New**, and **Setting**, and converted model-setting controls to concise English labels in every VS Code display language.
+- Reordered response code actions as **Copy**, **Insert**, and—only for SPSS code blocks—**Run**. Run submits the complete block through the trusted, serialized local SPSS execution path without modifying the `.sps` editor and automatically reveals Output when execution starts.
 
 ## 0.9.0 — 2026-10-03
 

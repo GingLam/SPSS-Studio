@@ -125,6 +125,14 @@ export function activate(context: vscode.ExtensionContext): SpssStudioExtensionA
     new AiSessionController(modelProfiles, conversationStore, new OpenAiCompatibleClient()),
     {
       insertCode: (code) => editorTarget.insert(code),
+      runCode: async (code) => {
+        const current = studioHolder.current;
+        if (!current) {
+          return false;
+        }
+        await current.execute(code, 'Run Chat Code');
+        return true;
+      },
       showWarning: (message) => {
         void vscode.window.showWarningMessage(message);
       },
@@ -147,6 +155,7 @@ export function activate(context: vscode.ExtensionContext): SpssStudioExtensionA
         }
         return false;
       },
+      requireExecutionTrust: () => requireTrustedWorkspace(),
     },
     context.globalState,
     aiInitialization,

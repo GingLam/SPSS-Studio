@@ -15,6 +15,39 @@ describe('SPSS AI localization', () => {
     assert.equal(aiStringsForLanguage('fr'), AI_STRINGS_EN);
   });
 
+  it('uses one concise English label set for Chat navigation and model settings', () => {
+    const expected = {
+      activeProfile: 'Active model',
+      configureModels: 'Setting',
+      currentChat: 'Current',
+      history: 'History',
+      newChat: 'New',
+      newProfile: 'New',
+      name: 'Name',
+      provider: 'Provider',
+      responseLanguage: 'Language',
+      enableReasoning: 'Reasoning',
+      baseUrl: 'Base URL',
+      model: 'Model',
+      apiKey: 'API Key',
+      save: 'Save',
+      duplicate: 'Duplicate',
+      makeActive: 'Activate',
+      deleteKey: 'Delete key',
+      delete: 'Delete',
+      officialDocs: 'Docs',
+      copy: 'Copy',
+      insert: 'Insert',
+      run: 'Run',
+    };
+    for (const strings of [AI_STRINGS_EN, AI_STRINGS_ZH_CN]) {
+      const values = strings as unknown as Record<string, string>;
+      for (const [key, value] of Object.entries(expected)) {
+        assert.equal(values[key], value, key);
+      }
+    }
+  });
+
   it('keeps package contribution localization keys in parity', () => {
     const root = path.resolve(__dirname, '../../..');
     const english = JSON.parse(fs.readFileSync(path.join(root, 'package.nls.json'), 'utf8')) as Record<string, string>;

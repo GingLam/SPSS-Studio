@@ -81,7 +81,12 @@ export type AiWebviewToExtensionMessage =
   | { type: 'setComposerHeight'; height: number }
   | { type: 'setResponseLanguage'; language: AiResponseLanguage }
   | { type: 'insertCode'; code: string }
-  | { type: 'copyCode'; code: string };
+  | { type: 'copyCode'; code: string }
+  | {
+    type: 'runCode';
+    language: 'spss' | 'sps' | 'spss-syntax' | 'ibm-spss' | 'ibm spss';
+    code: string;
+  };
 
 export function isAiWebviewMessage(value: unknown): value is AiWebviewToExtensionMessage {
   if (!isPlainObject(value) || typeof value.type !== 'string') {
@@ -100,6 +105,10 @@ export function isAiWebviewMessage(value: unknown): value is AiWebviewToExtensio
   }
   if (value.type === 'insertCode' || value.type === 'copyCode') {
     return boundedString(value.code, 0, 500_000);
+  }
+  if (value.type === 'runCode') {
+    return ['spss', 'sps', 'spss-syntax', 'ibm-spss', 'ibm spss'].includes(String(value.language))
+      && boundedString(value.code, 1, 500_000);
   }
   if (value.type === 'setComposerHeight') {
     return typeof value.height === 'number'
