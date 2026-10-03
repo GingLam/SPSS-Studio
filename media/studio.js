@@ -2,6 +2,7 @@
   'use strict';
 
   const vscode = acquireVsCodeApi();
+  const { filterVariables } = globalThis.spssVariableFilter;
   let persistedState = vscode.getState() || {};
   const savedStudioState = persistedState.studio || persistedState;
   const DATA_ROW_NUMBER_WIDTH = 64;
@@ -23,6 +24,7 @@
     pendingData: new Set(),
     variablePageOffset: 0,
     variablePageSize: 100,
+    variableFilter: '',
     selectedVariables: new Set(),
     exploringVariables: false,
     exploreHelpPinned: false,
@@ -156,13 +158,14 @@
   }
 
   function renderVariables() {
-    const variables = state.dataset?.active ? state.dataset.variables : [];
+    const allVariables = state.dataset?.active ? state.dataset.variables : [];
+    const variables = filterVariables(allVariables, state.variableFilter);
     const maximumOffset = Math.max(0, Math.floor(Math.max(0, variables.length - 1) / state.variablePageSize) * state.variablePageSize);
     state.variablePageOffset = Math.min(state.variablePageOffset, maximumOffset);
     const visible = variables.slice(state.variablePageOffset, state.variablePageOffset + state.variablePageSize);
     const body = byId('variables-table').querySelector('tbody');
     body.replaceChildren();
-    visible.forEach((variable, index) => {
+    visible.forEach((variable) => {
       const row = document.createElement('tr');
       const selectionCell = document.createElement('td');
       selectionCell.className = 'variable-checkbox-column';
@@ -182,7 +185,7 @@
       selectionCell.append(checkbox);
       row.append(selectionCell);
       row.classList.toggle('variable-selected', checkbox.checked);
-      appendTextCell(row, String(state.variablePageOffset + index + 1), 'row-number');
+      appendTextCell(row, String(variable.index + 1), 'row-number');
       const name = String(variable.name || '—');
       const nameCell = appendTextCell(row, name, 'variable-name');
       nameCell.title = document.documentElement.lang.toLowerCase().startsWith('zh')
@@ -200,7 +203,10 @@
     });
     const first = variables.length === 0 ? 0 : state.variablePageOffset + 1;
     const last = Math.min(variables.length, state.variablePageOffset + visible.length);
-    byId('variable-page-summary').textContent = `${first.toLocaleString()}–${last.toLocaleString()} of ${variables.length.toLocaleString()}`;
+    const filteredSummary = `${first.toLocaleString()}–${last.toLocaleString()} of ${variables.length.toLocaleString()}`;
+    byId('variable-page-summary').textContent = state.variableFilter.trim()
+      ? `${filteredSummary} (${allVariables.length.toLocaleString()} total)`
+      : filteredSummary;
     byId('previous-variable-page').disabled = state.variablePageOffset <= 0;
     byId('next-variable-page').disabled = state.variablePageOffset + visible.length >= variables.length;
     updateVariableActions();
@@ -213,22 +219,27 @@
       .map((variable) => variable.name);
   }
 
+  function filteredVariables() {
+    const allVariables = state.dataset?.active ? state.dataset.variables : [];
+    return filterVariables(allVariables, state.variableFilter);
+  }
+
   function updateVariableActions() {
     const selected = selectedVariableNames();
-    const hasDataset = Boolean(state.dataset?.active && state.dataset.variables.length);
+    const hasExploreCandidates = selected.length > 0 || filteredVariables().length > 0;
     const chinese = document.documentElement.lang.toLowerCase().startsWith('zh');
     byId('variables-selection').textContent = chinese
       ? `已选择 ${String(selected.length)} 个`
       : `${String(selected.length)} selected`;
     byId('copy-variables').disabled = selected.length === 0;
     byId('insert-variables').disabled = selected.length === 0;
-    byId('explore-variables').disabled = !hasDataset || state.exploringVariables;
+    byId('explore-variables').disabled = !hasExploreCandidates || state.exploringVariables;
     byId('explore-variables').textContent = state.exploringVariables
       ? (chinese ? '处理中…' : 'Exploring…')
       : 'Explore';
     const help = chinese
-      ? 'Explore 将所选变量的字典信息和受限统计摘要发送到 Chat；未选择时使用前10个变量。'
-      : "Explore sends selected variables' metadata and bounded summaries to Chat; with no selection, it uses the first 10 variables.";
+      ? 'Explore 将所选变量的字典信息和受限统计摘要发送到 Chat；未选择时使用当前筛选结果的前10个变量。'
+      : "Explore sends selected variables' metadata and bounded summaries to Chat; with no selection, it uses the first 10 filtered variables.";
     byId('explore-help').title = help;
     byId('explore-help').setAttribute('aria-label', help);
     byId('explore-help-popover').textContent = help;
@@ -384,9 +395,8 @@
     if (names.length) postStudio({ type: 'insertVariables', names });
   });
   byId('explore-variables').addEventListener('click', () => {
-    const variables = state.dataset?.active ? state.dataset.variables : [];
     const selected = selectedVariableNames();
-    const names = selected.length ? selected : variables.slice(0, 10).map((variable) => variable.name);
+    const names = selected.length ? selected : filteredVariables().slice(0, 10).map((variable) => variable.name);
     if (!names.length || state.exploringVariables) return;
     state.exploringVariables = true;
     updateVariableActions();
@@ -436,6 +446,11 @@
   });
   byId('variable-page-size').addEventListener('change', (event) => {
     state.variablePageSize = Number(event.target.value);
+    state.variablePageOffset = 0;
+    renderVariables();
+  });
+  byId('variable-filter').addEventListener('input', (event) => {
+    state.variableFilter = String(event.target.value || '');
     state.variablePageOffset = 0;
     renderVariables();
   });

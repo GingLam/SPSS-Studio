@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.0.0 — 2026-10-03
+
+- Added a compact Variables Name/Label filter with case-insensitive English matching and direct Chinese substring matching.
+- Kept variable selections across filter changes, so Copy, Insert, and Explore continue to use every selected variable, including selections hidden by the current filter.
+- Made no-selection Explore use the first 10 variables in the current filtered result while preserving the existing 20-variable request limit.
+- Shortened the Variables paging actions to **Previous** and **Next** and kept the filter aligned at the right edge of the paging row.
+- Updated the deterministic Chinese Explore responsibility statement and verified that Chat renders it as bold Markdown followed by the warning symbol.
+
 ## 0.9.0 — 2026-10-03
 
 - Replaced flat-text Output extraction with structural native-HTML parsing that preserves row spans, column spans, layered headers, row labels, and footnotes as aligned Markdown tables for Chat interpretation.

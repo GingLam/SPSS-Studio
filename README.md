@@ -21,7 +21,7 @@ Contact：[linjing@nufe.edu.cn](mailto:linjing@nufe.edu.cn)
 - A persistent, serialized local SPSS backend.
 - Native OMS HTML output with run history, structurally aligned Markdown tables for concise AI interpretation, safe standalone HTML export, and browser-based printing.
 - Read-only Data and Variables views for the current Active Dataset.
-- A read-only Variables table with multi-selection, Copy, Insert, and bounded AI-assisted Explore actions; Name cells can also be double-clicked for immediate insertion.
+- A read-only Variables table with Name/Label filtering, persistent multi-selection, Copy, Insert, and bounded AI-assisted Explore actions; Name cells can also be double-clicked for immediate insertion.
 - A lightweight SPSS AI question-and-answer workspace embedded in the fourth SPSS Studio tab, **Chat**, with multiple DeepSeek, Zhipu GLM, Qwen, Doubao, and custom OpenAI-compatible model profiles.
 - Insert and Copy controls on every AI response code block; generated code is never run automatically.
 - Automatic IBM SPSS Statistics discovery on macOS and Windows, with manual path overrides.
@@ -72,8 +72,9 @@ Execution statuses are `SUCCESS`, `SUCCESS_NO_OUTPUT`, `WARNING`, `ERROR`, `ENGI
 **SPSS: Show Variables** displays variable order, Name, Label, Type, Format, and Measure. It reuses metadata already cached for completion and Data preview and does not modify the SPSS data dictionary.
 
 - Select variables with the checkbox column. **Copy** writes their names to the clipboard in dataset order, separated by spaces. **Insert** places the same list at every current `.sps` cursor or selection as one undoable editor operation.
+- Use the bottom-right **Filter** field to match either Name or Label by a case-insensitive substring, including Chinese text. Filtering changes only the visible rows: selections outside the current result remain selected, and Copy, Insert, and Explore continue to use all selected variables.
 - Double-click a cell in the **Name** column to insert that exact cached variable at the most recently used `.sps` selection. Other cells remain read-only.
-- **Explore** sends the selected variables to the current Chat; with no selection, it uses the first 10 variables. One request accepts at most 20 variables. The local SPSS bridge sends no raw case rows: it builds bounded profiles containing dictionary metadata, up to 100 value labels, up to 20 observed categories with frequencies, or compact continuous/date summaries. Very high-cardinality categorical counts are explicitly approximate.
+- **Explore** sends the selected variables to the current Chat; with no selection, it uses the first 10 variables in the current filtered result. One request accepts at most 20 variables. The local SPSS bridge sends no raw case rows: it builds bounded profiles containing dictionary metadata, up to 100 value labels, up to 20 observed categories with frequencies, or compact continuous/date summaries. Very high-cardinality categorical counts are explicitly approximate.
 
 Explore is bounded, but it is not zero-disclosure: observed categorical or string values can themselves contain sensitive text. Review the variables before using Explore and do not send sensitive values to a provider that is not authorized to receive them.
 
@@ -192,6 +193,7 @@ SPSS Studio is not an LSP or a full semantic validator. It does not provide stat
 
 | Version | Date | Update summary |
 | --- | --- | --- |
+| 1.0.0 | 2026-10-03 | Added case-insensitive Name/Label filtering to Variables, preserved cross-filter selections for Copy/Insert/Explore, shortened paging controls, and strengthened the rendered Chinese Explore responsibility statement. |
 | 0.9.0 | 2026-10-03 | Rebuilt Output Explain table extraction around native HTML structure, added Variables multi-selection with Copy and multi-cursor Insert, and introduced privacy-bounded, measurement-aware Variable Explore in Chat. |
 | 0.8.1 | 2026-10-03 | Refined the bilingual product introduction for the final Marketplace presentation; functional behavior is unchanged from 0.8.0. |
 | 0.8.0 | 2026-10-02 | Rebuilt the SPSS syntax color system with optional contrast-checked Light/Dark themes, aligned Chat code blocks to the same taxonomy and palette, constrained Chat to the SPSS/statistics domain, and added per-model provider-native reasoning controls that default to off. |

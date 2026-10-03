@@ -87,6 +87,19 @@ describe('SPSS Studio Webview UI contract', () => {
     assert.ok(copy >= 0 && copy < insert && insert < refresh && refresh < explore);
     assert.match(panelSource, /class="explore-help"[^>]*>\?<\/button>/u);
     assert.match(panelSource, /class="variable-checkbox-column"/u);
+    assert.match(panelSource, /id="previous-variable-page">Previous<\/button>/u);
+    assert.match(panelSource, /id="next-variable-page">Next<\/button>/u);
+    assert.match(panelSource, /id="variable-filter"[^>]*placeholder="Filter Name or Label"/u);
+    assert.ok(panelSource.indexOf('id="variable-page-size"') < panelSource.indexOf('id="variable-filter"'));
+  });
+
+  it('filters only the visible Variables page while preserving full-dataset selections', () => {
+    const script = fs.readFileSync(path.resolve(__dirname, '../../../media/studio.js'), 'utf8');
+    assert.match(script, /variableFilter: ''/u);
+    assert.match(script, /filterVariables\(allVariables, state\.variableFilter\)/u);
+    assert.match(script, /state\.variablePageOffset = 0;\s*renderVariables\(\);/u);
+    assert.match(script, /function selectedVariableNames\(\)[\s\S]*state\.dataset\?\.active/u);
+    assert.match(script, /selected\.length \? selected : filteredVariables\(\)\.slice\(0, 10\)/u);
   });
 
   it('inserts variables only from a double-click on the Name cell', () => {

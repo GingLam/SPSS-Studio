@@ -9,13 +9,14 @@ import type {
 } from '../spss/types';
 
 const MAX_PROMPT_CHARACTERS = 30_000;
+const LEGACY_ZH_DISCLAIMER = '以上仅为分析建议；严谨的统计分析还须结合变量内涵、测量层次、取值分布与缺失情况。';
 
 export function exploreDisclaimer(
   language: AiResponseLanguage = DEFAULT_AI_RESPONSE_LANGUAGE,
 ): string {
   return language === 'en'
     ? 'These are exploratory suggestions only; rigorous analysis requires understanding the variables, measurement levels, value distributions, and missing data.'
-    : '以上仅为分析建议；严谨的统计分析还须结合变量内涵、测量层次、取值分布与缺失情况。';
+    : '**以上仅为分析建议；严谨统计分析还须考虑变量内涵、测量层次、取值分布与缺失情况**⚠️';
 }
 
 export function appendExploreDisclaimer(
@@ -23,7 +24,13 @@ export function appendExploreDisclaimer(
   language: AiResponseLanguage = DEFAULT_AI_RESPONSE_LANGUAGE,
 ): string {
   const disclaimer = exploreDisclaimer(language);
-  const withoutDuplicate = response.split(disclaimer).join('').trim();
+  const candidates = language === 'zh-CN'
+    ? [disclaimer, LEGACY_ZH_DISCLAIMER]
+    : [disclaimer];
+  const withoutDuplicate = candidates.reduce(
+    (content, candidate) => content.split(candidate).join(''),
+    response,
+  ).trim();
   return `${withoutDuplicate}\n\n${disclaimer}`;
 }
 

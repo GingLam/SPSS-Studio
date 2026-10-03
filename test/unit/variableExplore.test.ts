@@ -5,6 +5,7 @@ import {
   exploreDisclaimer,
   isOutOfScopeReply,
 } from '../../src/ai/variableExplore';
+import { parseMarkdown } from '../../src/ai/markdown';
 import type { VariableProfiles } from '../../src/spss/types';
 
 const fixture: VariableProfiles = {
@@ -56,6 +57,11 @@ describe('Variable Explore prompt', () => {
     const result = appendExploreDisclaimer(`建议使用 FREQUENCIES。\n\n${disclaimer}`);
     assert.equal(result.split(disclaimer).length - 1, 1);
     assert.equal(result.endsWith(disclaimer), true);
+    assert.equal(disclaimer, '**以上仅为分析建议；严谨统计分析还须考虑变量内涵、测量层次、取值分布与缺失情况**⚠️');
+    const blocks = parseMarkdown(disclaimer);
+    assert.equal(blocks[0]?.type, 'paragraph');
+    assert.equal(JSON.stringify(blocks).includes('"type":"strong"'), true);
+    assert.equal(JSON.stringify(blocks).includes('⚠️'), true);
     assert.equal(appendExploreDisclaimer('Use FREQUENCIES.', 'en').endsWith(exploreDisclaimer('en')), true);
   });
 
