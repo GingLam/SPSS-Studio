@@ -1,5 +1,6 @@
 {
   "spssStudio.command.showAi": "SPSS：显示 AI 助手",
   "spssStudio.command.configureAi": "SPSS：配置 AI 模型",
+  "spssStudio.command.showQuickStart": "快速上手",
   "spssStudio.command.explainSyntaxInChat": "Explain in Chat"
 }

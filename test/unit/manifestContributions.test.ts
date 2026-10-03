@@ -25,6 +25,7 @@ interface ExtensionManifest {
     menus?: {
       'editor/title'?: MenuContribution[];
       'editor/context'?: MenuContribution[];
+      commandPalette?: MenuContribution[];
     };
     configuration?: {
       properties?: Record<string, unknown>;
@@ -111,5 +112,43 @@ describe('SPSS editor title actions', () => {
       (manifest.contributes.configuration?.properties ?? {})['workbench.colorTheme'],
       undefined,
     );
+  });
+
+  it('places the localized Quick Start book action after AI and hides it from the command palette', () => {
+    const manifest = JSON.parse(
+      fs.readFileSync(path.resolve(__dirname, '../../../package.json'), 'utf8'),
+    ) as ExtensionManifest;
+    const commandId = 'spssStudio.showQuickStart';
+    const command = manifest.contributes.commands.find((item) => item.command === commandId);
+    assert.deepEqual(command, {
+      command: commandId,
+      title: '%spssStudio.command.showQuickStart%',
+      icon: '$(book)',
+    });
+    assert.ok(manifest.activationEvents?.includes('onStartupFinished'));
+    assert.ok(manifest.activationEvents?.includes(`onCommand:${commandId}`));
+
+    const editorActions = manifest.contributes.menus?.['editor/title'] ?? [];
+    const aiIndex = editorActions.findIndex((item) => item.command === 'spssStudio.showAi');
+    const guideIndex = editorActions.findIndex((item) => item.command === commandId);
+    assert.ok(aiIndex >= 0 && guideIndex === aiIndex + 1);
+    assert.deepEqual(editorActions[guideIndex], {
+      command: commandId,
+      when: 'resourceLangId == spss',
+      group: 'navigation@5',
+    });
+    assert.deepEqual(manifest.contributes.menus?.commandPalette, [{
+      command: commandId,
+      when: 'false',
+    }]);
+
+    const english = JSON.parse(
+      fs.readFileSync(path.resolve(__dirname, '../../../package.nls.json'), 'utf8'),
+    ) as Record<string, string>;
+    const chinese = JSON.parse(
+      fs.readFileSync(path.resolve(__dirname, '../../../package.nls.zh-cn.json'), 'utf8'),
+    ) as Record<string, string>;
+    assert.equal(english['spssStudio.command.showQuickStart'], 'Quick Start');
+    assert.equal(chinese['spssStudio.command.showQuickStart'], '快速上手');
   });
 });

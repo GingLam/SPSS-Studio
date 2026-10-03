@@ -1,5 +1,6 @@
 {
   "spssStudio.command.showAi": "SPSS: Show AI Assistant",
   "spssStudio.command.configureAi": "SPSS: Manage AI Model Profiles",
+  "spssStudio.command.showQuickStart": "Quick Start",
   "spssStudio.command.explainSyntaxInChat": "Explain in Chat"
 }

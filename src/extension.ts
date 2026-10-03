@@ -27,6 +27,8 @@ import {
 import { SpssEditorTargetTracker } from './editor/spssEditorTargetTracker';
 import { SpssCompletionProvider } from './language/completionProvider';
 import { loadLanguageSchema } from './language/languageSchema';
+import { QuickStartController } from './quickStart/quickStartController';
+import { extensionVersion } from './quickStart/quickStartState';
 import { EngineService, type SpssRuntimeConfiguration } from './spss/engineService';
 import { VariableCache } from './spss/variableCache';
 import type { EngineState, VariableProfiles } from './spss/types';
@@ -103,6 +105,11 @@ export function activate(context: vscode.ExtensionContext): SpssStudioExtensionA
   });
   const variableCache = new VariableCache();
   const editorTarget = new SpssEditorTargetTracker();
+  const quickStart = new QuickStartController(
+    context.extensionUri,
+    context.globalState,
+    vscode.env.language,
+  );
   const variableCommandDependencies = { variableCache, editorTarget };
   const modelProfiles = new ModelProfileStore(context.globalState, context.secrets);
   const conversationStore = new ConversationStore(
@@ -223,6 +230,7 @@ export function activate(context: vscode.ExtensionContext): SpssStudioExtensionA
     studioPanel,
     variableCache,
     editorTarget,
+    quickStart,
     aiPanelController,
     vscode.languages.registerCompletionItemProvider('spss', completionProvider, '/', '.'),
     vscode.commands.registerCommand('spssStudio.undo', undoLastEdit),
@@ -261,7 +269,14 @@ export function activate(context: vscode.ExtensionContext): SpssStudioExtensionA
     vscode.commands.registerCommand('spssStudio.clearOutput', () => studio.clearOutput()),
     vscode.commands.registerCommand('spssStudio.showAi', () => studioPanel?.showAi('chat')),
     vscode.commands.registerCommand('spssStudio.configureAi', () => studioPanel?.showAi('profiles')),
+    vscode.commands.registerCommand('spssStudio.showQuickStart', () => quickStart.show()),
   );
+
+  void quickStart.maybeShowForVersion(extensionVersion(context.extension.packageJSON))
+    .catch((error: unknown) => {
+      const message = error instanceof Error ? error.message : String(error);
+      output.appendLine(`[Quick Start] ${message}`);
+    });
 
   return {
     getStatusBarText: () => statusBar.text,

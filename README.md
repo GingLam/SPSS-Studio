@@ -24,6 +24,7 @@ Contact：[linjing@nufe.edu.cn](mailto:linjing@nufe.edu.cn)
 - A read-only Variables table with Name/Label filtering, persistent multi-selection, Copy, Insert, and bounded AI-assisted Explore actions; Name cells can also be double-clicked for immediate insertion.
 - A lightweight SPSS AI question-and-answer workspace embedded in the fourth SPSS Studio tab, **Chat**, with multiple DeepSeek, Zhipu GLM, Qwen, Doubao, and custom OpenAI-compatible model profiles.
 - Copy and Insert controls on every AI response code block, plus an explicit Run action on SPSS blocks; generated code is never run automatically.
+- A bilingual, locally bundled Quick Start page that opens after installation and—unless the user opts out—once after each future update, with a permanent book action in every `.sps` editor.
 - Automatic IBM SPSS Statistics discovery on macOS and Windows, with manual path overrides.
 
 ## Requirements
@@ -39,6 +40,8 @@ No separate Python installation is normally required. SPSS Studio prefers IBM's 
 ## Installation
 
 Install **SPSS Studio** from the Extensions view in Visual Studio Code, then open a `.sps` file. VS Code automatically assigns the **SPSS Syntax** language mode.
+
+On first activation after installation, SPSS Studio opens **Quick Start** for an English VS Code interface or **快速上手** for a Chinese interface. The page explains the complete editor, execution, Studio, Variables, and Chat workflow. Its prominent update-reminder checkbox controls whether later extension versions open the page once after updating. This preference stays in local VS Code global state and is not written beside an `.sps` file or packaged in the VSIX. The page remains available from the book icon between **Show AI Assistant** and VS Code's **Split Editor** action in every `.sps` editor.
 
 ## Running syntax
 
@@ -194,6 +197,7 @@ SPSS Studio is not an LSP or a full semantic validator. It does not provide stat
 
 | Version | Date | Update summary |
 | --- | --- | --- |
+| 1.1.0 | 2026-10-03 | Added a complete English/Chinese Quick Start page selected from the VS Code display language, a prominent persisted opt-out for automatic display after future updates, and a permanent localized book action in the `.sps` editor title bar. |
 | 1.0.0 | 2026-10-03 | Added Variables Name/Label filtering with persistent selections, compact English Chat and model-setting controls, Copy/Insert/Run actions for SPSS response blocks, shortened paging controls, and a strengthened Explore responsibility statement. |
 | 0.9.0 | 2026-10-03 | Rebuilt Output Explain table extraction around native HTML structure, added Variables multi-selection with Copy and multi-cursor Insert, and introduced privacy-bounded, measurement-aware Variable Explore in Chat. |
 | 0.8.1 | 2026-10-03 | Refined the bilingual product introduction for the final Marketplace presentation; functional behavior is unchanged from 0.8.0. |

@@ -2,7 +2,7 @@
   "name": "spss-studio",
   "displayName": "SPSS Studio",
   "description": "An exceptionally powerful integrated SPSS Syntax development, execution, interpretation, data, output, and AI environment for researchers.",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "publisher": "jinglin",
   "author": {
     "name": "Jing LIN (林景)",
@@ -43,6 +43,7 @@
     }
   },
   "activationEvents": [
+    "onStartupFinished",
     "onLanguage:spss",
     "onCommand:spssStudio.undo",
     "onCommand:spssStudio.runSelection",
@@ -57,6 +58,7 @@
     "onCommand:spssStudio.showVariables",
     "onCommand:spssStudio.showAi",
     "onCommand:spssStudio.configureAi",
+    "onCommand:spssStudio.showQuickStart",
     "onCommand:spssStudio.refreshDataPreview",
     "onCommand:spssStudio.clearOutput"
   ],
@@ -156,6 +158,11 @@
         "icon": "$(gear)"
       },
       {
+        "command": "spssStudio.showQuickStart",
+        "title": "%spssStudio.command.showQuickStart%",
+        "icon": "$(book)"
+      },
+      {
         "command": "spssStudio.refreshDataPreview",
         "title": "SPSS: Refresh Data Preview"
       },
@@ -185,6 +192,17 @@
           "command": "spssStudio.showAi",
           "when": "resourceLangId == spss",
           "group": "navigation@4"
+        },
+        {
+          "command": "spssStudio.showQuickStart",
+          "when": "resourceLangId == spss",
+          "group": "navigation@5"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "spssStudio.showQuickStart",
+          "when": "false"
         }
       ],
       "editor/context": [

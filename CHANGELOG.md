@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.1.0 — 2026-10-03
+
+- Added a complete locally bundled Quick Start page covering prerequisites, first execution, editor actions, all four Studio tabs, Variables workflows, Chat configuration, AI code actions, privacy, and troubleshooting.
+- Selected **Quick Start** or **快速上手** from the VS Code display language without mixing the two languages in one guide.
+- Opened the guide once on first activation after installation and once after each later extension update unless the user opts out.
+- Added a prominent persisted checkbox that disables automatic display after future updates while leaving manual access available.
+- Added a localized book action immediately after **Show AI Assistant** in every `.sps` editor title bar; the action reopens the same guide without adding a separate Command Palette entry.
+- Kept the display preference in local VS Code global state and excluded it, API credentials, and conversation history from the VSIX.
+
 ## 1.0.0 — 2026-10-03
 
 - Added a compact Variables Name/Label filter with case-insensitive English matching and direct Chinese substring matching.
