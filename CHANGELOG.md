@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.8.1 — 2026-10-03
+
+- Refined the English and Chinese product introduction for the final Marketplace presentation.
+- Kept the extension's runtime behavior unchanged from 0.8.0.
+
 ## 0.8.0 — 2026-10-02
 
 - Rebuilt SPSS highlighting around one canonical taxonomy that separates control commands, commands, subcommands, keywords, functions, formats, ordinary/system/scratch/macro variables, strings, numbers, missing-value constants, arithmetic/relational/logical operators, comments, and punctuation.

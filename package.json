@@ -2,7 +2,7 @@
   "name": "spss-studio",
   "displayName": "SPSS Studio",
   "description": "An exceptionally powerful integrated SPSS Syntax development, execution, interpretation, data, output, and AI environment for researchers.",
-  "version": "0.8.0",
+  "version": "0.8.1",
   "publisher": "jinglin",
   "author": {
     "name": "Jing LIN (林景)",

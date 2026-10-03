@@ -184,6 +184,7 @@ SPSS Studio is not an LSP or a full semantic validator. It does not provide stat
 
 | Version | Date | Update summary |
 | --- | --- | --- |
+| 0.8.1 | 2026-10-03 | Refined the bilingual product introduction for the final Marketplace presentation; functional behavior is unchanged from 0.8.0. |
 | 0.8.0 | 2026-10-02 | Rebuilt the SPSS syntax color system with optional contrast-checked Light/Dark themes, aligned Chat code blocks to the same taxonomy and palette, constrained Chat to the SPSS/statistics domain, and added per-model provider-native reasoning controls that default to off. |
 | 0.7.0 | 2026-10-02 | Added concise editor and Output explanations, a shared Chinese-default/English response setting, and deterministic local filtering of statistical Output before AI requests. |
 | 0.6.1 | 2026-10-02 | Added collapsible Output history, renamed the fourth Studio tab to Chat, rendered safe structured Markdown, and aligned Chat syntax highlighting with the editor grammar. |
