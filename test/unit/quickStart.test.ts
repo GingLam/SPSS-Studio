@@ -64,7 +64,7 @@ describe('Quick Start', () => {
 
     assert.match(english, /<h1>Quick Start<\/h1>/u);
     assert.match(english, /Do not show Quick Start automatically after future updates/u);
-    assert.match(english, /Output[\s\S]*Data[\s\S]*Variables[\s\S]*Chat/u);
+    assert.match(english, /Variables[\s\S]*Data[\s\S]*Output[\s\S]*Chat/u);
     assert.match(english, /id="suppress-after-updates" type="checkbox">/u);
     assert.match(chinese, /<h1>快速上手<\/h1>/u);
     assert.match(chinese, /此后版本更新时不再自动显示快速上手/u);

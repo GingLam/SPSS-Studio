@@ -490,7 +490,7 @@ export class SpssStudioPanel implements vscode.Disposable {
 </head>
 <body>
   <header class="toolbar">
-    <nav><button id="output-tab" class="tab active">Output</button><button id="data-tab" class="tab">Data</button><button id="variables-tab" class="tab">Variables</button><button id="ai-tab" class="tab">Chat</button></nav>
+    <nav><button id="variables-tab" class="tab">Variables</button><button id="data-tab" class="tab">Data</button><button id="output-tab" class="tab active">Output</button><button id="ai-tab" class="tab">Chat</button></nav>
     <span id="engine-state">SPSS: Stopped</span>
   </header>
   <main>

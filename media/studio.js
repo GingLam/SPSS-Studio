@@ -235,7 +235,7 @@
     byId('insert-variables').disabled = selected.length === 0;
     byId('explore-variables').disabled = !hasExploreCandidates || state.exploringVariables;
     byId('explore-variables').textContent = state.exploringVariables
-      ? (chinese ? '处理中…' : 'Exploring…')
+      ? 'Exploring…'
       : 'Explore';
     const help = chinese
       ? 'Explore 将所选变量的字典信息和受限统计摘要发送到 Chat；未选择时使用当前筛选结果的前10个变量。'

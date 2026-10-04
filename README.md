@@ -85,7 +85,7 @@ Variable Explore is measurement-aware. For one variable, Chat proposes descripti
 
 ## SPSS AI
 
-The reusable SPSS Studio panel opens beside the native `.sps` editor and contains four tabs in this order: **Output**, **Data**, **Variables**, and **Chat**. Opening a `.sps` file alone does not open the panel. Running syntax opens **Output**; the Show Data, Show Variables, Show AI Assistant, and Manage AI Model Profiles commands open their corresponding Studio location. The extension does not contribute or automatically reveal a native VS Code bottom-panel view.
+The reusable SPSS Studio panel opens beside the native `.sps` editor and contains four tabs in this order: **Variables**, **Data**, **Output**, and **Chat**. Opening a `.sps` file alone does not open the panel. Running syntax opens **Output**; the Show Data, Show Variables, Show AI Assistant, and Manage AI Model Profiles commands open their corresponding Studio location. The extension does not contribute or automatically reveal a native VS Code bottom-panel view.
 
 The **Chat** tab is an SPSS AI question-and-answer tool. Its compact header uses the concise English controls **Current**, **History**, **Active model**, **New**, and **Setting**; model settings use the same compact English convention. The boundary between the transcript and question box can be dragged with the mouse or adjusted from the keyboard. Completed answers render common Markdown structures without accepting model-generated HTML. A concise built-in system instruction grounds replies in executable SPSS Syntax, applied social statistics, assumptions, key options, and result interpretation without claiming that generated syntax was run. Replies default to Simplified Chinese and stay concise unless the user explicitly asks for detail.
 
@@ -197,6 +197,7 @@ SPSS Studio is not an LSP or a full semantic validator. It does not provide stat
 
 | Version | Date | Update summary |
 | --- | --- | --- |
+| 1.2.0 | 2026-10-04 | Reordered the Studio tabs as Variables, Data, Output, and Chat without changing their behavior, and standardized the Variables Explore in-progress label as English. |
 | 1.1.0 | 2026-10-03 | Added a complete English/Chinese Quick Start page selected from the VS Code display language, a prominent persisted opt-out for automatic display after future updates, and a permanent localized book action in the `.sps` editor title bar. |
 | 1.0.0 | 2026-10-03 | Added Variables Name/Label filtering with persistent selections, compact English Chat and model-setting controls, Copy/Insert/Run actions for SPSS response blocks, shortened paging controls, and a strengthened Explore responsibility statement. |
 | 0.9.0 | 2026-10-03 | Rebuilt Output Explain table extraction around native HTML structure, added Variables multi-selection with Copy and multi-cursor Insert, and introduced privacy-bounded, measurement-aware Variable Explore in Chat. |

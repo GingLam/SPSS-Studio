@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.2.0 — 2026-10-04
+
+- Reordered the SPSS Studio tabs as **Variables**, **Data**, **Output**, and **Chat**.
+- Preserved every tab's existing data flow, commands, default reveal behavior, buttons, and interaction logic; this release changes only their visible order.
+- Replaced the remaining Chinese Variables Explore in-progress button label with the English **Exploring…** label while retaining normal interface localization outside process states.
+- Updated Quick Start and README references to the new tab order.
+
 ## 1.1.0 — 2026-10-03
 
 - Added a complete locally bundled Quick Start page covering prerequisites, first execution, editor actions, all four Studio tabs, Variables workflows, Chat configuration, AI code actions, privacy, and troubleshooting.
