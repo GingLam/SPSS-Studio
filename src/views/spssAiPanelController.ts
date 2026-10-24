@@ -6,7 +6,7 @@ import {
 } from '../ai/chatProtocol';
 import { parseAssistantContent } from '../ai/fencedCode';
 import type { KeyValueStore } from '../ai/providerConfigurationStore';
-import { AI_PROVIDER_PRESETS, providerPreset } from '../ai/providerPresets';
+import { providerPreset, providerPresetsForLanguage } from '../ai/providerPresets';
 import {
   profileDraftFromMessage,
   type AiDisplayConversation,
@@ -51,6 +51,7 @@ export class SpssAiPanelController {
   private pendingPage: AiPage | undefined;
   private pendingEditorQuestion: { question: string; kind: AiQuestionKind } | undefined;
   private readonly strings: AiStrings;
+  private readonly presets;
 
   public constructor(
     private readonly controller: AiSessionController,
@@ -60,6 +61,7 @@ export class SpssAiPanelController {
     language = 'en',
   ) {
     this.strings = aiStringsForLanguage(language);
+    this.presets = providerPresetsForLanguage(language);
   }
 
   public attach(postTarget: AiPostMessage): void {
@@ -293,7 +295,7 @@ export class SpssAiPanelController {
     await this.post({
       type: 'renderState',
       composerHeight: this.composerHeight(),
-      presets: [...AI_PROVIDER_PRESETS],
+      presets: this.presets,
       state,
       strings: this.strings,
     });

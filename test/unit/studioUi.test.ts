@@ -39,7 +39,7 @@ describe('SPSS Studio Webview UI contract', () => {
     const variablesTab = panelSource.indexOf('id="variables-tab"');
     const aiTab = panelSource.indexOf('id="ai-tab"');
     assert.ok(variablesTab >= 0 && variablesTab < dataTab && dataTab < outputTab && outputTab < aiTab);
-    assert.match(panelSource, /id="ai-tab" class="tab">Chat<\/button>/u);
+    assert.match(panelSource, /id="ai-tab" class="tab">\$\{text\(strings\.tabChat\)\}<\/button>/u);
     assert.match(panelSource, /id="ai-view"/u);
     assert.match(panelSource, /id="spss-ai"/u);
     const outputContent = panelSource.indexOf('id="output-content"');
@@ -60,9 +60,9 @@ describe('SPSS Studio Webview UI contract', () => {
     const print = panelSource.indexOf('id="print-output"');
     const history = panelSource.indexOf('id="toggle-history"');
     assert.ok(explain >= 0 && explain < exportOutput && exportOutput < print && print < history);
-    assert.match(panelSource, /id="export-output" disabled>Export<\/button>/u);
+    assert.match(panelSource, /id="export-output" disabled>\$\{text\(strings\.outputExport\)\}<\/button>/u);
     assert.match(script, /type: 'explainOutput'/u);
-    assert.match(panelSource, /id="toggle-history"[^>]*aria-expanded="false"[^>]*>History/u);
+    assert.match(panelSource, /id="toggle-history"[^>]*aria-expanded="false"[^>]*>\$\{text\(strings\.outputHistory\)\}/u);
     assert.match(script, /historyVisible: false/u);
     assert.match(script, /setHistoryVisible\(!state\.historyVisible\)/u);
     assert.match(style, /#output-history \{ display: none;/u);
@@ -76,8 +76,8 @@ describe('SPSS Studio Webview UI contract', () => {
     );
     assert.doesNotMatch(panelSource, /id="previous-variables"|id="next-variables"|id="variable-summary"/u);
     assert.ok(panelSource.indexOf('id="next-page"') < panelSource.indexOf('id="page-size"'));
-    for (const heading of ['Name', 'Label', 'Type', 'Format', 'Measure']) {
-      assert.match(panelSource, new RegExp(`<th>${heading}</th>`, 'u'));
+    for (const heading of ['name', 'label', 'type', 'format', 'measure']) {
+      assert.match(panelSource, new RegExp(`<th>\\$\\{text\\(strings\\.${heading}\\)\\}</th>`, 'u'));
     }
     assert.match(panelSource, /id="variables-table"/u);
     const copy = panelSource.indexOf('id="copy-variables"');
@@ -87,9 +87,9 @@ describe('SPSS Studio Webview UI contract', () => {
     assert.ok(copy >= 0 && copy < insert && insert < refresh && refresh < explore);
     assert.match(panelSource, /class="explore-help"[^>]*>\?<\/button>/u);
     assert.match(panelSource, /class="variable-checkbox-column"/u);
-    assert.match(panelSource, /id="previous-variable-page">Previous<\/button>/u);
-    assert.match(panelSource, /id="next-variable-page">Next<\/button>/u);
-    assert.match(panelSource, /id="variable-filter"[^>]*placeholder="Filter Name or Label"/u);
+    assert.match(panelSource, /id="previous-variable-page">\$\{text\(strings\.previous\)\}<\/button>/u);
+    assert.match(panelSource, /id="next-variable-page">\$\{text\(strings\.next\)\}<\/button>/u);
+    assert.match(panelSource, /id="variable-filter"[^>]*placeholder="\$\{text\(strings\.filterNameOrLabel\)\}"/u);
     assert.ok(panelSource.indexOf('id="variable-page-size"') < panelSource.indexOf('id="variable-filter"'));
   });
 
@@ -102,10 +102,10 @@ describe('SPSS Studio Webview UI contract', () => {
     assert.match(script, /selected\.length \? selected : filteredVariables\(\)\.slice\(0, 10\)/u);
   });
 
-  it('uses English for every Studio button in-progress state', () => {
+  it('uses the localized Studio catalog for every button in-progress state', () => {
     const script = fs.readFileSync(path.resolve(__dirname, '../../../media/studio.js'), 'utf8');
-    assert.match(script, /state\.exploringVariables[\s\S]*\? 'Exploring…'/u);
-    assert.doesNotMatch(script, /处理中|正在处理|正在探索/u);
+    assert.match(script, /state\.exploringVariables[\s\S]*\? strings\.exploring/u);
+    assert.doesNotMatch(script, /\? \(chinese/u);
   });
 
   it('inserts variables only from a double-click on the Name cell', () => {

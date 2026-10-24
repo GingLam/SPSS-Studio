@@ -66,7 +66,7 @@ const ENGLISH_SECTIONS = `
   <section>
     <h2>5. Configure and use Chat</h2>
     <ol>
-      <li>Open <strong>Chat → Setting</strong>.</li>
+      <li>Open <strong>Chat → Settings</strong>.</li>
       <li>Create a DeepSeek, Zhipu GLM, Qwen, Doubao, or custom OpenAI-compatible profile.</li>
       <li>Confirm the Base URL, enter the provider's model identifier and API Key, choose Chinese or English, and optionally enable provider-supported reasoning.</li>
       <li>Select Syntax and use <strong>Explain in Chat</strong> from the editor context menu for a concise explanation.</li>
@@ -99,18 +99,18 @@ const CHINESE_SECTIONS = `
     <ol>
       <li>打开一个 <code>.sps</code> 文件。</li>
       <li>输入或粘贴有效的 SPSS Syntax。</li>
-      <li>选中语法后点击 <strong>Run</strong>；没有选区时，将光标放在命令内再点击 <strong>Run</strong>。点击 <strong>Run All</strong> 可运行内存中的完整文件。</li>
-      <li>第一次执行时，插件会启动持久化的本地 SPSS 处理器，并在编辑器右侧打开 <strong>SPSS Studio</strong> 的 <strong>Output</strong> 页面。通常无须预先手动打开 SPSS 桌面程序。</li>
+      <li>选中语法后点击 <strong>运行</strong>；没有选区时，将光标放在命令内再点击 <strong>运行</strong>。点击 <strong>全部运行</strong>可运行内存中的完整文件。</li>
+      <li>第一次执行时，插件会启动持久化的本地 SPSS 处理器，并在编辑器右侧打开 <strong>SPSS Studio</strong> 的<strong>输出</strong>页面。通常无须预先手动打开 SPSS 桌面程序。</li>
     </ol>
     <p>macOS 使用 <kbd>Cmd</kbd>+<kbd>Enter</kbd>；Windows 和 Linux 使用 <kbd>Ctrl</kbd>+<kbd>Enter</kbd>。</p>
   </section>
   <section>
     <h2>3. 编辑和运行 Syntax</h2>
     <div class="feature-grid">
-      <article><h3>Undo</h3><p>调用 VS Code 原生撤销栈，并以最近使用的 SPSS 编辑器为目标。</p></article>
-      <article><h3>Run</h3><p>存在选区时运行选中语法；没有选区时，识别并运行光标所在的完整 SPSS 命令或结构块。</p></article>
-      <article><h3>Run All</h3><p>运行整个文档，包括尚未保存的修改。所有请求通过同一个本地 SPSS 会话依次执行。</p></article>
-      <article><h3>Show AI Assistant</h3><p>打开 Studio 的 <strong>Chat</strong> 页面，不会自动发送内容或执行代码。</p></article>
+      <article><h3>撤销</h3><p>调用 VS Code 原生撤销栈，并以最近使用的 SPSS 编辑器为目标。</p></article>
+      <article><h3>运行</h3><p>存在选区时运行选中语法；没有选区时，识别并运行光标所在的完整 SPSS 命令或结构块。</p></article>
+      <article><h3>全部运行</h3><p>运行整个文档，包括尚未保存的修改。所有请求通过同一个本地 SPSS 会话依次执行。</p></article>
+      <article><h3>显示 AI 助手</h3><p>打开 Studio 的<strong>对话</strong>页面，不会自动发送内容或执行代码。</p></article>
     </div>
   </section>
   <section>
@@ -118,21 +118,21 @@ const CHINESE_SECTIONS = `
     <table>
       <thead><tr><th>页面</th><th>主要用途</th></tr></thead>
       <tbody>
-        <tr><td><strong>Variables</strong></td><td>按 Name 或 Label 筛选变量；选择后可 <strong>Copy</strong>、<strong>Insert</strong>，或通过 <strong>Explore</strong> 获取边界明确的 AI 分析建议。双击 Name 单元格可立即插入变量名。</td></tr>
-        <tr><td><strong>Data</strong></td><td>以只读、分页方式查看 Active Dataset；通过横向滚动查看全部变量。</td></tr>
-        <tr><td><strong>Output</strong></td><td>查看 SPSS 原生结果。<strong>Explain</strong> 将所选运行的主要统计表格和文字发送给 Chat，不发送图形、Notes、路径和运行元数据；<strong>Export</strong> 导出 HTML，<strong>Print</strong> 打开打印版本，<strong>History</strong> 展开或收起历史运行记录。</td></tr>
-        <tr><td><strong>Chat</strong></td><td>询问 SPSS Syntax、能够在 SPSS 中实现的应用统计方法，以及 SPSS 输出结果的解释。</td></tr>
+        <tr><td><strong>变量</strong></td><td>按名称或标签筛选变量；选择后可<strong>复制</strong>、<strong>插入</strong>，或通过<strong>探索</strong>获取边界明确的 AI 分析建议。双击名称单元格可立即插入变量名。</td></tr>
+        <tr><td><strong>数据</strong></td><td>以只读、分页方式查看活动数据集；通过横向滚动查看全部变量。</td></tr>
+        <tr><td><strong>输出</strong></td><td>查看 SPSS 原生结果。<strong>解释</strong>将所选运行的主要统计表格和文字发送至对话，不发送图形、Notes、路径和运行元数据；<strong>导出</strong>保存 HTML，<strong>打印</strong>打开打印版本，<strong>历史</strong>展开或收起运行记录。</td></tr>
+        <tr><td><strong>对话</strong></td><td>询问 SPSS Syntax、能够在 SPSS 中实现的应用统计方法，以及 SPSS 输出结果的解释。</td></tr>
       </tbody>
     </table>
   </section>
   <section>
     <h2>5. 配置和使用 Chat</h2>
     <ol>
-      <li>打开 <strong>Chat → Setting</strong>。</li>
+      <li>打开<strong>对话 → 设置</strong>。</li>
       <li>创建 DeepSeek、智谱 GLM、通义千问、豆包或自定义 OpenAI-compatible 模型配置。</li>
       <li>确认 Base URL，填写服务商提供的模型标识和 API Key，选择中文或英文，并按需开启模型支持的推理功能。</li>
-      <li>在编辑器中选择语法，通过右键菜单 <strong>Explain in Chat</strong> 获取简洁解释。</li>
-      <li>AI 回复中的代码块提供 <strong>Copy</strong>、<strong>Insert</strong>，SPSS 代码块还提供 <strong>Run</strong>。Insert 只修改语法文件，不执行命令；Run 会执行整个代码块并切换到 Output。</li>
+      <li>在编辑器中选择语法，通过右键菜单<strong>在对话中解释</strong>获取简洁解释。</li>
+      <li>AI 回复中的代码块提供<strong>复制</strong>、<strong>插入</strong>，SPSS 代码块还提供<strong>运行</strong>。插入只修改语法文件，不执行命令；运行会执行整个代码块并切换到输出页面。</li>
     </ol>
     <div class="notice"><strong>运行前必须检查 AI 生成的 Syntax。</strong> 模型输出可能不完整或存在错误。</div>
   </section>
@@ -150,7 +150,7 @@ function copyFor(language: QuickStartLanguage): QuickStartCopy {
   if (language === 'zh-cn') {
     return {
       title: '快速上手',
-      eyebrow: 'SPSS Studio 1.2.0',
+      eyebrow: 'SPSS Studio 1.3.0',
       introduction: '从打开第一个 .sps 文件开始，完成 Syntax 编辑、SPSS 本地执行、数据与变量查看，以及 AI 辅助解释。',
       preferenceTitle: '更新提醒',
       preferenceText: '此后版本更新时不再自动显示快速上手',
@@ -163,7 +163,7 @@ function copyFor(language: QuickStartLanguage): QuickStartCopy {
   }
   return {
     title: 'Quick Start',
-    eyebrow: 'SPSS Studio 1.2.0',
+    eyebrow: 'SPSS Studio 1.3.0',
     introduction: 'Open your first .sps file, edit and run Syntax locally, inspect data and variables, and use focused AI assistance.',
     preferenceTitle: 'Update reminder',
     preferenceText: 'Do not show Quick Start automatically after future updates',

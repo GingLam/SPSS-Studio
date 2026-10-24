@@ -7,6 +7,10 @@ import {
   extractSpssOutputForAi,
 } from '../ai/outputExplanation';
 import { buildVariableExploreQuestion } from '../ai/variableExplore';
+import {
+  formatLocalized,
+  runtimeStringsForLanguage,
+} from '../localization/runtimeStrings';
 import type {
   ActiveDatasetInfo,
   DatasetPage,
@@ -19,6 +23,7 @@ import type { AiPage, ExtensionToAiWebviewMessage } from './aiWebviewProtocol';
 import type { ExecutionRecord, OutputStore } from './outputStore';
 import { buildPortableOutputHtml } from './portableOutput';
 import type { SpssAiPanelController } from './spssAiPanelController';
+import { studioStringsForLanguage } from './studioStrings';
 import {
   isStudioShellMessage,
   type StudioTab,
@@ -49,6 +54,8 @@ export class SpssStudioPanel implements vscode.Disposable {
   private page: DatasetPage | undefined;
   private pageRequest = { requestId: 0, generation: 0 };
   private selectedHtmlLength = 0;
+  private readonly studioStrings = studioStringsForLanguage(vscode.env.language);
+  private readonly runtimeStrings = runtimeStringsForLanguage(vscode.env.language);
 
   public constructor(
     private readonly extensionUri: vscode.Uri,
@@ -244,9 +251,15 @@ export class SpssStudioPanel implements vscode.Disposable {
       } else if (message.type === 'insertVariable') {
         void this.callbacks.insertVariable(message.name);
       } else if (message.type === 'copyVariables') {
-        void this.runVariableAction(() => this.callbacks.copyVariables(message.names), 'copy variables');
+        void this.runVariableAction(
+          () => this.callbacks.copyVariables(message.names),
+          this.runtimeStrings.copyVariablesFailed,
+        );
       } else if (message.type === 'insertVariables') {
-        void this.runVariableAction(() => this.callbacks.insertVariables(message.names), 'insert variables');
+        void this.runVariableAction(
+          () => this.callbacks.insertVariables(message.names),
+          this.runtimeStrings.insertVariablesFailed,
+        );
       } else if (message.type === 'exploreVariables') {
         void this.exploreVariables(message.names);
       } else {
@@ -316,7 +329,7 @@ export class SpssStudioPanel implements vscode.Disposable {
     const fileName = `SPSS-output-run-${String(source.record.sequence)}-${timestamp}.html`;
     const options: vscode.SaveDialogOptions = {
       filters: { HTML: ['html'] },
-      saveLabel: 'Export SPSS HTML',
+      saveLabel: this.runtimeStrings.exportSaveLabel,
     };
     const workspace = vscode.workspace.workspaceFolders?.[0]?.uri;
     if (workspace) {
@@ -333,10 +346,13 @@ export class SpssStudioPanel implements vscode.Disposable {
         source.record.htmlPath,
       );
       await vscode.workspace.fs.writeFile(target, Buffer.from(html, 'utf8'));
-      void vscode.window.showInformationMessage(`SPSS output exported to ${target.fsPath || target.toString()}.`);
+      void vscode.window.showInformationMessage(formatLocalized(
+        this.runtimeStrings.outputExported,
+        { path: target.fsPath || target.toString() },
+      ));
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      void vscode.window.showErrorMessage(`Could not export SPSS output: ${message}`);
+      void vscode.window.showErrorMessage(`${this.runtimeStrings.outputExportFailed}: ${message}`);
     }
   }
 
@@ -351,7 +367,7 @@ export class SpssStudioPanel implements vscode.Disposable {
     );
     if (!extracted.content) {
       void vscode.window.showInformationMessage(
-        'The selected run contains no statistical tables or text to explain. Figures and system metadata are skipped.',
+        this.runtimeStrings.noExplainableOutput,
       );
       return;
     }
@@ -363,31 +379,31 @@ export class SpssStudioPanel implements vscode.Disposable {
     await this.aiController.sendQuestionFromEditor(question, 'outputExplain');
   }
 
-  private async runVariableAction(action: () => Promise<void>, label: string): Promise<void> {
+  private async runVariableAction(action: () => Promise<void>, failureMessage: string): Promise<void> {
     try {
       await action();
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      void vscode.window.showErrorMessage(`Could not ${label}: ${message}`);
+      void vscode.window.showErrorMessage(`${failureMessage}: ${message}`);
     }
   }
 
   private async exploreVariables(names: string[]): Promise<void> {
     try {
       if (names.length > 20) {
-        void vscode.window.showWarningMessage('Explore can process at most 20 variables at a time. Reduce the selection.');
+        void vscode.window.showWarningMessage(this.runtimeStrings.exploreLimit);
         return;
       }
       const profiles = await vscode.window.withProgress({
         location: vscode.ProgressLocation.Window,
-        title: 'SPSS Studio: preparing variable summaries…',
+        title: this.runtimeStrings.preparingVariableSummaries,
       }, () => this.callbacks.exploreVariables(names));
       const question = buildVariableExploreQuestion(profiles, this.aiController.responseLanguage);
       this.showAi('chat');
       await this.aiController.sendQuestionFromEditor(question, 'variableExplore');
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      void vscode.window.showErrorMessage(`Could not explore SPSS variables: ${message}`);
+      void vscode.window.showErrorMessage(`${this.runtimeStrings.exploreVariablesFailed}: ${message}`);
     } finally {
       void this.postStudio({ type: 'variableExploreFinished' });
     }
@@ -409,23 +425,23 @@ export class SpssStudioPanel implements vscode.Disposable {
       await fs.promises.writeFile(printPath, html, 'utf8');
       const opened = await vscode.env.openExternal(vscode.Uri.file(printPath));
       if (!opened) {
-        void vscode.window.showErrorMessage('The system did not open the printable SPSS output.');
+        void vscode.window.showErrorMessage(this.runtimeStrings.printableOutputNotOpened);
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      void vscode.window.showErrorMessage(`Could not prepare SPSS output for printing: ${message}`);
+      void vscode.window.showErrorMessage(`${this.runtimeStrings.printableOutputFailed}: ${message}`);
     }
   }
 
   private outputSource(id: string): { record: ExecutionRecord & { htmlPath: string }; rawHtml: string } | undefined {
     const record = this.outputStore.get(id);
     if (!record?.htmlPath || record.status === 'RUNNING') {
-      void vscode.window.showInformationMessage('The selected run has no HTML output to explain, export, or print.');
+      void vscode.window.showInformationMessage(this.runtimeStrings.selectedRunNoHtml);
       return undefined;
     }
     const rawHtml = this.outputStore.readHtml(id);
     if (rawHtml === undefined) {
-      void vscode.window.showErrorMessage('The selected SPSS HTML output file is no longer available.');
+      void vscode.window.showErrorMessage(this.runtimeStrings.selectedHtmlUnavailable);
       return undefined;
     }
     return { record: record as ExecutionRecord & { htmlPath: string }, rawHtml };
@@ -477,6 +493,9 @@ export class SpssStudioPanel implements vscode.Disposable {
       `style-src ${webview.cspSource} 'unsafe-inline'`,
       `script-src 'nonce-${nonce}'`,
     ].join('; ');
+    const strings = this.studioStrings;
+    const text = escapeHtmlText;
+    const serializedStrings = JSON.stringify(strings).replace(/</gu, '\\u003c');
     return `<!DOCTYPE html>
 <html lang="${vscode.env.language.toLowerCase()}">
 <head>
@@ -490,27 +509,27 @@ export class SpssStudioPanel implements vscode.Disposable {
 </head>
 <body>
   <header class="toolbar">
-    <nav><button id="variables-tab" class="tab">Variables</button><button id="data-tab" class="tab">Data</button><button id="output-tab" class="tab active">Output</button><button id="ai-tab" class="tab">Chat</button></nav>
-    <span id="engine-state">SPSS: Stopped</span>
+    <nav><button id="variables-tab" class="tab">${text(strings.tabVariables)}</button><button id="data-tab" class="tab">${text(strings.tabData)}</button><button id="output-tab" class="tab active">${text(strings.tabOutput)}</button><button id="ai-tab" class="tab">${text(strings.tabChat)}</button></nav>
+    <span id="engine-state">${text(strings.enginePrefix)}: ${text(strings.engineStates.stopped)}</span>
   </header>
   <main>
     <section id="output-view" class="view active">
       <article id="output-content">
-        <div class="output-actions"><button id="explain-output" disabled>Explain</button><button id="export-output" disabled>Export</button><button id="print-output" disabled>Print</button><button id="toggle-history" type="button" aria-expanded="false">History</button></div>
-        <div id="run-summary" class="summary">No executions yet.</div><div id="spss-output" class="spss-output"></div>
+        <div class="output-actions"><button id="explain-output" disabled>${text(strings.outputExplain)}</button><button id="export-output" disabled>${text(strings.outputExport)}</button><button id="print-output" disabled>${text(strings.outputPrint)}</button><button id="toggle-history" type="button" aria-expanded="false">${text(strings.outputHistory)}</button></div>
+        <div id="run-summary" class="summary">${text(strings.noExecutions)}</div><div id="spss-output" class="spss-output"></div>
       </article>
-      <div id="output-splitter" role="separator" aria-label="Resize run history" aria-orientation="vertical" tabindex="0"></div>
-      <aside id="output-history"><div class="aside-title"><strong>Runs</strong><button id="clear-output" title="Clear output">Clear</button></div><div id="run-history"></div></aside>
+      <div id="output-splitter" role="separator" aria-label="${text(strings.resizeRunHistory)}" aria-orientation="vertical" tabindex="0"></div>
+      <aside id="output-history"><div class="aside-title"><strong>${text(strings.runs)}</strong><button id="clear-output" title="${text(strings.clearOutput)}">${text(strings.clear)}</button></div><div id="run-history"></div></aside>
     </section>
     <section id="data-view" class="view">
-      <div class="data-toolbar"><div id="dataset-summary">No Active Dataset.</div><button id="refresh-data">Refresh</button></div>
+      <div class="data-toolbar"><div id="dataset-summary">${text(strings.noActiveDataset)}</div><button id="refresh-data">${text(strings.refresh)}</button></div>
       <div id="data-scroll" class="table-scroll"><div id="data-canvas"><table id="data-table"></table><table id="data-row-table"></table></div></div>
-      <div class="pager"><button id="previous-page">Previous rows</button><span id="page-summary">—</span><button id="next-page">Next rows</button><label>Rows <select id="page-size"><option>25</option><option>50</option><option selected>100</option><option>200</option><option>500</option></select></label></div>
+      <div class="pager"><button id="previous-page">${text(strings.previousRows)}</button><span id="page-summary">—</span><button id="next-page">${text(strings.nextRows)}</button><label>${text(strings.rows)} <select id="page-size"><option>25</option><option>50</option><option selected>100</option><option>200</option><option>500</option></select></label></div>
     </section>
     <section id="variables-view" class="view">
-      <div class="data-toolbar variables-toolbar"><div id="variables-summary">No Active Dataset.</div><div class="variables-actions"><span id="variables-selection">0 selected</span><button id="copy-variables" disabled>Copy</button><button id="insert-variables" disabled>Insert</button><button id="refresh-variables">Refresh</button><span class="explore-control"><button id="explore-variables" disabled>Explore</button><button id="explore-help" class="explore-help" type="button" aria-label="About Variable Explore" aria-expanded="false">?</button><span id="explore-help-popover" class="explore-help-popover" role="tooltip" hidden>Explore sends selected variables' metadata and bounded summaries to Chat; with no selection, it uses the first 10 filtered variables.</span></span></div></div>
-      <div class="table-scroll"><table id="variables-table"><thead><tr><th class="variable-checkbox-column" aria-label="Variable selection"></th><th>#</th><th>Name</th><th>Label</th><th>Type</th><th>Format</th><th>Measure</th></tr></thead><tbody></tbody></table></div>
-      <div class="pager variables-pager"><button id="previous-variable-page">Previous</button><span id="variable-page-summary">—</span><button id="next-variable-page">Next</button><label>Rows <select id="variable-page-size"><option>25</option><option>50</option><option selected>100</option><option>200</option><option>500</option></select></label><label class="variable-filter-label">Filter <input id="variable-filter" type="search" placeholder="Filter Name or Label" autocomplete="off" spellcheck="false"></label></div>
+      <div class="data-toolbar variables-toolbar"><div id="variables-summary">${text(strings.noActiveDataset)}</div><div class="variables-actions"><span id="variables-selection">${text(strings.variablesSelected.replace('{count}', '0'))}</span><button id="copy-variables" disabled>${text(strings.copy)}</button><button id="insert-variables" disabled>${text(strings.insert)}</button><button id="refresh-variables">${text(strings.refresh)}</button><span class="explore-control"><button id="explore-variables" disabled>${text(strings.explore)}</button><button id="explore-help" class="explore-help" type="button" aria-label="${text(strings.exploreHelp)}" aria-expanded="false">?</button><span id="explore-help-popover" class="explore-help-popover" role="tooltip" hidden>${text(strings.exploreHelp)}</span></span></div></div>
+      <div class="table-scroll"><table id="variables-table"><thead><tr><th class="variable-checkbox-column" aria-label="${text(strings.variableSelection)}"></th><th>#</th><th>${text(strings.name)}</th><th>${text(strings.label)}</th><th>${text(strings.type)}</th><th>${text(strings.format)}</th><th>${text(strings.measure)}</th></tr></thead><tbody></tbody></table></div>
+      <div class="pager variables-pager"><button id="previous-variable-page">${text(strings.previous)}</button><span id="variable-page-summary">—</span><button id="next-variable-page">${text(strings.next)}</button><label>${text(strings.rows)} <select id="variable-page-size"><option>25</option><option>50</option><option selected>100</option><option>200</option><option>500</option></select></label><label class="variable-filter-label">${text(strings.filter)} <input id="variable-filter" type="search" placeholder="${text(strings.filterNameOrLabel)}" autocomplete="off" spellcheck="false"></label></div>
     </section>
     <section id="ai-view" class="view">
       <div id="spss-ai">
@@ -576,6 +595,7 @@ export class SpssStudioPanel implements vscode.Disposable {
       </div>
     </section>
   </main>
+  <script nonce="${nonce}">globalThis.SPSS_STUDIO_STRINGS = ${serializedStrings};</script>
   <script nonce="${nonce}" src="${syntaxDataScript.toString()}"></script>
   <script nonce="${nonce}" src="${highlighterScript.toString()}"></script>
   <script nonce="${nonce}" src="${aiScript.toString()}"></script>
@@ -584,4 +604,13 @@ export class SpssStudioPanel implements vscode.Disposable {
 </body>
 </html>`;
   }
+}
+
+function escapeHtmlText(value: string): string {
+  return value
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
 }

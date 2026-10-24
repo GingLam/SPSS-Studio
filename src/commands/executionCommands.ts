@@ -2,6 +2,9 @@ import * as vscode from 'vscode';
 import { findCurrentCommand } from '../spss/commandScanner';
 import type { StudioSession } from '../studioSession';
 import { requireTrustedWorkspace } from './workspaceTrust';
+import { runtimeStringsForLanguage } from '../localization/runtimeStrings';
+
+const strings = runtimeStringsForLanguage(vscode.env.language);
 
 export interface ExecutionCommandDependencies {
   studio: StudioSession;
@@ -21,11 +24,11 @@ async function executeSyntax(
 function activeSpssEditor(): vscode.TextEditor | undefined {
   const editor = vscode.window.activeTextEditor;
   if (!editor) {
-    void vscode.window.showInformationMessage('Open an SPSS Syntax (.sps) editor first.');
+    void vscode.window.showInformationMessage(strings.openSpssEditor);
     return undefined;
   }
   if (editor.document.languageId !== 'spss') {
-    void vscode.window.showInformationMessage('The active editor is not an SPSS Syntax document.');
+    void vscode.window.showInformationMessage(strings.activeEditorNotSpss);
     return undefined;
   }
   return editor;
@@ -49,8 +52,8 @@ export async function runSelectionOrCurrentCommand(
   const current = findCurrentCommand(documentText, offset);
   if (current.kind === 'none') {
     const message = current.reason === 'comment'
-      ? 'The cursor is inside an SPSS command comment.'
-      : 'No SPSS command exists at the cursor position.';
+      ? strings.cursorInComment
+      : strings.noCommandAtCursor;
     void vscode.window.showInformationMessage(message);
     return;
   }

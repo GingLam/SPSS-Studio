@@ -2,6 +2,9 @@ import * as vscode from 'vscode';
 import type { SpssEditorTargetTracker } from '../editor/spssEditorTargetTracker';
 import { cachedVariableName, orderedCachedVariableNames } from '../spss/variableInsertion';
 import type { VariableCache } from '../spss/variableCache';
+import { runtimeStringsForLanguage } from '../localization/runtimeStrings';
+
+const strings = runtimeStringsForLanguage(vscode.env.language);
 
 export interface VariableCommandDependencies {
   variableCache: VariableCache;
@@ -16,7 +19,7 @@ export async function insertVariable(
     return;
   }
   if (!await dependencies.editorTarget.insert(variableName)) {
-    void vscode.window.showWarningMessage('Open an SPSS syntax editor before inserting a variable.');
+    void vscode.window.showWarningMessage(strings.insertRequiresEditor);
   }
 }
 
@@ -27,7 +30,7 @@ export async function insertCachedVariable(
   const validatedName = cachedVariableName(dependencies.variableCache.variables, variableName);
   if (!validatedName) {
     void vscode.window.showWarningMessage(
-      'That variable is no longer available in the current Active Dataset.',
+      strings.variableUnavailable,
     );
     return;
   }
@@ -41,7 +44,7 @@ export async function insertCachedVariables(
   const names = orderedCachedVariableNames(dependencies.variableCache.variables, values);
   if (!names) {
     void vscode.window.showWarningMessage(
-      'One or more selected variables are no longer available in the current Active Dataset.',
+      strings.selectedVariablesUnavailable,
     );
     return;
   }
@@ -55,7 +58,7 @@ export async function copyCachedVariables(
   const names = orderedCachedVariableNames(variableCache.variables, values);
   if (!names) {
     void vscode.window.showWarningMessage(
-      'One or more selected variables are no longer available in the current Active Dataset.',
+      strings.selectedVariablesUnavailable,
     );
     return;
   }

@@ -2,7 +2,7 @@
   "name": "spss-studio",
   "displayName": "SPSS Studio",
   "description": "An exceptionally powerful integrated SPSS Syntax development, execution, interpretation, data, output, and AI environment for researchers.",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "publisher": "jinglin",
   "author": {
     "name": "Jing LIN (林景)",
@@ -102,17 +102,17 @@
     "commands": [
       {
         "command": "spssStudio.undo",
-        "title": "SPSS: Undo Last Edit",
+        "title": "%spssStudio.command.undo%",
         "icon": "$(discard)"
       },
       {
         "command": "spssStudio.runSelection",
-        "title": "SPSS: Run Selection / Current Command",
+        "title": "%spssStudio.command.runSelection%",
         "icon": "$(run)"
       },
       {
         "command": "spssStudio.runFile",
-        "title": "SPSS: Run File",
+        "title": "%spssStudio.command.runFile%",
         "icon": "$(run-all)"
       },
       {
@@ -121,31 +121,31 @@
       },
       {
         "command": "spssStudio.startEngine",
-        "title": "SPSS: Start Engine"
+        "title": "%spssStudio.command.startEngine%"
       },
       {
         "command": "spssStudio.stopEngine",
-        "title": "SPSS: Stop Engine"
+        "title": "%spssStudio.command.stopEngine%"
       },
       {
         "command": "spssStudio.restartEngine",
-        "title": "SPSS: Restart Engine"
+        "title": "%spssStudio.command.restartEngine%"
       },
       {
         "command": "spssStudio.showStatus",
-        "title": "SPSS: Show Status"
+        "title": "%spssStudio.command.showStatus%"
       },
       {
         "command": "spssStudio.showOutput",
-        "title": "SPSS: Show Output"
+        "title": "%spssStudio.command.showOutput%"
       },
       {
         "command": "spssStudio.showData",
-        "title": "SPSS: Show Data"
+        "title": "%spssStudio.command.showData%"
       },
       {
         "command": "spssStudio.showVariables",
-        "title": "SPSS: Show Variables"
+        "title": "%spssStudio.command.showVariables%"
       },
       {
         "command": "spssStudio.showAi",
@@ -164,11 +164,11 @@
       },
       {
         "command": "spssStudio.refreshDataPreview",
-        "title": "SPSS: Refresh Data Preview"
+        "title": "%spssStudio.command.refreshDataPreview%"
       },
       {
         "command": "spssStudio.clearOutput",
-        "title": "SPSS: Clear Output"
+        "title": "%spssStudio.command.clearOutput%"
       }
     ],
     "menus": {

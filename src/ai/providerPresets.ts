@@ -58,6 +58,39 @@ export const AI_PROVIDER_PRESETS: readonly AiProviderPreset[] = [
   },
 ] as const;
 
+const AI_PROVIDER_PRESENTATION_ZH_CN: Readonly<Record<AiProviderId, Pick<AiProviderPreset, 'label' | 'modelPlaceholder'>>> = {
+  deepseek: {
+    label: 'DeepSeek',
+    modelPlaceholder: '输入 DeepSeek 控制台中的模型 ID',
+  },
+  zhipu: {
+    label: '智谱 GLM',
+    modelPlaceholder: '输入 GLM 模型 ID',
+  },
+  qwen: {
+    label: '通义千问',
+    modelPlaceholder: '例如：qwen-plus',
+  },
+  doubao: {
+    label: '豆包',
+    modelPlaceholder: '输入方舟模型或推理接入点 ID',
+  },
+  custom: {
+    label: '自定义 OpenAI 兼容接口',
+    modelPlaceholder: '输入服务商提供的模型 ID',
+  },
+};
+
+export function providerPresetsForLanguage(language: string): AiProviderPreset[] {
+  if (language.toLowerCase() !== 'zh-cn') {
+    return AI_PROVIDER_PRESETS.map((preset) => ({ ...preset }));
+  }
+  return AI_PROVIDER_PRESETS.map((preset) => ({
+    ...preset,
+    ...AI_PROVIDER_PRESENTATION_ZH_CN[preset.id],
+  }));
+}
+
 const PROVIDER_IDS = new Set<AiProviderId>(AI_PROVIDER_PRESETS.map((preset) => preset.id));
 
 export function isAiProviderId(value: unknown): value is AiProviderId {

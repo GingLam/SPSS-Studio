@@ -23,6 +23,12 @@ VS Code editor
 
 The extension implements editor integration and transport, not statistical algorithms. IBM SPSS Statistics remains the computation engine.
 
+## Interface localization
+
+VS Code package NLS files localize contributed editor-title actions, context menus, and Command Palette titles. Typed runtime catalogs localize the reusable Studio shell, Chat and model-management controls, provider presentation, progress states, tooltips, accessibility labels, status-bar text, and direct user feedback. `vscode.env.language === 'zh-cn'` selects Simplified Chinese; English and other locales use the English fallback.
+
+Localization changes presentation only. Command identifiers, Webview message types, provider identifiers, Base URLs, model identifiers, SPSS variable names, output content, and stored data remain language-neutral. Chat's response-language preference is separate from the VS Code interface language.
+
 ## Static Language Schema
 
 `syntax/spss-language.json` is the single static language source. It contains canonical commands, subcommands, functions, formats, macro directives, system/scratch variables, command-specific subcommands, keywords, and verified snippets. `syntax/spss-highlighting.json` is the single presentation source for the canonical token taxonomy and Light/Dark palettes. `tools/generate-grammar.mjs` validates both schemas and generates the TextMate grammar, Chat token data and CSS, optional VS Code color themes, and `docs/SYNTAX-COVERAGE.md`.

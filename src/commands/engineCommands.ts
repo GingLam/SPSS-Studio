@@ -1,6 +1,11 @@
 import * as vscode from 'vscode';
 import type { EngineService, SpssRuntimeConfiguration } from '../spss/engineService';
 import { requireTrustedWorkspace } from './workspaceTrust';
+import { runtimeStringsForLanguage } from '../localization/runtimeStrings';
+import { studioStringsForLanguage } from '../views/studioStrings';
+
+const strings = runtimeStringsForLanguage(vscode.env.language);
+const studioStrings = studioStringsForLanguage(vscode.env.language);
 
 export interface EngineCommandDependencies {
   engine: EngineService;
@@ -33,7 +38,7 @@ export async function startEngine(dependencies: EngineCommandDependencies): Prom
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     dependencies.output.appendLine(`[Error] ${message}`);
-    void vscode.window.showErrorMessage(`Could not start SPSS: ${message}`);
+    void vscode.window.showErrorMessage(`${strings.couldNotStartSpss}: ${message}`);
   }
   appendStatus(dependencies);
 }
@@ -54,16 +59,16 @@ export async function restartEngine(dependencies: EngineCommandDependencies): Pr
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     dependencies.output.appendLine(`[Error] ${message}`);
-    void vscode.window.showErrorMessage(`Could not restart SPSS: ${message}`);
+    void vscode.window.showErrorMessage(`${strings.couldNotRestartSpss}: ${message}`);
   }
 }
 
 export function showStatus(dependencies: EngineCommandDependencies): void {
   const status = dependencies.engine.status();
   appendStatus(dependencies);
-  const version = status.installation?.version ?? 'not detected';
-  const lastError = status.lastError ?? 'none';
+  const version = status.installation?.version ?? strings.notDetected;
+  const lastError = status.lastError ?? strings.none;
   void vscode.window.showInformationMessage(
-    `SPSS state: ${status.state} · Version: ${version} · Last error: ${lastError}`,
+    `SPSS ${strings.state}: ${studioStrings.engineStates[status.state]} · ${strings.version}: ${version} · ${strings.lastError}: ${lastError}`,
   );
 }

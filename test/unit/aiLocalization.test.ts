@@ -15,10 +15,10 @@ describe('SPSS AI localization', () => {
     assert.equal(aiStringsForLanguage('fr'), AI_STRINGS_EN);
   });
 
-  it('uses one concise English label set for Chat navigation and model settings', () => {
-    const expected = {
+  it('uses concise localized labels for Chat navigation and model settings', () => {
+    const englishExpected = {
       activeProfile: 'Active model',
-      configureModels: 'Setting',
+      configureModels: 'Settings',
       currentChat: 'Current',
       history: 'History',
       newChat: 'New',
@@ -40,11 +40,36 @@ describe('SPSS AI localization', () => {
       insert: 'Insert',
       run: 'Run',
     };
-    for (const strings of [AI_STRINGS_EN, AI_STRINGS_ZH_CN]) {
+    const chineseExpected = {
+      activeProfile: '当前模型',
+      configureModels: '设置',
+      currentChat: '当前',
+      history: '历史',
+      newChat: '新建',
+      newProfile: '新建',
+      name: '名称',
+      provider: '服务商',
+      responseLanguage: '回答语言',
+      enableReasoning: '推理',
+      baseUrl: '接口地址',
+      model: '模型',
+      apiKey: 'API 密钥',
+      save: '保存',
+      duplicate: '复制配置',
+      makeActive: '启用',
+      deleteKey: '删除密钥',
+      delete: '删除',
+      officialDocs: '官方文档',
+      copy: '复制',
+      insert: '插入',
+      run: '运行',
+    };
+    for (const [strings, expected] of [
+      [AI_STRINGS_EN, englishExpected],
+      [AI_STRINGS_ZH_CN, chineseExpected],
+    ] as const) {
       const values = strings as unknown as Record<string, string>;
-      for (const [key, value] of Object.entries(expected)) {
-        assert.equal(values[key], value, key);
-      }
+      for (const [key, value] of Object.entries(expected)) assert.equal(values[key], value, key);
     }
   });
 

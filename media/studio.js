@@ -3,6 +3,7 @@
 
   const vscode = acquireVsCodeApi();
   const { filterVariables } = globalThis.spssVariableFilter;
+  const strings = globalThis.SPSS_STUDIO_STRINGS;
   let persistedState = vscode.getState() || {};
   const savedStudioState = persistedState.studio || persistedState;
   const DATA_ROW_NUMBER_WIDTH = 64;
@@ -36,6 +37,10 @@
 
   const byId = (id) => document.getElementById(id);
   const tabs = ['output', 'data', 'variables', 'ai'];
+
+  function formatText(template, values) {
+    return String(template).replace(/\{([a-z]+)\}/giu, (match, key) => values[key] ?? match);
+  }
 
   function postStudio(message) {
     vscode.postMessage({ scope: 'studio', message });
@@ -72,8 +77,8 @@
     if (tab === 'ai') window.requestAnimationFrame(() => aiModule.resize());
   }
 
-  function statusLabel(status) {
-    return String(status || '').replaceAll('_', ' ').toLowerCase().replace(/^./, (letter) => letter.toUpperCase());
+  function executionStatusLabel(status) {
+    return strings.executionStatuses[status] || String(status || '');
   }
 
   function renderHistory() {
@@ -84,10 +89,10 @@
       button.className = `run${record.id === state.selectedId ? ' selected' : ''}`;
       button.type = 'button';
       const title = document.createElement('span');
-      title.textContent = `Run #${record.sequence}`;
+      title.textContent = formatText(strings.runNumber, { number: String(record.sequence) });
       const detail = document.createElement('span');
       detail.className = 'run-status';
-      detail.textContent = `${statusLabel(record.status)} · ${new Date(record.timestamp).toLocaleTimeString()}`;
+      detail.textContent = `${executionStatusLabel(record.status)} · ${new Date(record.timestamp).toLocaleTimeString()}`;
       button.append(title, detail);
       button.addEventListener('click', () => postStudio({ type: 'selectExecution', id: record.id }));
       container.append(button);
@@ -113,7 +118,8 @@
     setOutputActions(record);
     const seconds = (record.durationMs / 1000).toFixed(2);
     const error = record.errorMessage ? `\n${record.errorMessage}` : '';
-    byId('run-summary').textContent = `Run #${record.sequence} · ${statusLabel(record.status)}\nError level: ${record.errorLevel} · Duration: ${seconds} s${error}`;
+    const runNumber = formatText(strings.runNumber, { number: String(record.sequence) });
+    byId('run-summary').textContent = `${runNumber} · ${executionStatusLabel(record.status)}\n${strings.errorLevel}: ${record.errorLevel} · ${strings.duration}: ${seconds} s${error}`;
     const output = byId('spss-output');
     if (html) {
       // The extension sanitizes this IBM-generated fragment and rewrites local image URIs.
@@ -123,10 +129,10 @@
       const empty = document.createElement('p');
       empty.className = 'empty';
       empty.textContent = record.status === 'RUNNING'
-        ? 'SPSS execution is running…'
+        ? strings.executionRunning
         : record.status === 'SUCCESS_NO_OUTPUT'
-          ? 'Execution completed successfully. SPSS produced no display output.'
-          : 'No SPSS HTML output is available for this execution.';
+          ? strings.executionNoDisplayOutput
+          : strings.executionNoHtmlOutput;
       output.append(empty);
     }
   }
@@ -134,17 +140,17 @@
   function renderDatasetSummary() {
     const dataset = state.dataset;
     if (!dataset || !dataset.active) {
-      byId('dataset-summary').textContent = 'No Active Dataset.';
-      byId('variables-summary').textContent = 'No Active Dataset.';
+      byId('dataset-summary').textContent = strings.noActiveDataset;
+      byId('variables-summary').textContent = strings.noActiveDataset;
       return;
     }
     const controls = [
-      dataset.weightVariable ? `Weight: ${dataset.weightVariable}` : '',
-      dataset.splitVariables && dataset.splitVariables.length ? `Split: ${dataset.splitVariables.join(', ')}` : '',
-      dataset.filterVariable ? `Filter: ${dataset.filterVariable}` : '',
+      dataset.weightVariable ? `${strings.weight}: ${dataset.weightVariable}` : '',
+      dataset.splitVariables && dataset.splitVariables.length ? `${strings.split}: ${dataset.splitVariables.join(', ')}` : '',
+      dataset.filterVariable ? `${strings.filter}: ${dataset.filterVariable}` : '',
     ].filter(Boolean);
-    const cases = dataset.caseCount < 0 ? 'Unknown until data are materialized' : dataset.caseCount.toLocaleString();
-    const summary = `Dataset: ${dataset.datasetName} · Cases: ${cases} · Variables: ${dataset.variableCount.toLocaleString()}${controls.length ? ` · ${controls.join(' · ')}` : ''}`;
+    const cases = dataset.caseCount < 0 ? strings.casesUnknown : dataset.caseCount.toLocaleString();
+    const summary = `${strings.dataset}: ${dataset.datasetName} · ${strings.cases}: ${cases} · ${strings.variables}: ${dataset.variableCount.toLocaleString()}${controls.length ? ` · ${controls.join(' · ')}` : ''}`;
     byId('dataset-summary').textContent = summary;
     byId('variables-summary').textContent = summary;
   }
@@ -172,7 +178,7 @@
       const checkbox = document.createElement('input');
       checkbox.type = 'checkbox';
       checkbox.checked = state.selectedVariables.has(variable.name);
-      checkbox.setAttribute('aria-label', `Select ${String(variable.name)}`);
+      checkbox.setAttribute('aria-label', formatText(strings.selectVariable, { name: String(variable.name) }));
       checkbox.addEventListener('change', () => {
         if (checkbox.checked) {
           state.selectedVariables.add(variable.name);
@@ -188,9 +194,7 @@
       appendTextCell(row, String(variable.index + 1), 'row-number');
       const name = String(variable.name || '—');
       const nameCell = appendTextCell(row, name, 'variable-name');
-      nameCell.title = document.documentElement.lang.toLowerCase().startsWith('zh')
-        ? `双击插入 ${name}`
-        : `Double-click to insert ${name}`;
+      nameCell.title = formatText(strings.doubleClickInsert, { name });
       nameCell.addEventListener('dblclick', (event) => {
         event.preventDefault();
         postStudio({ type: 'insertVariable', name });
@@ -203,9 +207,16 @@
     });
     const first = variables.length === 0 ? 0 : state.variablePageOffset + 1;
     const last = Math.min(variables.length, state.variablePageOffset + visible.length);
-    const filteredSummary = `${first.toLocaleString()}–${last.toLocaleString()} of ${variables.length.toLocaleString()}`;
+    const filteredSummary = formatText(strings.itemRange, {
+      first: first.toLocaleString(),
+      last: last.toLocaleString(),
+      count: variables.length.toLocaleString(),
+    });
     byId('variable-page-summary').textContent = state.variableFilter.trim()
-      ? `${filteredSummary} (${allVariables.length.toLocaleString()} total)`
+      ? formatText(strings.filteredItemRange, {
+        range: filteredSummary,
+        total: allVariables.length.toLocaleString(),
+      })
       : filteredSummary;
     byId('previous-variable-page').disabled = state.variablePageOffset <= 0;
     byId('next-variable-page').disabled = state.variablePageOffset + visible.length >= variables.length;
@@ -227,19 +238,17 @@
   function updateVariableActions() {
     const selected = selectedVariableNames();
     const hasExploreCandidates = selected.length > 0 || filteredVariables().length > 0;
-    const chinese = document.documentElement.lang.toLowerCase().startsWith('zh');
-    byId('variables-selection').textContent = chinese
-      ? `已选择 ${String(selected.length)} 个`
-      : `${String(selected.length)} selected`;
+    byId('variables-selection').textContent = formatText(
+      strings.variablesSelected,
+      { count: String(selected.length) },
+    );
     byId('copy-variables').disabled = selected.length === 0;
     byId('insert-variables').disabled = selected.length === 0;
     byId('explore-variables').disabled = !hasExploreCandidates || state.exploringVariables;
     byId('explore-variables').textContent = state.exploringVariables
-      ? 'Exploring…'
-      : 'Explore';
-    const help = chinese
-      ? 'Explore 将所选变量的字典信息和受限统计摘要发送到 Chat；未选择时使用当前筛选结果的前10个变量。'
-      : "Explore sends selected variables' metadata and bounded summaries to Chat; with no selection, it uses the first 10 filtered variables.";
+      ? strings.exploring
+      : strings.explore;
+    const help = strings.exploreHelp;
     byId('explore-help').title = help;
     byId('explore-help').setAttribute('aria-label', help);
     byId('explore-help-popover').textContent = help;
@@ -316,7 +325,11 @@
 
     const first = page.totalCases === 0 ? 0 : page.offset + 1;
     const last = Math.min(page.totalCases, page.offset + page.rows.length);
-    byId('page-summary').textContent = `${first.toLocaleString()}–${last.toLocaleString()} of ${page.totalCases.toLocaleString()}`;
+    byId('page-summary').textContent = formatText(strings.rowRange, {
+      first: first.toLocaleString(),
+      last: last.toLocaleString(),
+      total: page.totalCases.toLocaleString(),
+    });
     byId('previous-page').disabled = page.offset <= 0;
     byId('next-page').disabled = page.offset + page.rows.length >= page.totalCases;
   }
@@ -529,7 +542,7 @@
         }
       }
     } else if (message.type === 'engineState') {
-      byId('engine-state').textContent = `SPSS: ${statusLabel(message.state)}`;
+      byId('engine-state').textContent = `${strings.enginePrefix}: ${strings.engineStates[message.state] || message.state}`;
     } else if (message.type === 'showOutput') {
       showTab('output', false);
     } else if (message.type === 'showData') {
@@ -543,7 +556,7 @@
       state.selectedId = undefined;
       renderHistory();
       setOutputActions(undefined);
-      byId('run-summary').textContent = 'No executions yet.';
+      byId('run-summary').textContent = strings.noExecutions;
       byId('spss-output').replaceChildren();
     } else if (message.type === 'variableExploreFinished') {
       state.exploringVariables = false;

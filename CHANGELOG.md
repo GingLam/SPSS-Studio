@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.3.0 — 2026-10-24
+
+- Added complete English and Simplified Chinese catalogs for SPSS Studio tabs, controls, progress states, summaries, tooltips, accessibility labels, and direct user feedback.
+- Localized all 16 contributed editor, context-menu, and Command Palette titles through VS Code package NLS.
+- Localized Chat navigation, model management, provider presentation, confirmation dialogs, code-block actions, and empty or error states without changing stored provider identifiers, endpoints, model names, or credentials.
+- Selected Simplified Chinese only when the VS Code display language is `zh-cn`; English and other locales retain the English interface.
+- Kept the interface language independent of Chat's Chinese/English response setting, so changing one cannot silently change the other.
+- Preserved the existing Variables, Data, Output, and Chat behavior, message protocol, execution path, local history, and SecretStorage boundaries.
+
 ## 1.2.0 — 2026-10-04
 
 - Reordered the SPSS Studio tabs as **Variables**, **Data**, **Output**, and **Chat**.

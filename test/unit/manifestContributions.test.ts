@@ -89,7 +89,7 @@ describe('SPSS editor title actions', () => {
       fs.readFileSync(path.resolve(__dirname, '../../../package.nls.zh-cn.json'), 'utf8'),
     ) as Record<string, string>;
     assert.equal(english['spssStudio.command.explainSyntaxInChat'], 'Explain in Chat');
-    assert.equal(chinese['spssStudio.command.explainSyntaxInChat'], 'Explain in Chat');
+    assert.equal(chinese['spssStudio.command.explainSyntaxInChat'], '在对话中解释');
   });
 
   it('contributes optional SPSS Studio Light and Dark themes without activating either one', () => {

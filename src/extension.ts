@@ -29,6 +29,7 @@ import { SpssCompletionProvider } from './language/completionProvider';
 import { loadLanguageSchema } from './language/languageSchema';
 import { QuickStartController } from './quickStart/quickStartController';
 import { extensionVersion } from './quickStart/quickStartState';
+import { runtimeStringsForLanguage } from './localization/runtimeStrings';
 import { EngineService, type SpssRuntimeConfiguration } from './spss/engineService';
 import { VariableCache } from './spss/variableCache';
 import type { EngineState, VariableProfiles } from './spss/types';
@@ -36,6 +37,7 @@ import { StudioSession } from './studioSession';
 import { OutputStore } from './views/outputStore';
 import { SpssAiPanelController } from './views/spssAiPanelController';
 import { SpssStudioPanel } from './views/spssStudioPanel';
+import { studioStringsForLanguage } from './views/studioStrings';
 
 let engineService: EngineService | undefined;
 let outputStore: OutputStore | undefined;
@@ -65,28 +67,19 @@ function readConfiguration(): SpssRuntimeConfiguration {
   };
 }
 
-function statusText(state: EngineState): string {
-  const labels: Record<EngineState, string> = {
-    stopped: 'Stopped',
-    starting: 'Starting…',
-    ready: 'Ready',
-    running: 'Running…',
-    error: 'Error',
-  };
-  return `$(database) SPSS: ${labels[state]}`;
-}
-
 export function activate(context: vscode.ExtensionContext): SpssStudioExtensionApi {
+  const runtimeStrings = runtimeStringsForLanguage(vscode.env.language);
+  const studioStrings = studioStringsForLanguage(vscode.env.language);
   const output = vscode.window.createOutputChannel('SPSS');
   const statusBar = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 100);
   statusBar.command = 'spssStudio.showStatus';
-  statusBar.tooltip = 'Show IBM SPSS Statistics engine status';
+  statusBar.tooltip = runtimeStrings.statusBarTooltip;
 
   let state: EngineState = 'stopped';
   const studioHolder: { current?: StudioSession } = {};
   const updateStatus = (newState: EngineState): void => {
     state = newState;
-    statusBar.text = statusText(newState);
+    statusBar.text = `$(database) ${studioStrings.enginePrefix}: ${studioStrings.engineStates[newState]}`;
     statusBar.backgroundColor = newState === 'error'
       ? new vscode.ThemeColor('statusBarItem.errorBackground')
       : undefined;
@@ -126,7 +119,7 @@ export function activate(context: vscode.ExtensionContext): SpssStudioExtensionA
     modelProfiles,
   ).catch((error: unknown) => {
     const message = error instanceof Error ? error.message : String(error);
-    void vscode.window.showErrorMessage(`SPSS AI configuration migration failed: ${message}`);
+    void vscode.window.showErrorMessage(`${runtimeStrings.configurationMigrationFailed}: ${message}`);
   });
   const aiPanelController = new SpssAiPanelController(
     new AiSessionController(modelProfiles, conversationStore, new OpenAiCompatibleClient()),
@@ -190,11 +183,11 @@ export function activate(context: vscode.ExtensionContext): SpssStudioExtensionA
     insertVariables: async (names) => insertCachedVariables(variableCommandDependencies, names),
     exploreVariables: async (names) => {
       if (!await requireTrustedWorkspace()) {
-        throw new Error('Variable Explore requires a trusted workspace.');
+        throw new Error(runtimeStrings.variableExploreRequiresTrusted);
       }
       const current = studioHolder.current;
       if (!current) {
-        throw new Error('SPSS Studio is not ready.');
+        throw new Error(runtimeStrings.studioNotReady);
       }
       return current.variableProfiles(names);
     },

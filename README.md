@@ -85,15 +85,15 @@ Variable Explore is measurement-aware. For one variable, Chat proposes descripti
 
 ## SPSS AI
 
-The reusable SPSS Studio panel opens beside the native `.sps` editor and contains four tabs in this order: **Variables**, **Data**, **Output**, and **Chat**. Opening a `.sps` file alone does not open the panel. Running syntax opens **Output**; the Show Data, Show Variables, Show AI Assistant, and Manage AI Model Profiles commands open their corresponding Studio location. The extension does not contribute or automatically reveal a native VS Code bottom-panel view.
+The reusable SPSS Studio panel opens beside the native `.sps` editor and contains four tabs in this order: **Variables**, **Data**, **Output**, and **Chat**. Opening a `.sps` file alone does not open the panel. Running syntax opens **Output**; the Show Data, Show Variables, Show AI Assistant, and Manage AI Model Profiles commands open their corresponding Studio location. The extension does not contribute or automatically reveal a native VS Code bottom-panel view. Editor menus, Studio tabs, controls, progress states, tooltips, and direct feedback follow the VS Code display language: Simplified Chinese (`zh-cn`) uses the Chinese catalog, while English and other locales use the English catalog. This interface language is independent of the model response-language preference.
 
-The **Chat** tab is an SPSS AI question-and-answer tool. Its compact header uses the concise English controls **Current**, **History**, **Active model**, **New**, and **Setting**; model settings use the same compact English convention. The boundary between the transcript and question box can be dragged with the mouse or adjusted from the keyboard. Completed answers render common Markdown structures without accepting model-generated HTML. A concise built-in system instruction grounds replies in executable SPSS Syntax, applied social statistics, assumptions, key options, and result interpretation without claiming that generated syntax was run. Replies default to Simplified Chinese and stay concise unless the user explicitly asks for detail.
+The **Chat** tab is an SPSS AI question-and-answer tool. Its compact English header uses **Current**, **History**, **Active model**, **New**, and **Settings**; a Simplified Chinese VS Code interface displays the corresponding concise Chinese controls. The boundary between the transcript and question box can be dragged with the mouse or adjusted from the keyboard. Completed answers render common Markdown structures without accepting model-generated HTML. A concise built-in system instruction grounds replies in executable SPSS Syntax, applied social statistics, assumptions, key options, and result interpretation without claiming that generated syntax was run. Replies default to Simplified Chinese and stay concise unless the user explicitly asks for detail.
 
 Chat is deliberately scoped to SPSS Syntax, IBM SPSS Statistics use, statistical methods implemented in SPSS, and SPSS output interpretation. Clearly unrelated requests receive a short boundary notice rather than a general-purpose answer. This instruction-level boundary reduces off-topic responses but is not a security guarantee against every possible model behavior.
 
-In an `.sps` editor, right-click a selection and choose **Explain in Chat**. With no selection, the command scanner sends the complete SPSS command or structural block at the cursor. The Studio panel opens to Chat and submits a concise explanation request immediately; it never executes the selected syntax. If no usable model profile exists, the command opens **Setting** instead.
+In an `.sps` editor, right-click a selection and choose **Explain in Chat**. With no selection, the command scanner sends the complete SPSS command or structural block at the cursor. The Studio panel opens to Chat and submits a concise explanation request immediately; it never executes the selected syntax. If no usable model profile exists, the command opens **Settings** instead.
 
-Configure it from **Setting** or run **SPSS: Manage AI Model Profiles**:
+Configure it from **Settings** or run **SPSS: Manage AI Model Profiles**:
 
 1. Create a profile and choose DeepSeek, Zhipu GLM, Qwen, Doubao, or Custom OpenAI-compatible.
 2. Confirm the prefilled Base URL.
@@ -102,9 +102,9 @@ Configure it from **Setting** or run **SPSS: Manage AI Model Profiles**:
 
 Each built-in provider profile also has a **Reasoning** checkbox, which is off by default. DeepSeek, Zhipu GLM, and Doubao receive their native `thinking.type` field; Qwen receives `enable_thinking`. Custom OpenAI-compatible profiles keep the checkbox disabled because the extension does not guess provider-specific fields. Whether a particular model supports the selected mode still depends on that provider and model.
 
-Profiles can be renamed, duplicated, deleted, and switched from the panel header. Multiple models—and multiple accounts for the same provider—can coexist. Reopening **Setting** always shows the saved non-secret values. The API Key field intentionally stays blank; the status below it indicates whether a key is saved. Switching profiles changes only later requests, while historical answers retain the profile name used to generate them.
+Profiles can be renamed, duplicated, deleted, and switched from the panel header. Multiple models—and multiple accounts for the same provider—can coexist. Reopening **Settings** always shows the saved non-secret values. The API Key field intentionally stays blank; the status below it indicates whether a key is saved. Switching profiles changes only later requests, while historical answers retain the profile name used to generate them.
 
-**Language** in **Setting** is shared by ordinary Chat questions, **Explain in Chat**, and Output **Explain**. It defaults to **Chinese (default)** and can be changed to **English**. The preference is stored in this extension's global VS Code state rather than in an `.sps` file or workspace folder.
+**Language** in **Settings** is shared by ordinary Chat questions, **Explain in Chat**, and Output **Explain**. It defaults to **Chinese (default)** and can be changed to **English**. The preference is stored in this extension's global VS Code state rather than in an `.sps` file or workspace folder.
 
 Provider model catalogs change independently of the extension, so the model field is intentionally editable. The four built-in presets use these official OpenAI-compatible Base URLs:
 
@@ -197,6 +197,7 @@ SPSS Studio is not an LSP or a full semantic validator. It does not provide stat
 
 | Version | Date | Update summary |
 | --- | --- | --- |
+| 1.3.0 | 2026-10-24 | Localized the complete SPSS Studio interface, editor and context commands, progress states, tooltips, provider presentation, and direct user feedback according to the VS Code display language, while keeping Chat response language independent. |
 | 1.2.0 | 2026-10-04 | Reordered the Studio tabs as Variables, Data, Output, and Chat without changing their behavior, and standardized the Variables Explore in-progress label as English. |
 | 1.1.0 | 2026-10-03 | Added a complete English/Chinese Quick Start page selected from the VS Code display language, a prominent persisted opt-out for automatic display after future updates, and a permanent localized book action in the `.sps` editor title bar. |
 | 1.0.0 | 2026-10-03 | Added Variables Name/Label filtering with persistent selections, compact English Chat and model-setting controls, Copy/Insert/Run actions for SPSS response blocks, shortened paging controls, and a strengthened Explore responsibility statement. |

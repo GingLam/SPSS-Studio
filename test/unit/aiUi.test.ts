@@ -122,7 +122,7 @@ describe('SPSS AI Webview contract', () => {
     assert.doesNotMatch(panel, /script-src[^\n]*unsafe-inline/u);
   });
 
-  it('keeps model profiles behind Setting and exposes an adjustable composer boundary', () => {
+  it('keeps model profiles behind Settings and exposes an adjustable composer boundary', () => {
     const panel = fs.readFileSync(
       path.resolve(__dirname, '../../../src/views/spssStudioPanel.ts'),
       'utf8',

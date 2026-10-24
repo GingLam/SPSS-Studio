@@ -13,6 +13,9 @@ import { DataPreviewState } from './views/dataPreviewState';
 import type { OutputStore } from './views/outputStore';
 import type { SpssStudioPanel } from './views/spssStudioPanel';
 import type { DatasetPageUiRequest } from './views/webviewProtocol';
+import { runtimeStringsForLanguage } from './localization/runtimeStrings';
+
+const strings = runtimeStringsForLanguage(vscode.env.language);
 
 export class StudioSession {
   private readonly dataPreview: DataPreviewState;
@@ -56,7 +59,7 @@ export class StudioSession {
       this.panel.executionCompleted(failed);
       const message = error instanceof Error ? error.message : String(error);
       this.diagnosticOutput.appendLine(`SPSS Run #${String(record.sequence)} failed: ${message}`);
-      void vscode.window.showErrorMessage(`SPSS execution failed: ${message}`);
+      void vscode.window.showErrorMessage(`${strings.executionFailed}: ${message}`);
     }
   }
 
@@ -87,11 +90,11 @@ export class StudioSession {
     const available = new Map(this.variableCache.variables.map((variable) => [variable.name, variable.index]));
     const unique = [...new Set(variableNames)];
     if (unique.length === 0 || unique.length > 20) {
-      throw new Error('Explore requires between 1 and 20 variables.');
+      throw new Error(strings.exploreRequiresVariables);
     }
     for (const name of unique) {
       if (!available.has(name)) {
-        throw new Error(`Variable ${name} is no longer available in the Active Dataset.`);
+        throw new Error(strings.variableUnavailable);
       }
     }
     unique.sort((left, right) => (available.get(left) ?? 0) - (available.get(right) ?? 0));
@@ -108,7 +111,7 @@ export class StudioSession {
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       this.diagnosticOutput.appendLine(`SPSS data preview failed: ${message}`);
-      void vscode.window.showErrorMessage(`Could not read Active Dataset page: ${message}`);
+      void vscode.window.showErrorMessage(`${strings.dataPageFailed}: ${message}`);
     }
   }
 

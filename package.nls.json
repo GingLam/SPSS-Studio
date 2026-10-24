@@ -1,6 +1,18 @@
 {
+  "spssStudio.command.undo": "SPSS: Undo Last Edit",
+  "spssStudio.command.runSelection": "SPSS: Run Selection / Current Command",
+  "spssStudio.command.runFile": "SPSS: Run File",
+  "spssStudio.command.explainSyntaxInChat": "Explain in Chat",
+  "spssStudio.command.startEngine": "SPSS: Start Engine",
+  "spssStudio.command.stopEngine": "SPSS: Stop Engine",
+  "spssStudio.command.restartEngine": "SPSS: Restart Engine",
+  "spssStudio.command.showStatus": "SPSS: Show Status",
+  "spssStudio.command.showOutput": "SPSS: Show Output",
+  "spssStudio.command.showData": "SPSS: Show Data",
+  "spssStudio.command.showVariables": "SPSS: Show Variables",
   "spssStudio.command.showAi": "SPSS: Show AI Assistant",
   "spssStudio.command.configureAi": "SPSS: Manage AI Model Profiles",
   "spssStudio.command.showQuickStart": "Quick Start",
-  "spssStudio.command.explainSyntaxInChat": "Explain in Chat"
+  "spssStudio.command.refreshDataPreview": "SPSS: Refresh Data Preview",
+  "spssStudio.command.clearOutput": "SPSS: Clear Output"
 }
