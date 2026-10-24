@@ -182,15 +182,52 @@ describe('Windows SPSS locator', () => {
     assert.equal(result.pythonLauncher, `${root32}\\statisticspython3.bat`);
   });
 
-  it('honors explicit paths and supports direct Python fallback', async () => {
+  it('rejects a Windows installation that only exposes direct Python', async () => {
     const root = 'D:\\Research Tools\\IBM SPSS Statistics 31';
     const fake = new FakeFileSystem(path.win32, [`${root}\\Python3`], [
       `${root}\\stats.exe`, `${root}\\Python3\\python.exe`,
     ]);
     const result = await locateWindows({ explicitInstallPath: root }, fake, new FakeRegistry([]), {});
+    assert.equal(result, undefined);
+  });
+
+  it('derives the exact installation root from an explicit launcher', async () => {
+    const root27 = 'C:\\Program Files\\IBM\\SPSS Statistics\\27';
+    const root32 = 'C:\\Program Files\\IBM\\SPSS Statistics\\32';
+    const launcher27 = `${root27}\\bin\\statisticspython3.bat`;
+    const fake = new FakeFileSystem(path.win32, [root27, root32], [
+      launcher27,
+      `${root27}\\bin\\stats.exe`,
+      `${root32}\\statisticspython3.bat`,
+      `${root32}\\stats.exe`,
+    ]);
+    const result = await locateWindows(
+      { explicitPythonLauncherPath: launcher27 },
+      fake,
+      new FakeRegistry([root32]),
+      { ProgramFiles: 'C:\\Program Files' },
+    );
     assert.ok(result);
-    assert.equal(result.launchMode, 'direct-python');
-    assert.equal(result.pythonHome, `${root}\\Python3`);
+    assert.equal(result.installRoot, root27);
+    assert.equal(result.pythonLauncher, launcher27);
+    assert.equal(result.version, '27');
+  });
+
+  it('rejects an explicit launcher outside the configured installation root', async () => {
+    const root27 = 'C:\\Program Files\\IBM\\SPSS Statistics\\27';
+    const root32 = 'C:\\Program Files\\IBM\\SPSS Statistics\\32';
+    const launcher27 = `${root27}\\statisticspython3.bat`;
+    const fake = new FakeFileSystem(path.win32, [root27, root32], [
+      launcher27,
+      `${root32}\\stats.exe`,
+    ]);
+    const result = await locateWindows(
+      { explicitInstallPath: root32, explicitPythonLauncherPath: launcher27 },
+      fake,
+      new FakeRegistry([]),
+      {},
+    );
+    assert.equal(result, undefined);
   });
 
   it('returns undefined when SPSS is not installed', async () => {

@@ -223,14 +223,31 @@ describe('BridgeManager', () => {
     const child = new FakeBridgeProcess((request, process) => process.send(responseFor(request)));
     let launchedExecutable = '';
     let launchedArguments: string[] = [];
+    let launchedEnvironment: NodeJS.ProcessEnv | undefined;
+    const terminatedProcessTrees: number[] = [];
     const manager = new BridgeManager({
       startupTimeoutMs: 100,
       executionTimeoutMs: 100,
       platform: 'win32',
-      environment: { ComSpec: 'C:\\Windows\\System32\\cmd.exe' },
-      spawner: (executable, args) => {
+      environment: {
+        ComSpec: 'C:\\Windows\\System32\\cmd.exe',
+        PATH: 'C:\\Windows\\System32',
+        PYTHONHOME: 'C:\\UnrelatedPython',
+        pythonpath: 'C:\\UnrelatedPackages',
+        PYTHONSTARTUP: 'C:\\startup.py',
+        PYTHONUSERBASE: 'C:\\UserPython',
+        VIRTUAL_ENV: 'C:\\venv',
+        CONDA_PREFIX: 'C:\\conda',
+        CONDA_DEFAULT_ENV: 'base',
+      },
+      processTreeTerminator: (processId) => {
+        terminatedProcessTrees.push(processId);
+        return { success: true };
+      },
+      spawner: (executable, args, options) => {
         launchedExecutable = executable;
         launchedArguments = args;
+        launchedEnvironment = options.env;
         return child;
       },
     });
@@ -239,7 +256,7 @@ describe('BridgeManager', () => {
       installRoot: 'C:\\Program Files\\IBM\\SPSS Statistics\\32',
       pythonLauncher: 'C:\\Program Files\\IBM\\SPSS Statistics\\32\\statisticspython3.bat',
       launchMode: 'ibm-launcher',
-      environment: {},
+      environment: { SPSS_HOME: 'C:\\Program Files\\IBM\\SPSS Statistics\\32' },
     };
     await manager.start(windowsInstallation, 'C:\\Extension Path\\resources\\bridge\\spss_bridge.py');
     await manager.run('HOST COMMAND=["not a shell argument"].', outputTarget);
@@ -247,7 +264,51 @@ describe('BridgeManager', () => {
     assert.deepEqual(launchedArguments.slice(0, 3), ['/d', '/s', '/c']);
     assert.match(launchedArguments[3] ?? '', /statisticspython3\.bat/u);
     assert.ok(!launchedArguments.join(' ').includes('HOST COMMAND'));
+    assert.ok(launchedEnvironment);
+    assert.equal(launchedEnvironment.PATH, 'C:\\Windows\\System32');
+    assert.equal(launchedEnvironment.SPSS_HOME, 'C:\\Program Files\\IBM\\SPSS Statistics\\32');
+    assert.equal(launchedEnvironment.PYTHONUTF8, '1');
+    assert.equal(launchedEnvironment.PYTHONIOENCODING, 'utf-8');
+    const environmentKeys = Object.keys(launchedEnvironment).map((key) => key.toUpperCase());
+    for (const key of ['PYTHONHOME', 'PYTHONPATH', 'PYTHONSTARTUP', 'PYTHONUSERBASE', 'VIRTUAL_ENV', 'CONDA_PREFIX', 'CONDA_DEFAULT_ENV']) {
+      assert.ok(!environmentKeys.includes(key), `${key} must not leak into IBM's Python launcher`);
+    }
     await manager.stop();
+    assert.deepEqual(terminatedProcessTrees, [4242]);
+    assert.equal(child.killed, false);
+  });
+
+  it('falls back to direct child termination when Windows tree cleanup fails', async () => {
+    const child = new FakeBridgeProcess((request, process) => process.send(responseFor(request)));
+    const diagnostics: string[] = [];
+    const manager = new BridgeManager({
+      startupTimeoutMs: 100,
+      executionTimeoutMs: 100,
+      platform: 'win32',
+      environment: { ComSpec: 'C:\\Windows\\System32\\cmd.exe' },
+      processTreeTerminator: () => ({ success: false, error: 'simulated taskkill failure' }),
+      onDiagnostic: (message) => diagnostics.push(message),
+      spawner: () => child,
+    });
+    const windowsInstallation: SpssInstallation = {
+      version: '32',
+      installRoot: 'C:\\Program Files\\IBM\\SPSS Statistics\\32',
+      pythonLauncher: 'C:\\Program Files\\IBM\\SPSS Statistics\\32\\statisticspython3.bat',
+      launchMode: 'ibm-launcher',
+      environment: {},
+    };
+    await manager.start(windowsInstallation, 'C:\\Extension\\resources\\bridge\\spss_bridge.py');
+    await manager.stop();
+    assert.equal(child.killed, true);
+    assert.match(diagnostics.join('\n'), /process-tree cleanup failed.*simulated taskkill failure/iu);
+  });
+
+  it('rejects a startup handshake that does not confirm a live SPSS processor', async () => {
+    const { manager, process } = managerWith((request, child) => {
+      child.send({ ...responseFor(request), ok: true, engineAlive: false });
+    });
+    await assert.rejects(manager.start(installation, '/bridge.py'), /did not become ready/iu);
+    assert.equal(process.killed, true);
   });
 
   it('serializes dataset metadata and page reads through the same queue', async () => {

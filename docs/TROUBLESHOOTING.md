@@ -12,7 +12,7 @@ Enable `spssStudio.debugLogging`, retry **SPSS: Start Engine**, and inspect the 
 
 ## Startup or execution times out
 
-Increase `spssStudio.startupTimeoutSeconds` or `spssStudio.executionTimeoutSeconds`. On timeout, SPSS Studio terminates its own bridge because the processor's eventual state cannot be trusted; the next execution can start a new session.
+Increase `spssStudio.startupTimeoutSeconds` or `spssStudio.executionTimeoutSeconds`. The packaged startup default is 120 seconds. On Windows, a timed-out startup terminates the plugin-owned process tree and is retried once with a fresh bridge; deterministic configuration, import, protocol, and license failures are not retried. An execution timeout still terminates the bridge without retry because the submitted analysis may already have changed the SPSS session.
 
 ## A successful command has no output
 

@@ -59,7 +59,7 @@ function readConfiguration(): SpssRuntimeConfiguration {
   return {
     installPath: configuration.get<string>('installPath', ''),
     pythonLauncherPath: configuration.get<string>('pythonLauncherPath', ''),
-    startupTimeoutSeconds: configuration.get<number>('startupTimeoutSeconds', 45),
+    startupTimeoutSeconds: configuration.get<number>('startupTimeoutSeconds', 120),
     executionTimeoutSeconds: configuration.get<number>('executionTimeoutSeconds', 300),
     dataPreviewPageSize: configuration.get<number>('dataPreviewPageSize', 100),
     autoStart: configuration.get<boolean>('autoStart', true),

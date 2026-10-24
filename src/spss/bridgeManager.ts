@@ -1,4 +1,4 @@
-import { spawn, type SpawnOptionsWithoutStdio } from 'node:child_process';
+import { spawn, spawnSync, type SpawnOptionsWithoutStdio } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import path from 'node:path';
 import type { Readable, Writable } from 'node:stream';
@@ -32,6 +32,13 @@ export type ProcessSpawner = (
   options: SpawnOptionsWithoutStdio,
 ) => BridgeProcess;
 
+export interface ProcessTreeTerminationResult {
+  success: boolean;
+  error?: string;
+}
+
+export type ProcessTreeTerminator = (processId: number) => ProcessTreeTerminationResult;
+
 export interface BridgeManagerOptions {
   startupTimeoutMs: number;
   executionTimeoutMs: number;
@@ -42,6 +49,7 @@ export interface BridgeManagerOptions {
   spawner?: ProcessSpawner;
   platform?: NodeJS.Platform;
   environment?: NodeJS.ProcessEnv;
+  processTreeTerminator?: ProcessTreeTerminator;
 }
 
 interface PendingRequest {
@@ -50,12 +58,43 @@ interface PendingRequest {
   timer: NodeJS.Timeout;
 }
 
+const WINDOWS_PYTHON_ENVIRONMENT_OVERRIDES = new Set([
+  'CONDA_DEFAULT_ENV',
+  'CONDA_PREFIX',
+  'PYTHONHOME',
+  'PYTHONPATH',
+  'PYTHONSTARTUP',
+  'PYTHONUSERBASE',
+  'VIRTUAL_ENV',
+]);
+
 function defaultSpawner(
   executable: string,
   args: string[],
   options: SpawnOptionsWithoutStdio,
 ): BridgeProcess {
   return spawn(executable, args, { ...options, stdio: ['pipe', 'pipe', 'pipe'] }) as BridgeProcess;
+}
+
+function windowsProcessTreeTerminator(environment: NodeJS.ProcessEnv): ProcessTreeTerminator {
+  return (processId) => {
+    const systemRoot = environment.SystemRoot ?? environment.SYSTEMROOT;
+    const executable = systemRoot
+      ? path.win32.join(systemRoot, 'System32', 'taskkill.exe')
+      : 'taskkill.exe';
+    const result = spawnSync(executable, ['/PID', String(processId), '/T', '/F'], {
+      windowsHide: true,
+      timeout: 5_000,
+      stdio: 'ignore',
+      shell: false,
+    });
+    if (result.error) {
+      return { success: false, error: result.error.message };
+    }
+    return result.status === 0
+      ? { success: true }
+      : { success: false, error: `taskkill exited with status ${String(result.status)}` };
+  };
 }
 
 function isBridgeResponse(value: unknown): value is BridgeResponse {
@@ -77,6 +116,7 @@ export class BridgeManager {
   private readonly spawner: ProcessSpawner;
   private readonly platform: NodeJS.Platform;
   private readonly environment: NodeJS.ProcessEnv;
+  private readonly processTreeTerminator: ProcessTreeTerminator;
   private readonly pending = new Map<string, PendingRequest>();
   private child: BridgeProcess | undefined;
   private stdoutBuffer = '';
@@ -87,6 +127,7 @@ export class BridgeManager {
     this.spawner = options.spawner ?? defaultSpawner;
     this.platform = options.platform ?? process.platform;
     this.environment = options.environment ?? process.env;
+    this.processTreeTerminator = options.processTreeTerminator ?? windowsProcessTreeTerminator(this.environment);
   }
 
   public get state(): EngineState {
@@ -114,6 +155,25 @@ export class BridgeManager {
 
   private diagnostic(message: string): void {
     this.options.onDiagnostic?.(message);
+  }
+
+  private spawnEnvironment(installation: SpssInstallation): NodeJS.ProcessEnv {
+    const sanitizeWindowsPython = this.platform === 'win32' && installation.launchMode === 'ibm-launcher';
+    const environment = sanitizeWindowsPython
+      ? Object.fromEntries(
+        Object.entries(this.environment)
+          .filter(([key]) => !WINDOWS_PYTHON_ENVIRONMENT_OVERRIDES.has(key.toUpperCase())),
+      )
+      : { ...this.environment };
+    if (sanitizeWindowsPython) {
+      environment.PYTHONUTF8 = '1';
+      environment.PYTHONIOENCODING = 'utf-8';
+    }
+    return {
+      ...environment,
+      ...installation.environment,
+      ...(this.options.debug ? { SPSS_STUDIO_DEBUG: '1' } : {}),
+    };
   }
 
   private launchCommand(
@@ -152,11 +212,7 @@ export class BridgeManager {
     try {
       child = this.spawner(launch.executable, launch.args, {
         cwd: launch.cwd,
-        env: {
-          ...this.environment,
-          ...installation.environment,
-          ...(this.options.debug ? { SPSS_STUDIO_DEBUG: '1' } : {}),
-        },
+        env: this.spawnEnvironment(installation),
         windowsHide: true,
         shell: false,
       });
@@ -187,7 +243,7 @@ export class BridgeManager {
 
     try {
       const response = await this.request('ping', undefined, this.options.startupTimeoutMs);
-      if (!response.ok) {
+      if (!response.ok || response.engineAlive !== true) {
         throw new Error(response.error ?? 'IBM SPSS Statistics did not become ready.');
       }
       this.setState('ready');
@@ -371,7 +427,25 @@ export class BridgeManager {
       child.removeAllListeners();
       child.stdout.removeAllListeners();
       child.stderr.removeAllListeners();
-      child.kill('SIGTERM');
+      let treeTerminated = false;
+      if (this.platform === 'win32' && child.pid && Number.isSafeInteger(child.pid) && child.pid > 0) {
+        try {
+          const result = this.processTreeTerminator(child.pid);
+          treeTerminated = result.success;
+          if (!result.success) {
+            this.diagnostic(`Windows process-tree cleanup failed for PID ${String(child.pid)}: ${result.error ?? 'unknown error'}`);
+          }
+        } catch (error) {
+          this.diagnostic(`Windows process-tree cleanup failed for PID ${String(child.pid)}: ${error instanceof Error ? error.message : String(error)}`);
+        }
+      }
+      if (!treeTerminated) {
+        try {
+          child.kill('SIGTERM');
+        } catch (error) {
+          this.diagnostic(`SPSS bridge child termination failed: ${error instanceof Error ? error.message : String(error)}`);
+        }
+      }
     }
   }
 }

@@ -1,5 +1,5 @@
 import path from 'node:path';
-import { BridgeManager } from './bridgeManager';
+import { BridgeManager, type BridgeManagerOptions } from './bridgeManager';
 import { locateSpss } from './spssLocator';
 import type { SpssInstallation } from './platform/types';
 import type {
@@ -28,21 +28,73 @@ export interface EngineServiceCallbacks {
   onDiagnostic: (message: string) => void;
 }
 
+export interface EngineServiceDependencies {
+  locate: typeof locateSpss;
+  createManager: (options: BridgeManagerOptions) => BridgeManager;
+}
+
 export class EngineService {
   private manager: BridgeManager | undefined;
   private installation: SpssInstallation | undefined;
   private lastError: string | undefined;
+  private startPromise: Promise<BridgeResponse> | undefined;
+  private lifecycleTail: Promise<void> = Promise.resolve();
+  private readonly locate: typeof locateSpss;
+  private readonly createManager: (options: BridgeManagerOptions) => BridgeManager;
 
   public constructor(
     private readonly extensionRoot: string,
     private readonly callbacks: EngineServiceCallbacks,
-  ) {}
+    dependencies: Partial<EngineServiceDependencies> = {},
+  ) {
+    this.locate = dependencies.locate ?? locateSpss;
+    this.createManager = dependencies.createManager ?? ((options) => new BridgeManager(options));
+  }
 
   private bridgePath(): string {
     return path.join(this.extensionRoot, 'resources', 'bridge', 'spss_bridge.py');
   }
 
-  public async start(configuration: SpssRuntimeConfiguration): Promise<BridgeResponse> {
+  private static isRetryableStartupError(error: unknown): boolean {
+    const message = error instanceof Error ? error.message : String(error);
+    return /timed out|SPSS bridge exited|\b(?:EBUSY|EAGAIN|ETIMEDOUT)\b/iu.test(message);
+  }
+
+  private newManager(configuration: SpssRuntimeConfiguration): BridgeManager {
+    return this.createManager({
+      startupTimeoutMs: configuration.startupTimeoutSeconds * 1_000,
+      executionTimeoutMs: configuration.executionTimeoutSeconds * 1_000,
+      debug: configuration.debugLogging,
+      onStateChange: this.callbacks.onStateChange,
+      onDiagnostic: this.callbacks.onDiagnostic,
+    });
+  }
+
+  private enqueueLifecycle<T>(operation: () => Promise<T>): Promise<T> {
+    const pending = this.lifecycleTail.then(operation, operation);
+    this.lifecycleTail = pending.then(() => undefined, () => undefined);
+    return pending;
+  }
+
+  private trackStartup(pending: Promise<BridgeResponse>): Promise<BridgeResponse> {
+    this.startPromise = pending;
+    const clear = (): void => {
+      if (this.startPromise === pending) {
+        this.startPromise = undefined;
+      }
+    };
+    void pending.then(clear, clear);
+    return pending;
+  }
+
+  public start(configuration: SpssRuntimeConfiguration): Promise<BridgeResponse> {
+    if (this.startPromise) {
+      return this.startPromise;
+    }
+    return this.trackStartup(this.enqueueLifecycle(() => this.startFresh(configuration)));
+  }
+
+  private async startFresh(configuration: SpssRuntimeConfiguration): Promise<BridgeResponse> {
     if (this.manager && (this.manager.state === 'ready' || this.manager.state === 'running')) {
       const status = this.manager.status();
       return {
@@ -56,13 +108,12 @@ export class EngineService {
         engineAlive: status.engineAlive,
       };
     }
-
     if (this.manager) {
       await this.manager.stop();
       this.manager = undefined;
     }
 
-    this.installation = await locateSpss({
+    this.installation = await this.locate({
       options: {
         ...(configuration.installPath ? { explicitInstallPath: configuration.installPath } : {}),
         ...(configuration.pythonLauncherPath
@@ -76,21 +127,33 @@ export class EngineService {
       throw new Error(this.lastError);
     }
 
-    this.manager = new BridgeManager({
-      startupTimeoutMs: configuration.startupTimeoutSeconds * 1_000,
-      executionTimeoutMs: configuration.executionTimeoutSeconds * 1_000,
-      debug: configuration.debugLogging,
-      onStateChange: this.callbacks.onStateChange,
-      onDiagnostic: this.callbacks.onDiagnostic,
-    });
-    try {
-      const response = await this.manager.start(this.installation, this.bridgePath());
-      this.lastError = undefined;
-      return response;
-    } catch (error) {
-      this.lastError = error instanceof Error ? error.message : String(error);
-      throw error;
+    let lastStartupError: unknown;
+    for (let attempt = 1; attempt <= 2; attempt += 1) {
+      const manager = this.newManager(configuration);
+      this.manager = manager;
+      try {
+        const response = await manager.start(this.installation, this.bridgePath());
+        this.lastError = undefined;
+        return response;
+      } catch (error) {
+        lastStartupError = error;
+        this.lastError = error instanceof Error ? error.message : String(error);
+        const retry = attempt === 1 && EngineService.isRetryableStartupError(error);
+        try {
+          await manager.stop();
+        } catch (cleanupError) {
+          this.callbacks.onDiagnostic(`SPSS startup cleanup failed: ${cleanupError instanceof Error ? cleanupError.message : String(cleanupError)}`);
+        }
+        if (this.manager === manager) {
+          this.manager = undefined;
+        }
+        if (!retry) {
+          throw error;
+        }
+        this.callbacks.onDiagnostic(`Transient SPSS startup failure; retrying once: ${this.lastError}`);
+      }
     }
+    throw lastStartupError instanceof Error ? lastStartupError : new Error(String(lastStartupError));
   }
 
   public async run(
@@ -141,18 +204,28 @@ export class EngineService {
     return (await this.readyManager(configuration)).variableProfiles(variableNames);
   }
 
-  public async stop(): Promise<void> {
-    if (this.manager) {
-      await this.manager.stop();
+  public stop(): Promise<void> {
+    return this.enqueueLifecycle(() => this.stopFresh());
+  }
+
+  private async stopFresh(): Promise<void> {
+    const manager = this.manager;
+    if (manager) {
+      await manager.stop();
+      if (this.manager === manager) {
+        this.manager = undefined;
+      }
     } else {
       this.callbacks.onStateChange('stopped');
     }
   }
 
-  public async restart(configuration: SpssRuntimeConfiguration): Promise<BridgeResponse> {
-    await this.stop();
-    this.manager = undefined;
-    return this.start(configuration);
+  public restart(configuration: SpssRuntimeConfiguration): Promise<BridgeResponse> {
+    const pending = this.enqueueLifecycle(async () => {
+      await this.stopFresh();
+      return this.startFresh(configuration);
+    });
+    return this.trackStartup(pending);
   }
 
   public status(): EngineStatus & { installation?: SpssInstallation } {

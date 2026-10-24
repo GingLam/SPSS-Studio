@@ -320,6 +320,7 @@ class SpssBridgeTests(unittest.TestCase):
             fake_module = os.path.join(module_directory, "spss.py")
             with open(fake_module, "w", encoding="utf-8") as module_file:
                 module_file.write(
+                    "print('导入噪声')\n"
                     "alive = False\n"
                     "def StartSPSS():\n    global alive\n    alive = True\n"
                     "def StopSPSS():\n    global alive\n    alive = False\n"
@@ -328,6 +329,7 @@ class SpssBridgeTests(unittest.TestCase):
                 )
             environment = dict(os.environ)
             environment["PYTHONPATH"] = module_directory
+            environment["PYTHONIOENCODING"] = "cp1252"
             requests = "\n".join(
                 json.dumps(request)
                 for request in [
@@ -347,7 +349,7 @@ class SpssBridgeTests(unittest.TestCase):
             responses = [json.loads(line) for line in completed.stdout.splitlines()]
             self.assertEqual([response["id"] for response in responses], ["ping", "status", "stop"])
             self.assertTrue(responses[0]["engineAlive"])
-            self.assertEqual(completed.stderr, "")
+            self.assertEqual(completed.stderr, "导入噪声\n")
 
 
 if __name__ == "__main__":

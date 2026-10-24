@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.3.1 — 2026-10-24
+
+- Serialized engine lifecycle transitions and shared concurrent startup requests so Run, Data, Variables, and Explore cannot create competing SPSS bridge instances.
+- Required the version-matched IBM `statisticspython3.bat` launcher on Windows, rejected cross-installation launcher/root combinations, and removed the unvalidated direct-Python fallback on Windows.
+- Isolated IBM's launcher from inherited Python, Conda, and virtual-environment overrides; forced UTF-8 JSONL transport; and redirected import-time module output away from the protocol stream.
+- Added bounded Windows process-tree cleanup with a direct-child fallback, one cleanup-first retry for classified transient startup failures, and a strict live-processor startup handshake.
+- Increased the default startup timeout to 120 seconds while leaving deterministic path, import, protocol, and license failures non-retryable.
+- Added Windows locator, startup concurrency, environment isolation, process cleanup, retry classification, handshake, and encoding regression coverage.
+
 ## 1.3.0 — 2026-10-24
 
 - Added complete English and Simplified Chinese catalogs for SPSS Studio tabs, controls, progress states, summaries, tooltips, accessibility labels, and direct user feedback.

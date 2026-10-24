@@ -14,6 +14,13 @@ from collections import Counter
 from contextlib import redirect_stdout
 
 
+def _configure_utf8_stdio():
+    for stream, errors in ((sys.stdin, "strict"), (sys.stdout, "strict"), (sys.stderr, "backslashreplace")):
+        reconfigure = getattr(stream, "reconfigure", None)
+        if reconfigure is not None:
+            reconfigure(encoding="utf-8", errors=errors)
+
+
 def _quote_spss_string(value):
     return "'{}'".format(value.replace("'", "''"))
 
@@ -742,11 +749,13 @@ def _failure_response(request_id, error, duration_ms=0):
 
 
 def main():
+    _configure_utf8_stdio()
     debug = os.environ.get("SPSS_STUDIO_DEBUG") == "1"
     import_error = None
     bridge = None
     try:
-        import spss  # pylint: disable=import-outside-toplevel
+        with redirect_stdout(sys.stderr):
+            import spss  # pylint: disable=import-outside-toplevel
         bridge = SpssBridge(spss, debug=debug)
     except Exception as exc:
         import_error = "Unable to import IBM SPSS Python module: {}".format(exc)

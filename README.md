@@ -35,7 +35,7 @@ Contact：[linjing@nufe.edu.cn](mailto:linjing@nufe.edu.cn)
 
 IBM SPSS Statistics 27 has been tested on macOS. Windows discovery, Registry parsing, paths containing spaces, batch-launch transport, and paging behavior are covered by automated tests, but Windows execution against a real SPSS installation has not yet been validated.
 
-No separate Python installation is normally required. SPSS Studio prefers IBM's `statisticspython3` launcher and uses IBM's bundled Python only as a fallback.
+No separate Python installation is normally required. On Windows, SPSS Studio requires IBM's `statisticspython3.bat` launcher so that the Python runtime and SPSS installation remain version-matched; it does not silently fall back to a generic Python executable. On macOS, IBM's bundled Python remains available as a compatibility fallback when the IBM launcher is absent.
 
 ## Installation
 
@@ -152,8 +152,8 @@ Model output is untrusted and can be wrong. Inspect generated syntax before runn
 | Setting | Default | Purpose |
 | --- | --- | --- |
 | `spssStudio.installPath` | empty | IBM SPSS Statistics installation root; empty enables automatic discovery. |
-| `spssStudio.pythonLauncherPath` | empty | IBM `statisticspython3` launcher; empty enables automatic discovery. |
-| `spssStudio.startupTimeoutSeconds` | `45` | Maximum engine startup time. |
+| `spssStudio.pythonLauncherPath` | empty | IBM `statisticspython3` launcher; on Windows this must be `statisticspython3.bat` inside the matching installation root. Empty enables automatic discovery. |
+| `spssStudio.startupTimeoutSeconds` | `120` | Maximum engine startup time. One retry is attempted only for a classified transient startup failure. |
 | `spssStudio.executionTimeoutSeconds` | `300` | Maximum time for one execution request. |
 | `spssStudio.dataPreviewPageSize` | `100` | Active Dataset rows per page: 25, 50, 100, 200, or 500. |
 | `spssStudio.autoStart` | `true` | Start the engine when syntax is first executed. |
@@ -197,6 +197,7 @@ SPSS Studio is not an LSP or a full semantic validator. It does not provide stat
 
 | Version | Date | Update summary |
 | --- | --- | --- |
+| 1.3.1 | 2026-10-24 | Strengthened Windows SPSS startup with serialized lifecycle transitions, strict version-matched IBM launcher discovery, isolated UTF-8 bridge environments, process-tree cleanup, a bounded transient retry, and a 120-second default startup timeout. |
 | 1.3.0 | 2026-10-24 | Localized the complete SPSS Studio interface, editor and context commands, progress states, tooltips, provider presentation, and direct user feedback according to the VS Code display language, while keeping Chat response language independent. |
 | 1.2.0 | 2026-10-04 | Reordered the Studio tabs as Variables, Data, Output, and Chat without changing their behavior, and standardized the Variables Explore in-progress label as English. |
 | 1.1.0 | 2026-10-03 | Added a complete English/Chinese Quick Start page selected from the VS Code display language, a prominent persisted opt-out for automatic display after future updates, and a permanent localized book action in the `.sps` editor title bar. |

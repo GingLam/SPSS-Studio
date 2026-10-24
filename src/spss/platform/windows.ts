@@ -31,17 +31,31 @@ function findVersionedChildren(fs: FileSystemAdapter, root: string): string[] {
   ];
 }
 
-function findSitePackages(fs: FileSystemAdapter, pythonHome: string): string | undefined {
-  const lib = path.win32.join(pythonHome, 'Lib');
-  const direct = path.win32.join(lib, 'site-packages');
-  if (fs.isDirectory(direct)) {
-    return direct;
+function normalizedLauncher(launcher: string): string | undefined {
+  const normalized = path.win32.normalize(launcher);
+  return path.win32.isAbsolute(normalized)
+    && path.win32.basename(normalized).toLowerCase() === 'statisticspython3.bat'
+    ? normalized
+    : undefined;
+}
+
+function rootFromLauncher(launcher: string): string | undefined {
+  const normalized = normalizedLauncher(launcher);
+  if (!normalized) {
+    return undefined;
   }
-  return fs
-    .readDirectory(lib)
-    .filter((entry) => entry.isDirectory && /^python\d+(?:\.\d+)+$/iu.test(entry.name))
-    .map((entry) => path.win32.join(lib, entry.name, 'site-packages'))
-    .find((candidate) => fs.isDirectory(candidate));
+  const parent = path.win32.dirname(normalized);
+  return path.win32.basename(parent).toLowerCase() === 'bin'
+    ? path.win32.dirname(parent)
+    : parent;
+}
+
+function launcherBelongsToRoot(root: string, launcher: string): boolean {
+  const normalizedLauncherPath = path.win32.normalize(launcher).toLowerCase();
+  return [
+    path.win32.join(root, 'statisticspython3.bat'),
+    path.win32.join(root, 'bin', 'statisticspython3.bat'),
+  ].some((candidate) => path.win32.normalize(candidate).toLowerCase() === normalizedLauncherPath);
 }
 
 function installationFromRoot(
@@ -50,20 +64,17 @@ function installationFromRoot(
   explicitLauncher?: string,
 ): SpssInstallation | undefined {
   const root = path.win32.normalize(installRoot);
+  const configuredLauncher = explicitLauncher ? normalizedLauncher(explicitLauncher) : undefined;
+  if (explicitLauncher && (!configuredLauncher || !launcherBelongsToRoot(root, configuredLauncher))) {
+    return undefined;
+  }
   const launchers = [
-    explicitLauncher,
+    configuredLauncher,
     path.win32.join(root, 'statisticspython3.bat'),
     path.win32.join(root, 'bin', 'statisticspython3.bat'),
   ].filter((candidate): candidate is string => Boolean(candidate));
   const launcher = launchers.find((candidate) => fs.isFile(candidate));
-  const pythonHomeCandidates = [
-    path.win32.join(root, 'Python3'),
-    path.win32.join(root, 'Resources', 'Python3'),
-  ];
-  const pythonHome = pythonHomeCandidates.find((candidate) => fs.isDirectory(candidate));
-  const directPython = pythonHome ? path.win32.join(pythonHome, 'python.exe') : undefined;
-  const pythonLauncher = launcher ?? (directPython && fs.isFile(directPython) ? directPython : undefined);
-  if (!pythonLauncher) {
+  if (!launcher) {
     return undefined;
   }
 
@@ -71,21 +82,12 @@ function installationFromRoot(
   const statsExecutable = statsCandidates.find((candidate) => fs.isFile(candidate));
   const version = versionFromPath(root);
   const environment: Record<string, string> = { SPSS_HOME: root };
-  const launchMode = launcher ? 'ibm-launcher' : 'direct-python';
-  if (launchMode === 'direct-python' && pythonHome) {
-    environment.PYTHONHOME = pythonHome;
-    const sitePackages = findSitePackages(fs, pythonHome);
-    if (sitePackages) {
-      environment.PYTHONPATH = sitePackages;
-    }
-  }
   return {
     ...(version ? { version } : {}),
     installRoot: root,
     ...(statsExecutable ? { statsExecutable } : {}),
-    pythonLauncher,
-    ...(pythonHome ? { pythonHome } : {}),
-    launchMode,
+    pythonLauncher: launcher,
+    launchMode: 'ibm-launcher',
     environment,
   };
 }
@@ -103,6 +105,12 @@ export async function locateWindows(
   if (options.explicitInstallPath) {
     return installationFromRoot(fs, options.explicitInstallPath, options.explicitPythonLauncherPath);
   }
+  if (options.explicitPythonLauncherPath) {
+    const installRoot = rootFromLauncher(options.explicitPythonLauncherPath);
+    return installRoot
+      ? installationFromRoot(fs, installRoot, options.explicitPythonLauncherPath)
+      : undefined;
+  }
 
   const registryRoots = await registry.getInstallRoots();
   const programFiles = uniqueCaseInsensitive(
@@ -119,7 +127,7 @@ export async function locateWindows(
     ...commonRoots.flatMap((root) => findVersionedChildren(fs, root)),
   ]);
   const installations = candidates
-    .map((candidate) => installationFromRoot(fs, candidate, options.explicitPythonLauncherPath))
+    .map((candidate) => installationFromRoot(fs, candidate))
     .filter((installation): installation is SpssInstallation => installation !== undefined)
     .sort((left, right) => numericVersion(right) - numericVersion(left));
   return installations[0];
