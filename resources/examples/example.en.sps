@@ -1,23 +1,23 @@
-* SPSS Studio Example — 60 fictional cases, no real people.
+* SPSS Studio Example.
 * 1. Select this GET FILE command and click Run, or press Ctrl+Enter (Cmd+Enter on Mac).
-* The Example button fills in the SAV path automatically. Run All runs every section.
+* The Load Example button fills in the SAV path automatically. Run All runs every section.
 * Reading this file again restores the original simulated observations.
-GET FILE='spss-studio-example.sav'.
+GET FILE="spss-studio-example.sav".
 
 * 2. Open Variables and Data in Studio. Double-click a variable name to insert it.
 VARIABLE LABELS
- id 'Case identifier'
- age 'Age in years'
- gender 'Simulated gender group'
- edu 'Years of education'
- income 'Simulated monthly income'
- hours 'Weekly working hours'.
-VALUE LABELS gender 0 'Group A' 1 'Group B'.
+ id "Case identifier"
+ age "Age in years"
+ gender "Simulated gender group"
+ edu "Years of education"
+ income "Simulated monthly income"
+ hours "Weekly working hours".
+VALUE LABELS gender 0 "Group A" 1 "Group B".
 VARIABLE LEVEL id gender (NOMINAL) age edu income hours (SCALE).
 FORMATS id (F3.0) age (F2.0) gender (F1.0) edu (F2.0) income (F8.2) hours (F4.1).
 
 * 3. Inspect the dictionary, categories, and descriptive statistics.
-CODEBOOK id age gender edu income hours.
+CODEBOOK  age gender edu income hours.
 FREQUENCIES VARIABLES=gender.
 DESCRIPTIVES VARIABLES=age edu income hours
  /STATISTICS=MEAN STDDEV MIN MAX.

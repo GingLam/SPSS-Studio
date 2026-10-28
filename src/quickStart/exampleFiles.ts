@@ -3,7 +3,7 @@ import { constants } from 'node:fs';
 import path from 'node:path';
 import type { QuickStartLanguage } from './quickStartState';
 
-const EXAMPLE_REVISION = '1.4.1';
+const EXAMPLE_REVISION = '1.4.1-r2';
 
 /** Prepare editable examples without modifying the extension or a research folder. */
 export async function prepareExample(extensionRoot: string, storageRoot: string, language: QuickStartLanguage): Promise<string> {
@@ -17,10 +17,10 @@ export async function prepareExample(extensionRoot: string, storageRoot: string,
   try { await fs.access(target); return target; }
   catch (error) { if (!(error instanceof Error && 'code' in error && error.code === 'ENOENT')) { throw error; } }
   const source = await fs.readFile(path.join(bundled, `example.${language}.sps`), 'utf8');
-  const reference = "GET FILE='spss-studio-example.sav'.";
+  const reference = 'GET FILE="spss-studio-example.sav".';
   if (source.split(reference).length !== 2) { throw new Error('Invalid bundled SPSS example reference.'); }
-  const resolved = data.replaceAll('\\', '/').replaceAll("'", "''");
-  try { await fs.writeFile(target, source.replace(reference, `GET FILE='${resolved}'.`), { encoding: 'utf8', flag: 'wx' }); }
+  const resolved = data.replaceAll('\\', '/').replaceAll('"', '""');
+  try { await fs.writeFile(target, source.replace(reference, `GET FILE="${resolved}".`), { encoding: 'utf8', flag: 'wx' }); }
   catch (error) { if (!isAlreadyPresent(error)) { throw error; } }
   return target;
 }

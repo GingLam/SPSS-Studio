@@ -1,23 +1,23 @@
-* SPSS Studio 示例——60 个原创模拟个案，不含真实个人信息.
+* SPSS Studio 示例.
 * 1. 选中下面的 GET FILE 命令，点击“运行”，或按 Ctrl+Enter（Mac 为 Cmd+Enter）.
-* “示例”按钮会自动填写 SAV 路径；点击“全部运行”可执行所有章节.
+* “一键加载示例”按钮会自动填写 SAV 路径；点击“全部运行”可执行所有章节.
 * 再次读取此文件可恢复最初的模拟观测数据.
-GET FILE='spss-studio-example.sav'.
+GET FILE="spss-studio-example.sav".
 
 * 2. 在 Studio 中打开“变量”和“数据”；双击变量名可将其插入语法编辑位置.
 VARIABLE LABELS
- id '个案编号'
- age '年龄（岁）'
- gender '模拟性别组别'
- edu '受教育年限'
- income '模拟月收入'
- hours '每周工作时长（小时）'.
-VALUE LABELS gender 0 '组别 A' 1 '组别 B'.
+ id "个案编号"
+ age "年龄（岁）"
+ gender "模拟性别组别"
+ edu "受教育年限"
+ income "模拟月收入"
+ hours "每周工作时长（小时）".
+VALUE LABELS gender 0 "组别 A" 1 "组别 B".
 VARIABLE LEVEL id gender (NOMINAL) age edu income hours (SCALE).
 FORMATS id (F3.0) age (F2.0) gender (F1.0) edu (F2.0) income (F8.2) hours (F4.1).
 
 * 3. 查看变量字典、类别分布和描述统计.
-CODEBOOK id age gender edu income hours.
+CODEBOOK  age gender edu income hours.
 FREQUENCIES VARIABLES=gender.
 DESCRIPTIVES VARIABLES=age edu income hours
  /STATISTICS=MEAN STDDEV MIN MAX.

@@ -81,7 +81,7 @@ describe('SPSS Studio real SPSS Extension Host', () => {
     const example = vscode.window.activeTextEditor?.document;
     assert.ok(example);
     assert.equal(example.languageId, 'spss');
-    assert.match(example.getText(), /GET FILE='/u);
+    assert.match(example.getText(), /GET FILE="/u);
     assert.equal(api.getOutputHistoryCount(), 2, 'Example must not auto-run');
     await vscode.commands.executeCommand('spssStudio.runFile');
     assert.equal(api.getVariableCount(), 6);

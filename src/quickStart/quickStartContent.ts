@@ -213,8 +213,8 @@ export function buildQuickStartHtml(options: QuickStartHtmlOptions): string {
     <button id="configure-runtime">${options.language === 'zh-cn' ? '一键检测并配置 SPSS' : 'Detect and Configure SPSS'}</button></section>` : ''}
     <section class="setup-entry">
       <h2>${options.language === 'zh-cn' ? '内置示例' : 'Built-in Example'}</h2>
-      <p>${options.language === 'zh-cn' ? '打开随插件内置的模拟 SAV 数据与中文 SPS：导入、描述统计、绘图、t 检验和回归。打开后可逐段运行，不会自动执行或发送 AI 请求。' : 'Open the bundled simulated SAV data and English SPS: import, descriptive statistics, charts, t test, and regression. Run sections at your own pace; opening the example executes nothing and sends no AI requests.'}</p>
-      <button id="open-example">${options.language === 'zh-cn' ? '示例' : 'Example'}</button>
+      <p>${options.language === 'zh-cn' ? '内置 60 条模拟个案，包含编号、年龄、性别、教育年限、月收入和每周工时。配套语法演示数据导入、变量设置、描述统计、条形图、散点图、t 检验和回归分析。' : 'Includes 60 simulated cases with ID, age, gender, years of education, monthly income, and weekly working hours. The tutorial covers data import, variable setup, descriptive statistics, bar and scatter charts, t tests, and regression.'}</p>
+      <button id="open-example">${options.language === 'zh-cn' ? '一键加载示例' : 'Load Example'}</button>
     </section>
     <aside class="update-preference" aria-labelledby="update-preference-title">
       <h2 id="update-preference-title">${copy.preferenceTitle}</h2>

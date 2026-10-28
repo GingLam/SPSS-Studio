@@ -151,7 +151,7 @@ Model output is untrusted and can be wrong. Inspect generated syntax before runn
 
 ### Built-in examples and session data
 
-Quick Start includes **Example** (or **示例** in a Chinese VS Code interface). It opens an English or Chinese `.sps` tutorial together with an already packaged, original `.sav` dataset: 60 fictional cases and `id age gender edu income hours`. No download or data generation is needed. The tutorial demonstrates import, labels, codebook, descriptive statistics, bar/scatter charts, an independent-samples t test, regression, and Studio/Chat interactions. Opening it does not run syntax or contact an AI provider. Editable copies stay in the extension's private example directory, and reopening preserves edits.
+Quick Start includes **Load Example** (or **一键加载示例** in a Chinese VS Code interface). It opens an English or Chinese `.sps` tutorial together with an already packaged, original `.sav` dataset: 60 fictional cases and `id age gender edu income hours`. No download or data generation is needed. The tutorial demonstrates import, labels, codebook, descriptive statistics, bar/scatter charts, an independent-samples t test, regression, and Studio/Chat interactions. Opening it does not run syntax or contact an AI provider. Editable copies stay in the extension's private example directory, and reopening preserves edits.
 
 The Output toolbar's **Clear**, between **Print** and **History**, discards all loaded datasets and unsaved changes in this Studio engine after confirmation. It preserves source files, output history, and Chat. The Runs sidebar's separate Clear still clears output history only.
 
