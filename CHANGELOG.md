@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.4.0 — 2026-10-28
+
+- Added a localized Detect and Configure SPSS wizard, a prominent Windows Quick Start action, a permanent command, and a Windows execution-failure entry point.
+- Fixed Windows CMD outer quoting and verbatim argument transport, kept delayed expansion off, and passed launcher/script paths through the child environment.
+- Expanded Windows discovery to installation/uninstall registration, Start Menu shortcuts, and bounded custom/local-drive directories; retained manual folder selection and executable-version inspection.
+- Verified setup using isolated synthetic data through the production bridge: startup, calculation, expected variables/rows/mean, native HTML, and graceful shutdown. Revalidated the effective saved configuration before reporting success.
+- Saved only required SPSS Studio settings through VS Code APIs, confirmed targeted workspace override repairs, restored prior values on failure/cancellation, and journaled interrupted changes for recovery. Existing SPSS sessions must be stopped manually before setup.
+- Added concise desktop TXT reports on Windows and bounded private diagnostics, with credential-shaped text redaction. No global environment edits, IBM file edits, AI requests, or new system runtime are required.
+- Preserved macOS installation discovery and launch behavior, added UTF-8 chunk-safe decoding, and made real Windows CMD acceptance tests explicitly pending on non-Windows hosts. Windows real-SPSS acceptance is required before broad distribution.
+
 ## 1.3.1 — 2026-10-24
 
 - Serialized engine lifecycle transitions and shared concurrent startup requests so Run, Data, Variables, and Explore cannot create competing SPSS bridge instances.

@@ -92,6 +92,20 @@ class SilentBridgeProcess extends EventEmitter implements BridgeProcess {
 }
 
 describe('EngineService startup lifecycle', () => {
+  it('reserves setup exclusively and refuses to replace an active SPSS session', async () => {
+    const service = new EngineService('/extension', { onStateChange: () => undefined, onDiagnostic: () => undefined }, {
+      locate: () => Promise.resolve(installation),
+      createManager: (options) => new BridgeManager({ ...options, platform: 'darwin', spawner: () => new ResponsiveBridgeProcess() }),
+    });
+    const release = service.reserveForSetup();
+    assert.throws(() => service.start(configuration), /setup is in progress/u);
+    assert.throws(() => service.reserveForSetup(), /SETUP_ENGINE_BUSY/u);
+    release();
+    await service.start(configuration);
+    assert.throws(() => service.reserveForSetup(), /SETUP_ENGINE_BUSY/u);
+    assert.equal(service.status().engineAlive, true);
+    await service.stop();
+  });
   it('shares one in-flight startup across concurrent runtime requests', async () => {
     let releaseLocation: ((value: SpssInstallation) => void) | undefined;
     let locateCount = 0;

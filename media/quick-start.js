@@ -4,6 +4,9 @@
   const vscode = acquireVsCodeApi();
   const checkbox = document.getElementById('suppress-after-updates');
   const status = document.getElementById('preference-status');
+  document.getElementById('configure-runtime')?.addEventListener('click', () => {
+    vscode.postMessage({ type: 'configureRuntime' });
+  });
   if (!(checkbox instanceof HTMLInputElement) || !status) {
     return;
   }

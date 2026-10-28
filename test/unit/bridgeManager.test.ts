@@ -224,6 +224,7 @@ describe('BridgeManager', () => {
     let launchedExecutable = '';
     let launchedArguments: string[] = [];
     let launchedEnvironment: NodeJS.ProcessEnv | undefined;
+    let verbatimArguments: boolean | undefined;
     const terminatedProcessTrees: number[] = [];
     const manager = new BridgeManager({
       startupTimeoutMs: 100,
@@ -248,6 +249,7 @@ describe('BridgeManager', () => {
         launchedExecutable = executable;
         launchedArguments = args;
         launchedEnvironment = options.env;
+        verbatimArguments = options.windowsVerbatimArguments;
         return child;
       },
     });
@@ -261,12 +263,15 @@ describe('BridgeManager', () => {
     await manager.start(windowsInstallation, 'C:\\Extension Path\\resources\\bridge\\spss_bridge.py');
     await manager.run('HOST COMMAND=["not a shell argument"].', outputTarget);
     assert.equal(launchedExecutable, 'C:\\Windows\\System32\\cmd.exe');
-    assert.deepEqual(launchedArguments.slice(0, 3), ['/d', '/s', '/c']);
-    assert.match(launchedArguments[3] ?? '', /statisticspython3\.bat/u);
+    assert.deepEqual(launchedArguments.slice(0, 4), ['/d', '/s', '/v:off', '/c']);
+    assert.equal(verbatimArguments, true);
+    assert.equal(launchedArguments[4], '""%SPSS_STUDIO_LAUNCHER%" "%SPSS_STUDIO_BRIDGE%""');
     assert.ok(!launchedArguments.join(' ').includes('HOST COMMAND'));
     assert.ok(launchedEnvironment);
     assert.equal(launchedEnvironment.PATH, 'C:\\Windows\\System32');
     assert.equal(launchedEnvironment.SPSS_HOME, 'C:\\Program Files\\IBM\\SPSS Statistics\\32');
+    assert.equal(launchedEnvironment.SPSS_STUDIO_LAUNCHER, windowsInstallation.pythonLauncher);
+    assert.equal(launchedEnvironment.SPSS_STUDIO_BRIDGE, 'C:\\Extension Path\\resources\\bridge\\spss_bridge.py');
     assert.equal(launchedEnvironment.PYTHONUTF8, '1');
     assert.equal(launchedEnvironment.PYTHONIOENCODING, 'utf-8');
     const environmentKeys = Object.keys(launchedEnvironment).map((key) => key.toUpperCase());
@@ -341,5 +346,39 @@ describe('BridgeManager', () => {
       process.requests.filter((request) => ['run', 'datasetInfo', 'datasetPage', 'variableProfiles'].includes(request.op)).map((request) => request.op),
       ['run', 'datasetInfo', 'datasetPage', 'variableProfiles'],
     );
+  });
+
+  it('preserves Chinese text split across UTF-8 buffer boundaries', async () => {
+    const { manager } = managerWith((request, child) => {
+      const bytes = Buffer.from(JSON.stringify({ ...responseFor(request), output: '中文教育' }) + '\n');
+      for (const byte of bytes) { child.stdout.write(Buffer.from([byte])); }
+    });
+    assert.equal((await manager.start(installation, '/bridge.py')).output, '中文教育');
+    await manager.stop();
+  });
+
+  it('decodes a Chinese Windows CMD failure and includes it in the error', async () => {
+    const { manager, process } = managerWith((_request, child) => {
+      setImmediate(() => {
+        child.stderr.write(Buffer.from([0xb2, 0xbb, 0xca, 0xc7]));
+        child.emit('close', 1, null);
+      });
+    }, { platform: 'win32' });
+    await assert.rejects(manager.start(installation, '/bridge.py'), /不是/u);
+    assert.equal(process.requests.length, 1);
+  });
+
+  it('does not accept strict shutdown after the bridge has already exited', async () => {
+    const { manager, process } = managerWith((request, child) => child.send(responseFor(request)));
+    await manager.start(installation, '/bridge.py');
+    process.emit('close', 1, null);
+    await assert.rejects(manager.stop(true), /before graceful shutdown/u);
+  });
+
+  it('rejects literal percent expansion before passing a path to Windows CMD', async () => {
+    const { manager, process } = managerWith((request, child) => child.send(responseFor(request)), { platform: 'win32' });
+    await assert.rejects(manager.start({ ...installation, pythonLauncher: 'D:\\%PATH%\\statisticspython3.bat' }, 'C:\\bridge.py'), /literal %/u);
+    assert.equal(process.requests.length, 0);
+    assert.equal(manager.state, 'error');
   });
 });

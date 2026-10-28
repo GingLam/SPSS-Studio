@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import path from 'node:path';
 import { locateMacOS } from '../../src/spss/platform/macos';
 import type { DirectoryEntry, FileSystemAdapter, RegistryProvider } from '../../src/spss/platform/types';
-import { locateWindows } from '../../src/spss/platform/windows';
+import { discoverWindowsInstallations, locateWindows } from '../../src/spss/platform/windows';
 
 class FakeFileSystem implements FileSystemAdapter {
   private readonly files = new Map<string, string>();
@@ -234,5 +234,20 @@ describe('Windows SPSS locator', () => {
     const fake = new FakeFileSystem(path.win32, [], []);
     const result = await locateWindows({}, fake, new FakeRegistry([]), { ProgramFiles: 'C:\\Program Files' });
     assert.equal(result, undefined);
+  });
+
+  it('finds custom roots during setup even when saved paths are stale', async () => {
+    const root = 'D:\\SPSS';
+    const fake = new FakeFileSystem(path.win32, [root], [`${root}\\statisticspython3.bat`, `${root}\\stats.exe`]);
+    const options = { explicitInstallPath: 'C:\\RemovedSPSS' };
+    assert.equal(await locateWindows(options, fake, new FakeRegistry([]), {}), undefined);
+    const results = await discoverWindowsInstallations(options, fake, new FakeRegistry([]), {}, [root]);
+    assert.equal(results[0]?.installRoot, root);
+  });
+
+  it('rejects a residual launcher without the SPSS executable', async () => {
+    const root = 'D:\\SPSS';
+    const fake = new FakeFileSystem(path.win32, [root], [`${root}\\statisticspython3.bat`]);
+    assert.equal(await locateWindows({ explicitInstallPath: root }, fake, new FakeRegistry([]), {}), undefined);
   });
 });

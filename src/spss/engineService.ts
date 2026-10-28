@@ -39,6 +39,7 @@ export class EngineService {
   private lastError: string | undefined;
   private startPromise: Promise<BridgeResponse> | undefined;
   private lifecycleTail: Promise<void> = Promise.resolve();
+  private setupReserved = false;
   private readonly locate: typeof locateSpss;
   private readonly createManager: (options: BridgeManagerOptions) => BridgeManager;
 
@@ -57,7 +58,32 @@ export class EngineService {
 
   private static isRetryableStartupError(error: unknown): boolean {
     const message = error instanceof Error ? error.message : String(error);
+    if (/Unable to import|license|licen[cs]ing|not recognized|不是内部|cannot find|not found|Malformed|Invalid characters/iu.test(message)) {
+      return false;
+    }
     return /timed out|SPSS bridge exited|\b(?:EBUSY|EAGAIN|ETIMEDOUT)\b/iu.test(message);
+  }
+
+  public reserveForSetup(): () => void {
+    if (this.setupReserved || this.startPromise || this.manager?.status().engineAlive) {
+      throw new Error('SETUP_ENGINE_BUSY');
+    }
+    this.setupReserved = true;
+    return () => { this.setupReserved = false; };
+  }
+
+  private requireNotConfiguring(): void {
+    if (this.setupReserved) {
+      throw new Error('SPSS setup is in progress. Wait for setup to finish before running syntax.');
+    }
+  }
+
+  public completeSetup(installation: SpssInstallation): void {
+    if (!this.setupReserved || this.manager?.status().engineAlive) { throw new Error('SETUP_ENGINE_BUSY'); }
+    this.manager = undefined;
+    this.installation = installation;
+    this.lastError = undefined;
+    this.callbacks.onStateChange('stopped');
   }
 
   private newManager(configuration: SpssRuntimeConfiguration): BridgeManager {
@@ -88,6 +114,7 @@ export class EngineService {
   }
 
   public start(configuration: SpssRuntimeConfiguration): Promise<BridgeResponse> {
+    this.requireNotConfiguring();
     if (this.startPromise) {
       return this.startPromise;
     }
@@ -173,6 +200,7 @@ export class EngineService {
   }
 
   private async readyManager(configuration: SpssRuntimeConfiguration): Promise<BridgeManager> {
+    this.requireNotConfiguring();
     if (!this.manager || (this.manager.state !== 'ready' && this.manager.state !== 'running')) {
       if (!configuration.autoStart) {
         throw new Error('SPSS engine is stopped. Run “SPSS: Start Engine” or enable spssStudio.autoStart.');
@@ -205,6 +233,7 @@ export class EngineService {
   }
 
   public stop(): Promise<void> {
+    this.requireNotConfiguring();
     return this.enqueueLifecycle(() => this.stopFresh());
   }
 
@@ -221,6 +250,7 @@ export class EngineService {
   }
 
   public restart(configuration: SpssRuntimeConfiguration): Promise<BridgeResponse> {
+    this.requireNotConfiguring();
     const pending = this.enqueueLifecycle(async () => {
       await this.stopFresh();
       return this.startFresh(configuration);

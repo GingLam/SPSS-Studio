@@ -4,7 +4,7 @@ import type { FileSystemAdapter, LocatorOptions, RegistryProvider, SpssInstallat
 function uniqueCaseInsensitive(values: string[]): string[] {
   const seen = new Set<string>();
   return values.filter((value) => {
-    const key = path.win32.normalize(value).toLowerCase();
+    const key = path.win32.normalize(value).replace(/[\\/]+$/u, '').toLowerCase();
     if (seen.has(key)) {
       return false;
     }
@@ -63,7 +63,9 @@ function installationFromRoot(
   installRoot: string,
   explicitLauncher?: string,
 ): SpssInstallation | undefined {
-  const root = path.win32.normalize(installRoot);
+  let root = path.win32.normalize(installRoot.trim().replace(/^"(.*)"$/u, '$1'));
+  if (!path.win32.isAbsolute(root)) { return undefined; }
+  root = path.win32.resolve(root);
   const configuredLauncher = explicitLauncher ? normalizedLauncher(explicitLauncher) : undefined;
   if (explicitLauncher && (!configuredLauncher || !launcherBelongsToRoot(root, configuredLauncher))) {
     return undefined;
@@ -80,6 +82,7 @@ function installationFromRoot(
 
   const statsCandidates = [path.win32.join(root, 'stats.exe'), path.win32.join(root, 'bin', 'stats.exe')];
   const statsExecutable = statsCandidates.find((candidate) => fs.isFile(candidate));
+  if (!statsExecutable) { return undefined; }
   const version = versionFromPath(root);
   const environment: Record<string, string> = { SPSS_HOME: root };
   return {
@@ -112,6 +115,21 @@ export async function locateWindows(
       : undefined;
   }
 
+  return (await discoverWindowsInstallations(options, fs, registry, environment))[0];
+}
+
+export async function discoverWindowsInstallations(
+  options: LocatorOptions,
+  fs: FileSystemAdapter,
+  registry: RegistryProvider,
+  environment: NodeJS.ProcessEnv,
+  additionalRoots: readonly string[] = [],
+): Promise<SpssInstallation[]> {
+  const explicit = options.explicitInstallPath
+    ? installationFromRoot(fs, options.explicitInstallPath, options.explicitPythonLauncherPath)
+    : options.explicitPythonLauncherPath
+      ? installationFromRoot(fs, rootFromLauncher(options.explicitPythonLauncherPath) ?? '', options.explicitPythonLauncherPath)
+      : undefined;
   const registryRoots = await registry.getInstallRoots();
   const programFiles = uniqueCaseInsensitive(
     [environment.ProgramFiles, environment.ProgramW6432, environment['ProgramFiles(x86)']]
@@ -124,11 +142,15 @@ export async function locateWindows(
   ]);
   const candidates = uniqueCaseInsensitive([
     ...registryRoots,
+    ...additionalRoots,
     ...commonRoots.flatMap((root) => findVersionedChildren(fs, root)),
   ]);
   const installations = candidates
     .map((candidate) => installationFromRoot(fs, candidate))
     .filter((installation): installation is SpssInstallation => installation !== undefined)
     .sort((left, right) => numericVersion(right) - numericVersion(left));
-  return installations[0];
+  return [
+    ...(explicit ? [explicit] : []),
+    ...installations.filter((item) => item.installRoot.toLowerCase() !== explicit?.installRoot.toLowerCase()),
+  ];
 }

@@ -73,5 +73,8 @@ describe('Quick Start', () => {
     assert.match(chinese, /第一次执行时[\s\S]*SPSS Studio/u);
     assert.match(chinese, /default-src 'none'/u);
     assert.match(chinese, /script-src 'nonce-test-nonce'/u);
+    assert.doesNotMatch(chinese, /id="configure-runtime"/u);
+    assert.match(buildQuickStartHtml({ ...common, language: 'zh-cn', suppressAfterUpdates: false, isWindows: true }), /id="configure-runtime">一键检测并配置 SPSS/u);
+    assert.equal(isQuickStartMessage({ type: 'configureRuntime' }), true);
   });
 });

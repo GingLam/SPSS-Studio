@@ -33,7 +33,7 @@ Contact：[linjing@nufe.edu.cn](mailto:linjing@nufe.edu.cn)
 - A locally installed and licensed IBM SPSS Statistics with the Python Integration Package.
 - A trusted VS Code workspace for execution and Active Dataset access.
 
-IBM SPSS Statistics 27 has been tested on macOS. Windows discovery, Registry parsing, paths containing spaces, batch-launch transport, and paging behavior are covered by automated tests, but Windows execution against a real SPSS installation has not yet been validated.
+IBM SPSS Statistics 27 has been tested on macOS. Version 1.4.0 adds a built-in setup wizard and a Windows CMD transport fix. Windows-specific command tests are included but skipped on macOS; execution against a real Windows SPSS installation remains pending user acceptance. A passed mock test is not a real Windows acceptance result.
 
 No separate Python installation is normally required. On Windows, SPSS Studio requires IBM's `statisticspython3.bat` launcher so that the Python runtime and SPSS installation remain version-matched; it does not silently fall back to a generic Python executable. On macOS, IBM's bundled Python remains available as a compatibility fallback when the IBM launcher is absent.
 
@@ -149,6 +149,12 @@ Model output is untrusted and can be wrong. Inspect generated syntax before runn
 
 ## Configuration
 
+On Windows, select **Detect and Configure SPSS** in Quick Start, or run **SPSS: Detect and Configure** from the Command Palette. The wizard finds installations, runs an isolated temporary analysis, saves only the necessary SPSS Studio settings, and verifies the effective saved configuration. It checks three rows, the expected mean of 30, native HTML output, and graceful shutdown. No system-wide Python variables need to be edited.
+
+An active SPSS session is preserved: save any data you need and stop the engine manually before running setup. If multiple installations pass, select one. If none are found, use **Choose SPSS Folder**. Conflicting workspace values require confirmation for targeted repair. Failed or cancelled configuration restores the previous values; concurrent user edits are preserved and reported as conflicts. Interrupted setup changes are journaled for recovery after reload.
+
+On Windows the result is saved as a concise desktop TXT report when the desktop is writable; **Save Desktop Report** offers a save-location fallback. Detailed bounded setup diagnostics stay in the extension's private global-storage directory. Setup never sends data to Chat. On macOS the same command is available manually, but the Windows Quick Start action and automatic desktop report are not enabled.
+
 | Setting | Default | Purpose |
 | --- | --- | --- |
 | `spssStudio.installPath` | empty | IBM SPSS Statistics installation root; empty enables automatic discovery. |
@@ -197,6 +203,7 @@ SPSS Studio is not an LSP or a full semantic validator. It does not provide stat
 
 | Version | Date | Update summary |
 | --- | --- | --- |
+| 1.4.0 | 2026-10-28 | Added built-in one-click runtime detection, configuration, isolated calculation/HTML/data/shutdown verification, rollback and desktop reports; fixed Windows CMD quoting and expanded installation discovery. Windows real-SPSS acceptance remains pending. |
 | 1.3.1 | 2026-10-24 | Strengthened Windows SPSS startup with serialized lifecycle transitions, strict version-matched IBM launcher discovery, isolated UTF-8 bridge environments, process-tree cleanup, a bounded transient retry, and a 120-second default startup timeout. |
 | 1.3.0 | 2026-10-24 | Localized the complete SPSS Studio interface, editor and context commands, progress states, tooltips, provider presentation, and direct user feedback according to the VS Code display language, while keeping Chat response language independent. |
 | 1.2.0 | 2026-10-04 | Reordered the Studio tabs as Variables, Data, Output, and Chat without changing their behavior, and standardized the Variables Explore in-progress label as English. |

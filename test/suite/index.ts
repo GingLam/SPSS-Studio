@@ -2,7 +2,7 @@ import path from 'node:path';
 import Mocha from 'mocha';
 
 export async function run(): Promise<void> {
-  const mocha = new Mocha({ color: true, timeout: 30_000 });
+  const mocha = new Mocha({ color: true, timeout: process.env.SPSS_STUDIO_REAL_INTEGRATION === '1' ? 180_000 : 30_000 });
   if (process.env.SPSS_STUDIO_REAL_INTEGRATION === '1') {
     mocha.addFile(path.resolve(__dirname, 'realSpss.extension.test.js'));
   } else {

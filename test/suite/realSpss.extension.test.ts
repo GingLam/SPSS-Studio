@@ -61,6 +61,22 @@ describe('SPSS Studio real SPSS Extension Host', () => {
     assert.equal(ageProfile.summary.validN, 3);
     assert.equal(ageProfile.summary.missingN, 0);
     assert.equal(api.getOutputHistoryCount(), 1);
+    await api.configureRuntime();
+    assert.equal(api.getSetupSummary()?.success, false);
+    assert.equal(api.getSetupSummary()?.error, 'SETUP_ENGINE_BUSY');
+    assert.equal(api.getEngineState(), 'ready');
+    assert.equal(api.getVariableCount(), 3);
+    await vscode.commands.executeCommand('spssStudio.stopEngine');
+    await api.configureRuntime();
+    assert.equal(api.getSetupSummary()?.success, true, api.getSetupSummary()?.error);
+    assert.deepEqual(api.getSetupSummary()?.stages, ['startup', 'analysis', 'data', 'output', 'shutdown']);
+    assert.equal(api.getEngineState(), 'stopped');
+    // Verify normal Run still uses the saved configuration after isolated setup.
+    await vscode.window.showTextDocument(document);
+    await vscode.commands.executeCommand('spssStudio.runFile');
+    assert.equal(api.getEngineState(), 'ready');
+    assert.equal(api.getVariableCount(), 3);
+    assert.equal(api.getOutputHistoryCount(), 2);
     await vscode.commands.executeCommand('spssStudio.stopEngine');
   });
 });

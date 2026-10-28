@@ -60,7 +60,7 @@ describe('SPSS Studio interface localization', () => {
     };
     const english = JSON.parse(fs.readFileSync(path.join(root, 'package.nls.json'), 'utf8')) as Record<string, string>;
     const chinese = JSON.parse(fs.readFileSync(path.join(root, 'package.nls.zh-cn.json'), 'utf8')) as Record<string, string>;
-    assert.equal(manifest.contributes.commands.length, 16);
+    assert.equal(manifest.contributes.commands.length, 17);
     for (const command of manifest.contributes.commands) {
       assert.match(command.title, /^%spssStudio\.command\.[A-Za-z]+%$/u);
       const key = command.title.slice(1, -1);

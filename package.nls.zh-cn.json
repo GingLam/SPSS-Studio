@@ -1,4 +1,5 @@
 {
+  "spssStudio.command.configureRuntime": "SPSS：检测并配置",
   "spssStudio.command.undo": "SPSS：撤销上次编辑",
   "spssStudio.command.runSelection": "SPSS：运行选中内容或当前命令",
   "spssStudio.command.runFile": "SPSS：运行全部",

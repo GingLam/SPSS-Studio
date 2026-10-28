@@ -18,6 +18,7 @@ export class QuickStartController implements vscode.Disposable {
     private readonly extensionUri: vscode.Uri,
     private readonly globalState: vscode.Memento,
     uiLanguage: string,
+    private readonly configureRuntime?: () => void,
   ) {
     this.language = quickStartLanguage(uiLanguage);
   }
@@ -63,6 +64,10 @@ export class QuickStartController implements vscode.Disposable {
       if (!isQuickStartMessage(value)) {
         return;
       }
+      if (value.type === 'configureRuntime') {
+        this.configureRuntime?.();
+        return;
+      }
       void this.saveSuppressPreference(panel, value.value);
     });
     this.render();
@@ -94,6 +99,7 @@ export class QuickStartController implements vscode.Disposable {
       scriptUri: scriptUri.toString(),
       nonce: randomBytes(18).toString('base64url'),
       cspSource: panel.webview.cspSource,
+      isWindows: process.platform === 'win32',
     });
   }
 

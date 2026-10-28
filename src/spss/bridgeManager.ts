@@ -1,6 +1,7 @@
 import { spawn, spawnSync, type SpawnOptionsWithoutStdio } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import path from 'node:path';
+import { StringDecoder } from 'node:string_decoder';
 import type { Readable, Writable } from 'node:stream';
 import type { EventEmitter } from 'node:events';
 import { ExecutionQueue } from './executionQueue';
@@ -120,6 +121,8 @@ export class BridgeManager {
   private readonly pending = new Map<string, PendingRequest>();
   private child: BridgeProcess | undefined;
   private stdoutBuffer = '';
+  private stdoutDecoder = new StringDecoder('utf8');
+  private readonly stderrChunks: Buffer[] = [];
   private currentState: EngineState = 'stopped';
   private lastError: string | undefined;
 
@@ -157,7 +160,7 @@ export class BridgeManager {
     this.options.onDiagnostic?.(message);
   }
 
-  private spawnEnvironment(installation: SpssInstallation): NodeJS.ProcessEnv {
+  private spawnEnvironment(installation: SpssInstallation, bridgePath: string): NodeJS.ProcessEnv {
     const sanitizeWindowsPython = this.platform === 'win32' && installation.launchMode === 'ibm-launcher';
     const environment = sanitizeWindowsPython
       ? Object.fromEntries(
@@ -172,6 +175,10 @@ export class BridgeManager {
     return {
       ...environment,
       ...installation.environment,
+      ...(this.platform === 'win32' ? {
+        SPSS_STUDIO_LAUNCHER: installation.pythonLauncher,
+        SPSS_STUDIO_BRIDGE: bridgePath,
+      } : {}),
       ...(this.options.debug ? { SPSS_STUDIO_DEBUG: '1' } : {}),
     };
   }
@@ -182,10 +189,18 @@ export class BridgeManager {
   ): { executable: string; args: string[]; cwd: string } {
     if (this.platform === 'win32' && installation.pythonLauncher.toLowerCase().endsWith('.bat')) {
       const commandInterpreter = this.environment.ComSpec ?? 'cmd.exe';
-      const command = `"${installation.pythonLauncher.replaceAll('"', '""')}" "${bridgePath.replaceAll('"', '""')}"`;
+      if ([installation.pythonLauncher, bridgePath].some((value) => /["\r\n\0]/u.test(value))) {
+        throw new Error('Invalid characters in SPSS launcher or bridge path.');
+      }
+      if ([installation.pythonLauncher, bridgePath].some((value) => value.includes('%'))) {
+        throw new Error('Windows SPSS/extension paths containing literal % are unsupported because IBM batch CALL expands them. Use paths without percent signs.');
+      }
+      // CMD requires its own outer quotes; libuv must not escape them as \".
+      // Paths stay out of CMD source; literal % is rejected before IBM's CALL reparses it.
+      const command = '""%SPSS_STUDIO_LAUNCHER%" "%SPSS_STUDIO_BRIDGE%""';
       return {
         executable: commandInterpreter,
-        args: ['/d', '/s', '/c', command],
+        args: ['/d', '/s', '/v:off', '/c', command],
         cwd: installation.installRoot,
       };
     }
@@ -207,12 +222,13 @@ export class BridgeManager {
     }
 
     this.setState('starting');
-    const launch = this.launchCommand(installation, bridgePath);
     let child: BridgeProcess;
     try {
+      const launch = this.launchCommand(installation, bridgePath);
       child = this.spawner(launch.executable, launch.args, {
         cwd: launch.cwd,
-        env: this.spawnEnvironment(installation),
+        env: this.spawnEnvironment(installation, bridgePath),
+        ...(this.platform === 'win32' ? { windowsVerbatimArguments: true } : {}),
         windowsHide: true,
         shell: false,
       });
@@ -223,9 +239,16 @@ export class BridgeManager {
     }
     this.child = child;
     this.stdoutBuffer = '';
+    this.stdoutDecoder = new StringDecoder('utf8');
+    this.stderrChunks.length = 0;
     child.stdout.on('data', (chunk: Buffer | string) => this.onStdout(chunk));
     child.stderr.on('data', (chunk: Buffer | string) => {
-      const message = chunk.toString().trimEnd();
+      const bytes = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+      this.stderrChunks.push(bytes);
+      if (this.stderrChunks.reduce((total, item) => total + item.length, 0) > 16_384) {
+        this.stderrChunks.shift();
+      }
+      const message = bytes.toString('utf8').trimEnd();
       if (message) {
         this.diagnostic(message);
       }
@@ -236,7 +259,13 @@ export class BridgeManager {
     });
     child.on('close', (code: number | null, signal: NodeJS.Signals | null) => {
       if (this.child === child) {
-        this.failProcess(`SPSS bridge exited (code=${String(code)}, signal=${String(signal)}).`);
+        const raw = Buffer.concat(this.stderrChunks);
+        let detail = raw.toString('utf8');
+        if (this.platform === 'win32' && detail.includes('\uFFFD')) {
+          // IBM Python uses UTF-8, while CMD on Chinese Windows may still emit GBK.
+          try { detail = new TextDecoder('gb18030').decode(raw); } catch { /* Keep original bytes' UTF-8 view. */ }
+        }
+        this.failProcess(`SPSS bridge exited (code=${String(code)}, signal=${String(signal)}).${detail.trim() ? ` ${detail.trim().slice(0, 2000)}` : ''}`);
         this.child = undefined;
       }
     });
@@ -316,27 +345,51 @@ export class BridgeManager {
     return response.variableProfiles;
   }
 
-  public async stop(): Promise<void> {
+  public async stop(requireGraceful = false): Promise<void> {
     const child = this.child;
     if (!child) {
+      if (requireGraceful) { throw new Error('SPSS bridge exited before graceful shutdown could be verified.'); }
       this.setState('stopped');
       return;
     }
+    let failure: Error | undefined;
+    let cleaned = true;
     try {
-      await this.request('shutdown', undefined, this.options.shutdownTimeoutMs ?? 5_000);
+      const response = await this.request('shutdown', undefined, this.options.shutdownTimeoutMs ?? 5_000);
+      if (requireGraceful && (!response.ok || response.engineAlive !== false)) {
+        throw new Error(response.error ?? 'SPSS did not confirm graceful shutdown.');
+      }
+      if (requireGraceful && this.child === child) {
+        // Let a healthy bridge exit itself before invoking Windows taskkill.
+        // This avoids treating "PID already exited" as a failed tree cleanup.
+        await new Promise<void>((resolve) => {
+          const finish = (): void => { clearTimeout(timer); child.off('close', finish); resolve(); };
+          const timer = setTimeout(finish, 250);
+          child.once('close', finish);
+        });
+      }
     } catch (error) {
       this.diagnostic(`Graceful shutdown failed: ${error instanceof Error ? error.message : String(error)}`);
+      failure = error instanceof Error ? error : new Error(String(error));
     } finally {
       if (this.child === child) {
-        this.terminateChild();
+        cleaned = this.terminateChild();
       }
       this.setState('stopped');
     }
+    if (requireGraceful && failure) { throw failure; }
+    if (requireGraceful && !cleaned) { throw new Error('Windows process-tree cleanup could not be verified.'); }
   }
 
   public async restart(installation: SpssInstallation, bridgePath: string): Promise<BridgeResponse> {
     await this.stop();
     return this.start(installation, bridgePath);
+  }
+
+  public abort(): void {
+    this.failProcess('SETUP_CANCELLED');
+    this.terminateChild();
+    this.setState('stopped');
   }
 
   private request(
@@ -372,7 +425,7 @@ export class BridgeManager {
   }
 
   private onStdout(chunk: Buffer | string): void {
-    this.stdoutBuffer += chunk.toString();
+    this.stdoutBuffer += Buffer.isBuffer(chunk) ? this.stdoutDecoder.write(chunk) : chunk;
     let newline = this.stdoutBuffer.indexOf('\n');
     while (newline >= 0) {
       const line = this.stdoutBuffer.slice(0, newline).trim();
@@ -420,7 +473,7 @@ export class BridgeManager {
     }
   }
 
-  private terminateChild(): void {
+  private terminateChild(): boolean {
     const child = this.child;
     this.child = undefined;
     if (child) {
@@ -446,6 +499,8 @@ export class BridgeManager {
           this.diagnostic(`SPSS bridge child termination failed: ${error instanceof Error ? error.message : String(error)}`);
         }
       }
+      return this.platform !== 'win32' || treeTerminated;
     }
+    return true;
   }
 }

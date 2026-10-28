@@ -59,7 +59,14 @@ export class StudioSession {
       this.panel.executionCompleted(failed);
       const message = error instanceof Error ? error.message : String(error);
       this.diagnosticOutput.appendLine(`SPSS Run #${String(record.sequence)} failed: ${message}`);
-      void vscode.window.showErrorMessage(`${strings.executionFailed}: ${message}`);
+      if (process.platform === 'win32' && !this.engine.status().engineAlive) {
+        const action = vscode.env.language.startsWith('zh') ? '检测并配置 SPSS' : 'Detect and Configure SPSS';
+        void vscode.window.showErrorMessage(`${strings.executionFailed}: ${message}`, action).then((choice) => {
+          if (choice === action) { void vscode.commands.executeCommand('spssStudio.configureRuntime'); }
+        });
+      } else {
+        void vscode.window.showErrorMessage(`${strings.executionFailed}: ${message}`);
+      }
     }
   }
 

@@ -38,10 +38,12 @@ import { OutputStore } from './views/outputStore';
 import { SpssAiPanelController } from './views/spssAiPanelController';
 import { SpssStudioPanel } from './views/spssStudioPanel';
 import { studioStringsForLanguage } from './views/studioStrings';
+import { SetupController } from './setup/setupController';
 
 let engineService: EngineService | undefined;
 let outputStore: OutputStore | undefined;
 let studioPanel: SpssStudioPanel | undefined;
+let runtimeSetupController: SetupController | undefined;
 
 export interface SpssStudioExtensionApi {
   getStatusBarText(): string;
@@ -52,6 +54,8 @@ export interface SpssStudioExtensionApi {
   getDataPageSummary(): { rows: number; variables: number; totalCases: number } | undefined;
   getVariableProfiles(names: readonly string[]): Promise<VariableProfiles>;
   outputChannelName: string;
+  configureRuntime(): Promise<void>;
+  getSetupSummary(): { success: boolean; error?: string; stages: string[] } | undefined;
 }
 
 function readConfiguration(): SpssRuntimeConfiguration {
@@ -98,10 +102,13 @@ export function activate(context: vscode.ExtensionContext): SpssStudioExtensionA
   });
   const variableCache = new VariableCache();
   const editorTarget = new SpssEditorTargetTracker();
+  const runtimeSetup = new SetupController(context, engineService, readConfiguration, output);
+  runtimeSetupController = runtimeSetup;
   const quickStart = new QuickStartController(
     context.extensionUri,
     context.globalState,
     vscode.env.language,
+    () => { void runtimeSetup.run(); },
   );
   const variableCommandDependencies = { variableCache, editorTarget };
   const modelProfiles = new ModelProfileStore(context.globalState, context.secrets);
@@ -224,6 +231,7 @@ export function activate(context: vscode.ExtensionContext): SpssStudioExtensionA
     variableCache,
     editorTarget,
     quickStart,
+    runtimeSetup,
     aiPanelController,
     vscode.languages.registerCompletionItemProvider('spss', completionProvider, '/', '.'),
     vscode.commands.registerCommand('spssStudio.undo', undoLastEdit),
@@ -263,6 +271,7 @@ export function activate(context: vscode.ExtensionContext): SpssStudioExtensionA
     vscode.commands.registerCommand('spssStudio.showAi', () => studioPanel?.showAi('chat')),
     vscode.commands.registerCommand('spssStudio.configureAi', () => studioPanel?.showAi('profiles')),
     vscode.commands.registerCommand('spssStudio.showQuickStart', () => quickStart.show()),
+    vscode.commands.registerCommand('spssStudio.configureRuntime', () => runtimeSetup.show()),
   );
 
   void quickStart.maybeShowForVersion(extensionVersion(context.extension.packageJSON))
@@ -285,10 +294,15 @@ export function activate(context: vscode.ExtensionContext): SpssStudioExtensionA
     getDataPageSummary: () => studioPanel?.currentPageSummary,
     getVariableProfiles: (names) => studio.variableProfiles(names),
     outputChannelName: output.name,
+    configureRuntime: () => runtimeSetup.run(),
+    getSetupSummary: () => runtimeSetup.summary,
   };
 }
 
 export async function deactivate(): Promise<void> {
+  await runtimeSetupController?.cancelAndWait();
+  runtimeSetupController?.dispose();
+  runtimeSetupController = undefined;
   await engineService?.stop();
   studioPanel?.dispose();
   outputStore?.dispose();

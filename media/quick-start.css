@@ -153,6 +153,16 @@ kbd {
   background: var(--vscode-textBlockQuote-background);
 }
 
+.setup-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+.setup-actions button, .setup-entry button {
+  padding: 9px 14px; border: 1px solid var(--vscode-button-border, transparent);
+  border-radius: 4px; background: var(--vscode-button-background); color: var(--vscode-button-foreground);
+  font: inherit; cursor: pointer;
+}
+.setup-actions button:disabled { opacity: .5; cursor: default; }
+.setup-actions button:focus-visible, .setup-entry button:focus-visible { outline: 2px solid var(--vscode-focusBorder); outline-offset: 2px; }
+.setup-entry { padding: 14px; border: 1px solid var(--vscode-focusBorder); border-radius: 5px; }
+
 @media (max-width: 680px) {
   main {
     width: min(100% - 28px, 920px);

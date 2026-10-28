@@ -57,6 +57,8 @@ export class NodeFileSystem implements FileSystemAdapter {
 }
 
 export class WindowsRegistry implements RegistryProvider {
+  public constructor(private readonly signal?: AbortSignal) {}
+
   public async getInstallRoots(): Promise<string[]> {
     const keys = [
       'HKLM\\SOFTWARE\\IBM\\SPSS\\Statistics',
@@ -65,13 +67,15 @@ export class WindowsRegistry implements RegistryProvider {
     ];
     const roots = new Set<string>();
     for (const key of keys) {
+      this.signal?.throwIfAborted();
       try {
         const { stdout } = await execFileAsync('reg.exe', ['query', key, '/s'], {
           windowsHide: true,
           timeout: 10_000,
+          ...(this.signal ? { signal: this.signal } : {}),
         });
         for (const line of stdout.split(/\r?\n/u)) {
-          const match = line.match(/^\s*(?:InstallPath|InstallDir|Path)\s+REG_\w+\s+(.+)$/iu);
+          const match = line.match(/^\s*(?:InstallPath|InstallDir|InstallLocation|InstallationPath|Path)\s+REG_\w+\s+(.+)$/iu);
           if (match?.[1]) {
             roots.add(match[1].trim());
           }
