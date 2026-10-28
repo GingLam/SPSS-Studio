@@ -20,6 +20,8 @@ export type ExtensionToWebviewMessage =
   | { type: 'showVariables' }
   | { type: 'showAi' }
   | { type: 'outputCleared' }
+  | { type: 'dataCleared' }
+  | { type: 'dataActionState'; busy: boolean }
   | { type: 'variableExploreFinished' };
 
 export type WebviewToExtensionMessage =
@@ -46,7 +48,8 @@ export type WebviewToExtensionMessage =
   | { type: 'copyVariables'; names: string[] }
   | { type: 'insertVariables'; names: string[] }
   | { type: 'exploreVariables'; names: string[] }
-  | { type: 'clearOutput' };
+  | { type: 'clearOutput' }
+  | { type: 'clearData' };
 
 export function isWebviewMessage(value: unknown): value is WebviewToExtensionMessage {
   if (!isPlainObject(value) || typeof value.type !== 'string') {
@@ -54,7 +57,7 @@ export function isWebviewMessage(value: unknown): value is WebviewToExtensionMes
   }
   const message = value;
   const type = String(message.type);
-  if (['showOutput', 'showData', 'showVariables', 'showAi', 'refreshData', 'refreshVariables', 'clearOutput'].includes(type)) {
+  if (['showOutput', 'showData', 'showVariables', 'showAi', 'refreshData', 'refreshVariables', 'clearOutput', 'clearData'].includes(type)) {
     return true;
   }
   if (['selectExecution', 'explainOutput', 'exportOutput', 'printOutput'].includes(type)) {

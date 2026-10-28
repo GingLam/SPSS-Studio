@@ -42,6 +42,7 @@ export interface SpssStudioPanelCallbacks {
   insertVariables: (names: string[]) => Promise<void>;
   exploreVariables: (names: string[]) => Promise<VariableProfiles>;
   clearOutput: () => void;
+  clearData: () => Promise<void>;
 }
 
 export class SpssStudioPanel implements vscode.Disposable {
@@ -51,6 +52,7 @@ export class SpssStudioPanel implements vscode.Disposable {
   private engineState: EngineState = 'stopped';
   private dataset: ActiveDatasetInfo | undefined;
   private datasetRevision = 0;
+  private dataActionsBusy = false;
   private page: DatasetPage | undefined;
   private pageRequest = { requestId: 0, generation: 0 };
   private selectedHtmlLength = 0;
@@ -153,6 +155,22 @@ export class SpssStudioPanel implements vscode.Disposable {
     void this.postStudio({ type: 'outputCleared' });
   }
 
+  public setDataActionsBusy(busy: boolean): void {
+    this.dataActionsBusy = busy;
+    void this.postStudio({ type: 'dataActionState', busy });
+  }
+
+  public dataCleared(): void {
+    void this.postStudio({ type: 'dataCleared' });
+  }
+
+  private async confirmClearData(): Promise<void> {
+    if (this.dataActionsBusy || !vscode.workspace.isTrusted) { return; }
+    const action = this.studioStrings.clear;
+    if (await vscode.window.showWarningMessage(this.studioStrings.clearDataConfirm, { modal: true }, action) !== action) { return; }
+    await this.runVariableAction(this.callbacks.clearData, this.studioStrings.clearDataFailed);
+  }
+
   public dispose(): void {
     this.panel?.dispose();
     this.panel = undefined;
@@ -168,7 +186,7 @@ export class SpssStudioPanel implements vscode.Disposable {
     const panel = vscode.window.createWebviewPanel(
       'spssStudio',
       'SPSS Studio',
-      vscode.ViewColumn.Beside,
+      { viewColumn: vscode.ViewColumn.Beside, preserveFocus: true },
       {
         enableScripts: true,
         retainContextWhenHidden: true,
@@ -262,6 +280,8 @@ export class SpssStudioPanel implements vscode.Disposable {
         );
       } else if (message.type === 'exploreVariables') {
         void this.exploreVariables(message.names);
+      } else if (message.type === 'clearData') {
+        void this.confirmClearData();
       } else {
         this.callbacks.clearOutput();
       }
@@ -273,6 +293,7 @@ export class SpssStudioPanel implements vscode.Disposable {
 
   private async postInitialState(): Promise<void> {
     await this.postStudio({ type: 'engineState', state: this.engineState });
+    await this.postStudio({ type: 'dataActionState', busy: this.dataActionsBusy });
     await this.postStudio({
       type: 'datasetMetadata',
       dataset: this.dataset ?? null,
@@ -515,8 +536,8 @@ export class SpssStudioPanel implements vscode.Disposable {
   <main>
     <section id="output-view" class="view active">
       <article id="output-content">
-        <div class="output-actions"><button id="explain-output" disabled>${text(strings.outputExplain)}</button><button id="export-output" disabled>${text(strings.outputExport)}</button><button id="print-output" disabled>${text(strings.outputPrint)}</button><button id="toggle-history" type="button" aria-expanded="false">${text(strings.outputHistory)}</button></div>
-        <div id="run-summary" class="summary">${text(strings.noExecutions)}</div><div id="spss-output" class="spss-output"></div>
+        <div class="output-actions"><button id="explain-output" disabled>${text(strings.outputExplain)}</button><button id="export-output" disabled>${text(strings.outputExport)}</button><button id="print-output" disabled>${text(strings.outputPrint)}</button><button id="clear-data" disabled title="${text(strings.clearData)}">${text(strings.clear)}</button><button id="toggle-history" type="button" aria-expanded="false">${text(strings.outputHistory)}</button></div>
+        <div id="data-notice" role="status"></div><div id="run-summary" class="summary">${text(strings.noExecutions)}</div><div id="spss-output" class="spss-output"></div>
       </article>
       <div id="output-splitter" role="separator" aria-label="${text(strings.resizeRunHistory)}" aria-orientation="vertical" tabindex="0"></div>
       <aside id="output-history"><div class="aside-title"><strong>${text(strings.runs)}</strong><button id="clear-output" title="${text(strings.clearOutput)}">${text(strings.clear)}</button></div><div id="run-history"></div></aside>

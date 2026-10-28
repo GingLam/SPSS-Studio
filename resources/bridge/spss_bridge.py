@@ -172,7 +172,7 @@ class SpssBridge(object):
 
         variables = [self._variable_metadata(index) for index in range(variable_count)]
         info = {
-            "active": True,
+            "active": variable_count > 0,
             "datasetName": dataset_name,
             "caseCount": case_count,
             "variableCount": variable_count,
@@ -648,6 +648,15 @@ class SpssBridge(object):
         ok = status in ("SUCCESS", "SUCCESS_NO_OUTPUT", "WARNING")
         if ok:
             self.last_error = None
+        summary = None
+        if self.started:
+            try:
+                count = int(self._invoke(self.spss.GetVariableCount))
+                if count > 0:
+                    summary = {"variableCount": count, "caseCount": int(self._invoke(self.spss.GetCaseCount))}
+            except Exception:
+                # Counts are advisory; never replace this run's original result.
+                pass
         return {
             "ok": ok,
             "errorLevel": error_level,
@@ -659,6 +668,7 @@ class SpssBridge(object):
             "status": status,
             "htmlPath": output_path if output_created else None,
             "runId": run_id,
+            **({"datasetSummary": summary} if summary is not None else {}),
         }
 
     def status(self):
@@ -675,6 +685,26 @@ class SpssBridge(object):
             "error": self.last_error,
             "durationMs": 0,
             "engineAlive": alive,
+        }
+
+    def clear_data(self) -> dict:
+        """Discard only this processor's datasets; never save or erase a file."""
+        if self.started:
+            started_at = time.monotonic()
+            # CLOSE ALL alone leaves the active data intact. NEW FILE first
+            # ensures that the surviving active dataset is empty.
+            self._invoke(self.spss.Submit, "NEW FILE.\nDATASET CLOSE ALL.")
+            level, message = self._last_error()
+            if level > 1:
+                raise RuntimeError(message or "SPSS could not clear session data.")
+            if int(self._invoke(self.spss.GetVariableCount)) != 0:
+                raise RuntimeError("SPSS session data are still present after Clear.")
+        else:
+            started_at = time.monotonic()
+        return {
+            "ok": True, "errorLevel": 0, "output": "", "warnings": [],
+            "error": None, "durationMs": int(round((time.monotonic() - started_at) * 1000)),
+            "engineAlive": self.started,
         }
 
     def shutdown(self):
@@ -728,6 +758,8 @@ class SpssBridge(object):
             )
         elif operation == "variableProfiles":
             response = self.variable_profiles(request.get("variableNames"))
+        elif operation == "clearData":
+            response = self.clear_data()
         elif operation == "shutdown":
             response = self.shutdown()
         else:

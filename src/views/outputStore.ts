@@ -3,6 +3,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 import type { BridgeResponse, ExecutionStatus, RunOutputTarget } from '../spss/types';
+import { htmlText, parseHtmlDocument } from '../ai/htmlDocument';
 
 export interface ExecutionRecord {
   id: string;
@@ -15,6 +16,8 @@ export interface ExecutionRecord {
   errorMessage?: string;
   htmlPath?: string;
   outputDirectory: string;
+  datasetSummary?: { caseCount: number; variableCount: number };
+  fileInUseWarning?: boolean;
 }
 
 export type ExecutionMetadata = Omit<ExecutionRecord, 'outputDirectory' | 'htmlPath'> & { hasHtml: boolean };
@@ -52,8 +55,15 @@ export class OutputStore {
     return { record, target: { runId: id, outputDirectory } };
   }
 
-  public complete(id: string, response: BridgeResponse): ExecutionRecord {
+  public complete(id: string, response: BridgeResponse, datasetSummary?: ExecutionRecord['datasetSummary']): ExecutionRecord {
     const record = this.requireRecord(id);
+    let fileInUseWarning = false;
+    if (response.status === 'WARNING') {
+      let message = response.error ?? '';
+      try { if (response.htmlPath) { message += ` ${htmlText(parseHtmlDocument(fs.readFileSync(response.htmlPath, 'utf8')))}`; } }
+      catch { /* Native status still applies when its HTML is unavailable. */ }
+      fileInUseWarning = /(?:\bWarning|警告)\s*#?\s*67\b/iu.test(message) && /\bGET\s+FILE\b/iu.test(message);
+    }
     const completed: ExecutionRecord = {
       ...record,
       status: response.status ?? (response.ok ? 'SUCCESS_NO_OUTPUT' : 'ERROR'),
@@ -61,6 +71,8 @@ export class OutputStore {
       errorLevel: response.errorLevel,
       ...(response.error ? { errorMessage: response.error } : {}),
       ...(response.htmlPath ? { htmlPath: response.htmlPath } : {}),
+      ...(datasetSummary ? { datasetSummary: { ...datasetSummary } } : {}),
+      ...(fileInUseWarning ? { fileInUseWarning: true } : {}),
     };
     this.records.set(id, completed);
     this.selectedId = id;
@@ -94,6 +106,8 @@ export class OutputStore {
         errorLevel: record.errorLevel,
         ...(record.errorMessage ? { errorMessage: record.errorMessage } : {}),
         hasHtml: record.htmlPath !== undefined,
+        ...(record.datasetSummary ? { datasetSummary: { ...record.datasetSummary } } : {}),
+        ...(record.fileInUseWarning ? { fileInUseWarning: true } : {}),
       }));
   }
 

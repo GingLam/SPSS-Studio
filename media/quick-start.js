@@ -7,6 +7,9 @@
   document.getElementById('configure-runtime')?.addEventListener('click', () => {
     vscode.postMessage({ type: 'configureRuntime' });
   });
+  document.getElementById('open-example')?.addEventListener('click', () => {
+    vscode.postMessage({ type: 'openExample' });
+  });
   if (!(checkbox instanceof HTMLInputElement) || !status) {
     return;
   }

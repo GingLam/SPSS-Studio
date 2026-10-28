@@ -75,7 +75,7 @@ export class SetupController implements vscode.Disposable {
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${this.panel.webview.cspSource}; script-src 'nonce-${nonce}'">
 <link rel="stylesheet" href="${style.toString()}"><title>${escape(this.s.title)}</title></head><body><main>
-<header class="hero"><div class="eyebrow">SPSS Studio 1.4.0</div><h1>${escape(this.s.title)}</h1><p>${escape(this.s.introduction)}</p></header>
+<header class="hero"><div class="eyebrow">SPSS Studio ${escape((this.context.extension.packageJSON as { version: string }).version)}</div><h1>${escape(this.s.title)}</h1><p>${escape(this.s.introduction)}</p></header>
 <section class="setup-actions"><button data-action="start" ${busy ? 'disabled' : ''}>${escape(this.s.start)}</button>
 <button data-action="choose" ${busy ? 'disabled' : ''}>${escape(this.s.chooseFolder)}</button>
 <button data-action="cancel" ${busy && !this.finishing ? '' : 'disabled'}>${escape(this.s.cancel)}</button>

@@ -19,6 +19,10 @@ const strings = runtimeStringsForLanguage(vscode.env.language);
 
 export class StudioSession {
   private readonly dataPreview: DataPreviewState;
+  private activeExecutions = 0;
+  private clearingData = false;
+  private engineBusy = false;
+  private datasetEpoch = 0;
 
   public constructor(
     private readonly engine: EngineService,
@@ -40,17 +44,20 @@ export class StudioSession {
   }
 
   public async execute(syntax: string, label: string): Promise<void> {
+    if (this.clearingData) { throw new Error('Wait for Clear to finish before running syntax.'); }
+    this.activeExecutions += 1;
+    this.updateDataActions();
     const { record, target } = this.outputStore.begin(label);
     this.panel.executionStarted(record);
     this.diagnosticOutput.appendLine(`SPSS ${label} started as Run #${String(record.sequence)}.`);
     try {
       const response = await this.engine.run(syntax, target, this.getConfiguration());
-      const completed = this.outputStore.complete(record.id, response);
-      this.panel.executionCompleted(completed);
-      this.appendDiagnostic(completed.sequence, response);
       if (shouldRefreshDatasetMetadata(response)) {
         await this.refreshMetadata(this.panel.dataVisible);
       }
+      const completed = this.outputStore.complete(record.id, response, response.datasetSummary);
+      this.panel.executionCompleted(completed);
+      this.appendDiagnostic(completed.sequence, response);
     } catch (error) {
       const status: ExecutionStatus = error instanceof Error && /timed out/iu.test(error.message)
         ? 'TIMEOUT'
@@ -67,6 +74,50 @@ export class StudioSession {
       } else {
         void vscode.window.showErrorMessage(`${strings.executionFailed}: ${message}`);
       }
+    } finally {
+      this.activeExecutions -= 1;
+      this.updateDataActions();
+    }
+  }
+
+  public handleEngineBusy(busy: boolean): void {
+    this.engineBusy = busy;
+    this.updateDataActions();
+  }
+
+  private updateDataActions(): void {
+    this.panel.setDataActionsBusy(this.engineBusy || this.clearingData || this.activeExecutions > 0);
+  }
+
+  public async clearData(): Promise<void> {
+    if (!vscode.workspace.isTrusted) { throw new Error(strings.untrustedExecution); }
+    if (this.activeExecutions || this.clearingData || this.engineBusy) {
+      throw new Error('Wait for the current SPSS operation to finish.');
+    }
+    this.clearingData = true;
+    this.updateDataActions();
+    this.datasetEpoch += 1;
+    try {
+      await this.engine.clearData();
+      this.variableCache.clear();
+      this.dataPreview.reset();
+      this.panel.clearDatasetPage();
+      this.panel.setDatasetMetadata(undefined);
+      this.panel.dataCleared();
+    } catch (error) {
+      // The rejected operation may have invalidated an in-flight preview.
+      // Reset the front-end generation with actual metadata, never a success notice.
+      this.clearingData = false;
+      if (this.engine.status().engineAlive) {
+        await this.refreshMetadata(false);
+      } else {
+        this.panel.clearDatasetPage();
+        this.panel.setDatasetMetadata(undefined);
+      }
+      throw error;
+    } finally {
+      this.clearingData = false;
+      this.updateDataActions();
     }
   }
 
@@ -109,12 +160,14 @@ export class StudioSession {
   }
 
   public async requestDatasetPage(request: DatasetPageRequest | DatasetPageUiRequest): Promise<void> {
+    const epoch = this.datasetEpoch;
+    if (this.clearingData) { return; }
     const normalized = this.dataPreview.update(request);
     try {
       const page = await this.engine.datasetPage(normalized, this.getConfiguration());
       const requestId = 'requestId' in request ? request.requestId : 0;
       const generation = 'generation' in request ? request.generation : 0;
-      this.panel.setDatasetPage(page, requestId, generation);
+      if (epoch === this.datasetEpoch) { this.panel.setDatasetPage(page, requestId, generation); }
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       this.diagnosticOutput.appendLine(`SPSS data preview failed: ${message}`);
@@ -130,6 +183,7 @@ export class StudioSession {
   public handleEngineState(state: EngineState): void {
     this.panel.setEngineState(state);
     if (state === 'stopped' || state === 'starting' || state === 'error') {
+      this.datasetEpoch += 1;
       this.variableCache.clear();
       this.dataPreview.reset();
       this.panel.clearDatasetPage();
@@ -138,9 +192,13 @@ export class StudioSession {
   }
 
   private async refreshMetadata(loadPage: boolean): Promise<void> {
+    const epoch = this.datasetEpoch;
+    if (this.clearingData) { return; }
     try {
       const info = await this.engine.datasetInfo(this.getConfiguration());
+      if (epoch !== this.datasetEpoch) { return; }
       this.variableCache.replace(info);
+      this.panel.clearDatasetPage();
       this.panel.setDatasetMetadata(info.active ? info : undefined);
       if (!info.active) {
         this.panel.clearDatasetPage();
@@ -148,6 +206,7 @@ export class StudioSession {
         await this.requestDatasetPage(this.dataPreview.current);
       }
     } catch (error) {
+      if (epoch !== this.datasetEpoch) { return; }
       this.variableCache.clear();
       this.panel.clearDatasetPage();
       this.panel.setDatasetMetadata(undefined);

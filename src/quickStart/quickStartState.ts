@@ -40,8 +40,8 @@ export interface SetSuppressAfterUpdatesMessage {
   value: boolean;
 }
 
-export function isQuickStartMessage(value: unknown): value is SetSuppressAfterUpdatesMessage | { type: 'configureRuntime' } {
-  if (typeof value === 'object' && value !== null && 'type' in value && value.type === 'configureRuntime') { return true; }
+export function isQuickStartMessage(value: unknown): value is SetSuppressAfterUpdatesMessage | { type: 'configureRuntime' } | { type: 'openExample' } {
+  if (typeof value === 'object' && value !== null && 'type' in value && ['configureRuntime', 'openExample'].includes(String(value.type))) { return true; }
   return typeof value === 'object'
     && value !== null
     && 'type' in value

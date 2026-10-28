@@ -12,4 +12,8 @@
 !syntaxes/**
 !themes/**
 !resources/bridge/spss_bridge.py
+!resources/examples/example.en.sps
+!resources/examples/example.zh-cn.sps
+!resources/examples/spss-studio-example.sav
+!resources/examples/LICENSE.txt
 !out/src/**/*.js

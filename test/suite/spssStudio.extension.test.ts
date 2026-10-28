@@ -121,11 +121,13 @@ describe('SPSS Studio Extension Host', () => {
     );
     assert.equal(document.languageId, 'spss');
     const editor = await vscode.window.showTextDocument(document);
+    await vscode.commands.executeCommand('workbench.action.focusWindow');
+    await waitForValue(() => vscode.window.state.focused, true, 'the isolated test window to gain focus');
     const originalText = document.getText();
     await editor.edit((edit) => edit.insert(new vscode.Position(0, 0), 'TITLE "temporary".\n'));
     assert.notEqual(document.getText(), originalText);
     await vscode.commands.executeCommand('spssStudio.undo');
-    assert.equal(document.getText(), originalText);
+    await waitForValue(() => document.getText(), originalText, 'the native undo edit');
 
     editor.selection = new vscode.Selection(new vscode.Position(0, 0), new vscode.Position(0, 19));
     await vscode.commands.executeCommand('spssStudio.runSelection');

@@ -1,6 +1,7 @@
 import { randomBytes } from 'node:crypto';
 import * as vscode from 'vscode';
 import { buildQuickStartHtml } from './quickStartContent';
+import { prepareExample } from './exampleFiles';
 import {
   isQuickStartMessage,
   QUICK_START_LAST_VERSION_KEY,
@@ -19,6 +20,7 @@ export class QuickStartController implements vscode.Disposable {
     private readonly globalState: vscode.Memento,
     uiLanguage: string,
     private readonly configureRuntime?: () => void,
+    private readonly exampleStorageRoot?: string,
   ) {
     this.language = quickStartLanguage(uiLanguage);
   }
@@ -68,6 +70,12 @@ export class QuickStartController implements vscode.Disposable {
         this.configureRuntime?.();
         return;
       }
+      if (value.type === 'openExample') {
+        void this.openExample().catch((error: unknown) => {
+          void vscode.window.showErrorMessage(`${this.language === 'zh-cn' ? '无法打开示例' : 'Could not open example'}: ${error instanceof Error ? error.message : String(error)}`);
+        });
+        return;
+      }
       void this.saveSuppressPreference(panel, value.value);
     });
     this.render();
@@ -76,6 +84,13 @@ export class QuickStartController implements vscode.Disposable {
   public dispose(): void {
     this.panel?.dispose();
     this.panel = undefined;
+  }
+
+  public async openExample(): Promise<void> {
+    if (!this.exampleStorageRoot) { throw new Error('Example storage is unavailable.'); }
+    const file = await prepareExample(this.extensionUri.fsPath, this.exampleStorageRoot, this.language);
+    const document = await vscode.workspace.openTextDocument(vscode.Uri.file(file));
+    await vscode.window.showTextDocument(document, { viewColumn: vscode.ViewColumn.One, preview: false, preserveFocus: false });
   }
 
   private render(): void {

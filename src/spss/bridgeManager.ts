@@ -327,6 +327,10 @@ export class BridgeManager {
     return response.datasetInfo;
   }
 
+  public clearData(): Promise<BridgeResponse> {
+    return this.enqueueOperation('clearData', {});
+  }
+
   public async datasetPage(page: DatasetPageRequest): Promise<DatasetPage> {
     const response = await this.enqueueOperation('datasetPage', page);
     if (!response.ok || !response.datasetPage) {

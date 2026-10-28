@@ -28,6 +28,10 @@ describe('VSIX package policy', () => {
       'out/src/extension.js',
       'out/src/ai/modelProfileStore.js',
       'resources/bridge/spss_bridge.py',
+      'resources/examples/example.en.sps',
+      'resources/examples/example.zh-cn.sps',
+      'resources/examples/spss-studio-example.sav',
+      'resources/examples/LICENSE.txt',
       'syntaxes/spss.tmLanguage.json',
       'themes/spss-studio-light-color-theme.json',
       'themes/spss-studio-dark-color-theme.json',
@@ -64,10 +68,15 @@ describe('VSIX package policy', () => {
       'media/spss-syntax-data.js',
       'out/src/extension.js',
       'resources/bridge/spss_bridge.py',
+      'resources/examples/example.en.sps',
+      'resources/examples/example.zh-cn.sps',
+      'resources/examples/spss-studio-example.sav',
+      'resources/examples/LICENSE.txt',
       'themes/spss-studio-light-color-theme.json',
       'themes/spss-studio-dark-color-theme.json',
     ];
     assert.deepEqual(policy.assertAllowedSourceFiles(required), required);
+    assert.throws(() => policy.assertAllowedSourceFiles(required.filter((name) => !name.endsWith('.sav'))), /missing required files/u);
     assert.deepEqual(policy.assertAllowedVsixEntries([
       '[Content_Types].xml',
       'extension.vsixmanifest',

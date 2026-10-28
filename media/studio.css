@@ -113,3 +113,5 @@ main { height: calc(100vh - 42px); }
   #variable-filter { flex: 1; width: auto; }
 }
 .empty { padding: 18px; color: var(--vscode-descriptionForeground); }
+#data-notice:empty { display: none; }
+#data-notice { padding: 8px 10px; margin: 8px 0; border-left: 3px solid var(--vscode-focusBorder); }

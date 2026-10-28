@@ -92,6 +92,22 @@ class SilentBridgeProcess extends EventEmitter implements BridgeProcess {
 }
 
 describe('EngineService startup lifecycle', () => {
+  it('blocks new Run requests during Clear and preserves a live engine on a rejected clear', async () => {
+    const service = new EngineService('/extension', { onStateChange: () => undefined, onDiagnostic: () => undefined }, {
+      locate: () => Promise.resolve(installation),
+      createManager: (options) => new BridgeManager({ ...options, platform: 'darwin', spawner: () => new ResponsiveBridgeProcess((request) => (
+        request.op === 'clearData' ? { ...responseFor(request), ok: false, errorLevel: 3, error: 'Clear rejected' } : responseFor(request)
+      )) }),
+    });
+    try {
+      await service.start(configuration);
+      const clearing = service.clearData();
+      const rejectedClear = assert.rejects(clearing, /Clear rejected/u);
+      try { await assert.rejects(service.run('COMPUTE x=1.', { runId: 'run', outputDirectory: '/tmp' }, configuration), /clearing/iu); }
+      finally { await rejectedClear; }
+      assert.equal(service.status().engineAlive, true);
+    } finally { await service.stop(); }
+  });
   it('reserves setup exclusively and refuses to replace an active SPSS session', async () => {
     const service = new EngineService('/extension', { onStateChange: () => undefined, onDiagnostic: () => undefined }, {
       locate: () => Promise.resolve(installation),

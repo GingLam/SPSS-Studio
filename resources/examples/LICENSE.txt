@@ -1,0 +1,12 @@
+SPSS Studio demonstration resources
+
+The simulated dataset and the two example SPS scripts in this directory
+were created for SPSS Studio. All observations are fictional.
+
+Permission is granted to anyone to use, copy, modify, and redistribute
+these example resources, for any purpose, without a fee or attribution
+requirement. They are provided without warranty.
+
+This permission applies only to the example dataset and scripts in this
+directory. SPSS Studio itself remains proprietary software, All rights
+reserved, under the extension's main LICENSE.

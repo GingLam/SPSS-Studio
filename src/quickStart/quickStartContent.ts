@@ -152,7 +152,7 @@ function copyFor(language: QuickStartLanguage): QuickStartCopy {
   if (language === 'zh-cn') {
     return {
       title: '快速上手',
-      eyebrow: 'SPSS Studio 1.4.0',
+      eyebrow: 'SPSS Studio 1.4.1',
       introduction: '从打开第一个 .sps 文件开始，完成 Syntax 编辑、SPSS 本地执行、数据与变量查看，以及 AI 辅助解释。',
       preferenceTitle: '更新提醒',
       preferenceText: '此后版本更新时不再自动显示快速上手',
@@ -165,7 +165,7 @@ function copyFor(language: QuickStartLanguage): QuickStartCopy {
   }
   return {
     title: 'Quick Start',
-    eyebrow: 'SPSS Studio 1.4.0',
+    eyebrow: 'SPSS Studio 1.4.1',
     introduction: 'Open your first .sps file, edit and run Syntax locally, inspect data and variables, and use focused AI assistance.',
     preferenceTitle: 'Update reminder',
     preferenceText: 'Do not show Quick Start automatically after future updates',
@@ -204,13 +204,18 @@ export function buildQuickStartHtml(options: QuickStartHtmlOptions): string {
 >
   <main>
     <header class="hero">
-      <div class="eyebrow">SPSS Studio ${escapeAttribute(options.version ?? '1.4.0')}</div>
+      <div class="eyebrow">SPSS Studio ${escapeAttribute(options.version ?? '1.4.1')}</div>
       <h1>${copy.title}</h1>
       <p>${copy.introduction}</p>
     </header>
     ${options.isWindows ? `<section class="setup-entry"><h2>${options.language === 'zh-cn' ? 'Windows 一键配置' : 'Windows Setup'}</h2>
     <p>${options.language === 'zh-cn' ? '自动查找 SPSS、配置连接并验证实际运行，无需手动设置环境变量。' : 'Find SPSS, save working settings, and verify execution without manual environment-variable editing.'}</p>
     <button id="configure-runtime">${options.language === 'zh-cn' ? '一键检测并配置 SPSS' : 'Detect and Configure SPSS'}</button></section>` : ''}
+    <section class="setup-entry">
+      <h2>${options.language === 'zh-cn' ? '内置示例' : 'Built-in Example'}</h2>
+      <p>${options.language === 'zh-cn' ? '打开随插件内置的模拟 SAV 数据与中文 SPS：导入、描述统计、绘图、t 检验和回归。打开后可逐段运行，不会自动执行或发送 AI 请求。' : 'Open the bundled simulated SAV data and English SPS: import, descriptive statistics, charts, t test, and regression. Run sections at your own pace; opening the example executes nothing and sends no AI requests.'}</p>
+      <button id="open-example">${options.language === 'zh-cn' ? '示例' : 'Example'}</button>
+    </section>
     <aside class="update-preference" aria-labelledby="update-preference-title">
       <h2 id="update-preference-title">${copy.preferenceTitle}</h2>
       <label for="suppress-after-updates">

@@ -33,6 +33,8 @@
     generation: 0,
     historyWidth: Number(savedStudioState.historyWidth) || 240,
     historyVisible: false,
+    dataBusy: false,
+    engineState: 'stopped',
   };
 
   const byId = (id) => document.getElementById(id);
@@ -106,6 +108,10 @@
     byId('print-output').disabled = !enabled;
   }
 
+  function updateClearAction() {
+    byId('clear-data').disabled = state.dataBusy || state.engineState !== 'ready';
+  }
+
   function setHistoryVisible(visible) {
     state.historyVisible = Boolean(visible);
     byId('output-view').classList.toggle('history-open', state.historyVisible);
@@ -120,6 +126,13 @@
     const error = record.errorMessage ? `\n${record.errorMessage}` : '';
     const runNumber = formatText(strings.runNumber, { number: String(record.sequence) });
     byId('run-summary').textContent = `${runNumber} · ${executionStatusLabel(record.status)}\n${strings.errorLevel}: ${record.errorLevel} · ${strings.duration}: ${seconds} s${error}`;
+    if (record.datasetSummary) {
+      byId('run-summary').textContent += `\n${formatText(strings.datasetSummary, {
+        cases: record.datasetSummary.caseCount < 0 ? strings.casesUnknown : record.datasetSummary.caseCount.toLocaleString(),
+        variables: record.datasetSummary.variableCount.toLocaleString(),
+      })}`;
+    }
+    if (record.fileInUseWarning) byId('run-summary').textContent += `\n${strings.fileInUseWarning}`;
     const output = byId('spss-output');
     if (html) {
       // The extension sanitizes this IBM-generated fragment and rewrites local image URIs.
@@ -131,7 +144,7 @@
       empty.textContent = record.status === 'RUNNING'
         ? strings.executionRunning
         : record.status === 'SUCCESS_NO_OUTPUT'
-          ? strings.executionNoDisplayOutput
+          ? record.datasetSummary ? strings.executionDataReady : strings.executionNoDisplayOutput
           : strings.executionNoHtmlOutput;
       output.append(empty);
     }
@@ -382,6 +395,9 @@
   byId('variables-tab').addEventListener('click', () => showTab('variables'));
   byId('ai-tab').addEventListener('click', () => showTab('ai'));
   byId('clear-output').addEventListener('click', () => postStudio({ type: 'clearOutput' }));
+  byId('clear-data').addEventListener('click', () => {
+    if (!byId('clear-data').disabled) postStudio({ type: 'clearData' });
+  });
   byId('explain-output').addEventListener('click', () => {
     if (state.selectedId) postStudio({ type: 'explainOutput', id: state.selectedId });
   });
@@ -501,6 +517,7 @@
     }
     const message = envelope.message;
     if (message.type === 'executionStarted' || message.type === 'executionCompleted') {
+      if (message.type === 'executionStarted') byId('data-notice').textContent = '';
       state.history = message.history;
       state.selectedId = message.selectedId;
       renderHistory();
@@ -515,6 +532,7 @@
         [...state.selectedVariables].filter((name) => availableVariables.has(name)),
       );
       state.datasetRevision = message.revision;
+      updateClearAction();
       if (revisionChanged) {
         state.variablePageOffset = 0;
         resetDataRequests(true);
@@ -542,7 +560,17 @@
         }
       }
     } else if (message.type === 'engineState') {
+      state.engineState = message.state;
+      updateClearAction();
       byId('engine-state').textContent = `${strings.enginePrefix}: ${strings.engineStates[message.state] || message.state}`;
+    } else if (message.type === 'dataActionState') {
+      state.dataBusy = message.busy;
+      updateClearAction();
+    } else if (message.type === 'dataCleared') {
+      state.selectedVariables.clear();
+      resetDataRequests(true);
+      renderVariables();
+      byId('data-notice').textContent = strings.dataCleared;
     } else if (message.type === 'showOutput') {
       showTab('output', false);
     } else if (message.type === 'showData') {

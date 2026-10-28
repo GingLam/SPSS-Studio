@@ -7,6 +7,7 @@ export type BridgeOperation =
   | 'datasetInfo'
   | 'datasetPage'
   | 'variableProfiles'
+  | 'clearData'
   | 'shutdown';
 
 export type ExecutionStatus =
@@ -151,6 +152,7 @@ export interface BridgeResponse {
   status?: ExecutionStatus;
   htmlPath?: string | null;
   datasetInfo?: ActiveDatasetInfo;
+  datasetSummary?: { caseCount: number; variableCount: number };
   datasetPage?: DatasetPage;
   variableProfiles?: VariableProfiles;
 }

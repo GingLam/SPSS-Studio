@@ -149,6 +149,16 @@ Model output is untrusted and can be wrong. Inspect generated syntax before runn
 
 ## Configuration
 
+### Built-in examples and session data
+
+Quick Start includes **Example** (or **示例** in a Chinese VS Code interface). It opens an English or Chinese `.sps` tutorial together with an already packaged, original `.sav` dataset: 60 fictional cases and `id age gender edu income hours`. No download or data generation is needed. The tutorial demonstrates import, labels, codebook, descriptive statistics, bar/scatter charts, an independent-samples t test, regression, and Studio/Chat interactions. Opening it does not run syntax or contact an AI provider. Editable copies stay in the extension's private example directory, and reopening preserves edits.
+
+The Output toolbar's **Clear**, between **Print** and **History**, discards all loaded datasets and unsaved changes in this Studio engine after confirmation. It preserves source files, output history, and Chat. The Runs sidebar's separate Clear still clears output history only.
+
+Data-loading commands can succeed without producing statistical tables; their run now includes the available case and variable counts. SPSS Warning #67 indicates a file-use condition and does not alone establish a failed read. Its native text is retained with concise guidance. Studio preserves named datasets rather than silently clearing them before imports; use Clear when you intentionally want an empty session. Another process's file use can still require action outside this session.
+
+### Runtime configuration
+
 On Windows, select **Detect and Configure SPSS** in Quick Start, or run **SPSS: Detect and Configure** from the Command Palette. The wizard finds installations, runs an isolated temporary analysis, saves only the necessary SPSS Studio settings, and verifies the effective saved configuration. It checks three rows, the expected mean of 30, native HTML output, and graceful shutdown. No system-wide Python variables need to be edited.
 
 An active SPSS session is preserved: save any data you need and stop the engine manually before running setup. If multiple installations pass, select one. If none are found, use **Choose SPSS Folder**. Conflicting workspace values require confirmation for targeted repair. Failed or cancelled configuration restores the previous values; concurrent user edits are preserved and reported as conflicts. Interrupted setup changes are journaled for recovery after reload.
@@ -203,6 +213,7 @@ SPSS Studio is not an LSP or a full semantic validator. It does not provide stat
 
 | Version | Date | Update summary |
 | --- | --- | --- |
+| 1.4.1 | 2026-10-28 | Added per-run data summaries, native file-use warning guidance, a confirmed session-data Clear action, and prebuilt bilingual SPS/SAV examples in Quick Start. |
 | 1.4.0 | 2026-10-28 | Added built-in one-click runtime detection, configuration, isolated calculation/HTML/data/shutdown verification, rollback and desktop reports; fixed Windows CMD quoting and expanded installation discovery. Windows real-SPSS acceptance remains pending. |
 | 1.3.1 | 2026-10-24 | Strengthened Windows SPSS startup with serialized lifecycle transitions, strict version-matched IBM launcher discovery, isolated UTF-8 bridge environments, process-tree cleanup, a bounded transient retry, and a 120-second default startup timeout. |
 | 1.3.0 | 2026-10-24 | Localized the complete SPSS Studio interface, editor and context commands, progress states, tooltips, provider presentation, and direct user feedback according to the VS Code display language, while keeping Chat response language independent. |

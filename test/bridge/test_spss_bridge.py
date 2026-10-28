@@ -55,6 +55,10 @@ class FakeSpss(object):
                     output_file.write("<html><body><table><tr><td>SPSS output</td></tr></table></body></html>")
         elif syntax.startswith("DATASET NAME "):
             self.dataset_name = syntax[len("DATASET NAME "):].rstrip(".")
+        elif syntax.startswith("NEW FILE.") and not self.raise_on_user:
+            self.variables = []
+            self.rows = []
+            self.dataset_name = "*"
         elif self.raise_on_user:
             raise RuntimeError(self.raise_on_user)
 
@@ -237,6 +241,43 @@ class SpssBridgeTests(unittest.TestCase):
         self.assertTrue(response["ok"])
         self.assertEqual(response["status"], "SUCCESS_NO_OUTPUT")
         self.assertIsNone(response["htmlPath"])
+
+    def test_run_captures_its_own_counts_before_next_request(self):
+        fake = FakeSpss()
+        fake.write_output = False
+        fake.error_level = 2
+        fake.error_message = "Native warning"
+        bridge = BRIDGE_MODULE.SpssBridge(fake)
+        with tempfile.TemporaryDirectory() as output_root:
+            response = bridge.handle({"id": "read", "op": "run", "syntax": "GET FILE='sample.sav'.", "runId": "read", "outputDirectory": output_root})
+        fake.rows.append([30.0, "B"])
+        self.assertEqual(response.get("datasetSummary"), {"caseCount": 2, "variableCount": 2})
+        self.assertEqual(response["errorLevel"], 2)
+        self.assertEqual(response["error"], "Native warning")
+
+    def test_clear_data_empties_dataset_without_stopping_processor(self):
+        fake = FakeSpss()
+        bridge = BRIDGE_MODULE.SpssBridge(fake)
+        bridge.start()
+        try:
+            response = bridge.handle({"id": "clear", "op": "clearData"})
+        except ValueError as error:
+            self.fail(str(error))
+        self.assertTrue(response["ok"])
+        self.assertEqual(fake.variables, [])
+        self.assertEqual(fake.rows, [])
+        self.assertTrue(response["engineAlive"])
+        self.assertEqual(fake.stop_count, 0)
+        self.assertIn("DATASET CLOSE ALL.", "\n".join(fake.submissions))
+
+    def test_clear_data_does_not_claim_success_on_engine_failure(self):
+        fake = FakeSpss()
+        fake.raise_on_user = "Cannot clear data"
+        bridge = BRIDGE_MODULE.SpssBridge(fake)
+        bridge.start()
+        with self.assertRaisesRegex(RuntimeError, "Cannot clear data"):
+            bridge.handle({"id": "clear", "op": "clearData"})
+        self.assertEqual(len(fake.variables), 2)
 
     def test_dataset_info_and_range_page(self):
         fake = FakeSpss()

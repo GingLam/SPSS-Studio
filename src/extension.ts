@@ -55,6 +55,8 @@ export interface SpssStudioExtensionApi {
   getVariableProfiles(names: readonly string[]): Promise<VariableProfiles>;
   outputChannelName: string;
   configureRuntime(): Promise<void>;
+  clearData(): Promise<void>;
+  openExample(): Promise<void>;
   getSetupSummary(): { success: boolean; error?: string; stages: string[] } | undefined;
 }
 
@@ -93,6 +95,7 @@ export function activate(context: vscode.ExtensionContext): SpssStudioExtensionA
 
   engineService = new EngineService(context.extensionPath, {
     onStateChange: updateStatus,
+    onBusyChange: (busy) => studioHolder.current?.handleEngineBusy(busy),
     onDiagnostic: (message) => {
       const configuration = readConfiguration();
       if (configuration.debugLogging) {
@@ -109,6 +112,7 @@ export function activate(context: vscode.ExtensionContext): SpssStudioExtensionA
     context.globalState,
     vscode.env.language,
     () => { void runtimeSetup.run(); },
+    context.globalStorageUri.fsPath,
   );
   const variableCommandDependencies = { variableCache, editorTarget };
   const modelProfiles = new ModelProfileStore(context.globalState, context.secrets);
@@ -199,6 +203,7 @@ export function activate(context: vscode.ExtensionContext): SpssStudioExtensionA
       return current.variableProfiles(names);
     },
     clearOutput: () => studioHolder.current?.clearOutput(),
+    clearData: async () => studioHolder.current?.clearData(),
   }, aiPanelController);
   const studio = new StudioSession(
     engineService,
@@ -295,6 +300,8 @@ export function activate(context: vscode.ExtensionContext): SpssStudioExtensionA
     getVariableProfiles: (names) => studio.variableProfiles(names),
     outputChannelName: output.name,
     configureRuntime: () => runtimeSetup.run(),
+    clearData: () => studio.clearData(),
+    openExample: () => quickStart.openExample(),
     getSetupSummary: () => runtimeSetup.summary,
   };
 }

@@ -47,6 +47,7 @@ export function isAllowedSourceFile(value) {
   const normalized = normalizePackagePath(value);
   return ROOT_FILES.has(normalized)
     || normalized === 'resources/bridge/spss_bridge.py'
+    || /^resources\/examples\/(?:example\.(?:en|zh-cn)\.sps|spss-studio-example\.sav|LICENSE\.txt)$/u.test(normalized)
     || ASSET_PATTERNS.some((pattern) => pattern.test(normalized));
 }
 
@@ -64,6 +65,10 @@ export function assertAllowedSourceFiles(values, phase = 'package input') {
     'media/spss-syntax-data.js',
     'out/src/extension.js',
     'resources/bridge/spss_bridge.py',
+    'resources/examples/example.en.sps',
+    'resources/examples/example.zh-cn.sps',
+    'resources/examples/spss-studio-example.sav',
+    'resources/examples/LICENSE.txt',
     'themes/spss-studio-light-color-theme.json',
     'themes/spss-studio-dark-color-theme.json',
   ];

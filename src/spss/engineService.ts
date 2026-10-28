@@ -26,6 +26,7 @@ export interface SpssRuntimeConfiguration {
 export interface EngineServiceCallbacks {
   onStateChange: (state: EngineState) => void;
   onDiagnostic: (message: string) => void;
+  onBusyChange?: (busy: boolean) => void;
 }
 
 export interface EngineServiceDependencies {
@@ -40,6 +41,7 @@ export class EngineService {
   private startPromise: Promise<BridgeResponse> | undefined;
   private lifecycleTail: Promise<void> = Promise.resolve();
   private setupReserved = false;
+  private clearingData = false;
   private readonly locate: typeof locateSpss;
   private readonly createManager: (options: BridgeManagerOptions) => BridgeManager;
 
@@ -65,16 +67,41 @@ export class EngineService {
   }
 
   public reserveForSetup(): () => void {
-    if (this.setupReserved || this.startPromise || this.manager?.status().engineAlive) {
+    if (this.setupReserved || this.clearingData || this.startPromise || this.manager?.status().engineAlive) {
       throw new Error('SETUP_ENGINE_BUSY');
     }
     this.setupReserved = true;
-    return () => { this.setupReserved = false; };
+    this.callbacks.onBusyChange?.(true);
+    return () => { this.setupReserved = false; this.callbacks.onBusyChange?.(false); };
   }
 
   private requireNotConfiguring(): void {
     if (this.setupReserved) {
       throw new Error('SPSS setup is in progress. Wait for setup to finish before running syntax.');
+    }
+    if (this.clearingData) {
+      throw new Error('SPSS data clearing is in progress. Wait for Clear to finish.');
+    }
+  }
+
+  public async clearData(): Promise<void> {
+    this.requireNotConfiguring();
+    if (this.startPromise || this.manager?.state === 'running') {
+      throw new Error('Wait for the current SPSS operation to finish.');
+    }
+    if (!this.manager?.status().engineAlive) { return; }
+    this.clearingData = true;
+    this.callbacks.onBusyChange?.(true);
+    try {
+      await this.enqueueLifecycle(async () => {
+        const manager = this.manager;
+        if (!manager?.status().engineAlive) { return; }
+        const response = await manager.clearData();
+        if (!response.ok) { throw new Error(response.error ?? 'SPSS could not clear session data.'); }
+      });
+    } finally {
+      this.clearingData = false;
+      this.callbacks.onBusyChange?.(false);
     }
   }
 

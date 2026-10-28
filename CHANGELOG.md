@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.4.1 — 2026-10-28
+
+- Added per-run dataset counts after execution and clearer success messages when commands load data without producing tables. Warning #67 receives localized guidance while retaining native warning content and SPSS multi-dataset behavior; external file-use warnings are not suppressed.
+- Added Clear between Print and History in Output. After one confirmation, it clears all datasets and unsaved changes in this Studio engine, refreshes Data/Variables/completion state, and preserves original files, output history, and Chat.
+- Bundled a 1.8 KB original simulated SAV dataset (60 cases, six variables) and English/Chinese SPS tutorials. Quick Start's Example action opens an editable local copy with a resolved data path; it never automatically executes syntax or sends AI requests, and subsequent openings preserve edits.
+- Examples cover import, labels, codebook, descriptive statistics, bar/scatter plots, t tests, regression, and Studio/Chat interactions. Only the example resources receive permission for free reuse; the extension remains proprietary.
+- Retained the 1.4.0 setup wizard. Windows-specific file-lock and real-SPSS acceptance still require Windows hardware.
+
 ## 1.4.0 — 2026-10-28
 
 - Added a localized Detect and Configure SPSS wizard, a prominent Windows Quick Start action, a permanent command, and a Windows execution-failure entry point.

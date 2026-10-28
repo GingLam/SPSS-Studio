@@ -23,7 +23,7 @@ describe('SPSS Studio interface localization', () => {
     assert.deepEqual(Object.keys(RUNTIME_STRINGS_ZH_CN).sort(), Object.keys(RUNTIME_STRINGS_EN).sort());
     assert.equal(studioStringsForLanguage('zh-cn'), STUDIO_STRINGS_ZH_CN);
     assert.equal(studioStringsForLanguage('ZH-CN'), STUDIO_STRINGS_ZH_CN);
-    assert.equal(studioStringsForLanguage('zh-tw'), STUDIO_STRINGS_EN);
+    assert.equal(studioStringsForLanguage('zh-tw'), STUDIO_STRINGS_ZH_CN);
     assert.equal(runtimeStringsForLanguage('fr'), RUNTIME_STRINGS_EN);
   });
 

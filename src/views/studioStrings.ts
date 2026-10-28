@@ -17,6 +17,13 @@ export interface StudioStrings {
   runs: string;
   clear: string;
   clearOutput: string;
+  clearData: string;
+  clearDataConfirm: string;
+  clearDataFailed: string;
+  dataCleared: string;
+  datasetSummary: string;
+  executionDataReady: string;
+  fileInUseWarning: string;
   runNumber: string;
   errorLevel: string;
   duration: string;
@@ -88,6 +95,13 @@ export const STUDIO_STRINGS_EN: StudioStrings = {
   runs: 'Runs',
   clear: 'Clear',
   clearOutput: 'Clear output',
+  clearData: 'Clear session data',
+  clearDataConfirm: 'Clear all data in this SPSS Studio session? Unsaved changes will be lost. Original files, output history, and Chat will be kept.',
+  clearDataFailed: 'Could not clear session data',
+  dataCleared: 'Session data cleared. Original files, output history, and Chat were kept.',
+  datasetSummary: 'Data after this run: {cases} cases · {variables} variables.',
+  executionDataReady: 'Execution completed. View the dataset in Variables or Data.',
+  fileInUseWarning: 'SPSS reports that the source file is already in use (Warning #67). This warning alone does not mean the read failed. To discard this session’s loaded data before reading again, use Clear. Another application may still hold the file.',
   runNumber: 'Run #{number}',
   errorLevel: 'Error level',
   duration: 'Duration',
@@ -159,6 +173,13 @@ export const STUDIO_STRINGS_ZH_CN: StudioStrings = {
   runs: '运行记录',
   clear: '清空',
   clearOutput: '清空输出',
+  clearData: '清空会话数据',
+  clearDataConfirm: '清空本会话的全部数据？未保存修改将丢失；原始文件、输出历史和对话将保留。',
+  clearDataFailed: '无法清空会话数据',
+  dataCleared: '会话数据已清空；原始文件、输出历史和对话已保留。',
+  datasetSummary: '本次运行后数据：{cases} 个观测，{variables} 个变量。',
+  executionDataReady: '执行成功，可在变量或数据页面查看数据集。',
+  fileInUseWarning: 'SPSS 提示源文件已被占用（Warning #67），这条警告本身不代表读取失败。如需丢弃本会话已载入数据后重新读取，可点击“清空”；其他程序仍可能占用该文件。',
   runNumber: '运行 #{number}',
   errorLevel: '错误级别',
   duration: '用时',
@@ -200,5 +221,5 @@ export const STUDIO_STRINGS_ZH_CN: StudioStrings = {
 };
 
 export function studioStringsForLanguage(language: string): StudioStrings {
-  return language.toLowerCase() === 'zh-cn' ? STUDIO_STRINGS_ZH_CN : STUDIO_STRINGS_EN;
+  return language.toLowerCase().startsWith('zh') ? STUDIO_STRINGS_ZH_CN : STUDIO_STRINGS_EN;
 }
