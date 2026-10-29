@@ -2,7 +2,7 @@ import { DEFAULT_AI_RESPONSE_LANGUAGE, type AiResponseLanguage } from '../ai/cha
 import { descendants, elementChildren, hasClass, hasDescendantTag, htmlText, parseHtmlDocument, type HtmlElement } from '../ai/htmlDocument';
 import {
   buildOutputExplanationQuestion, extractSpssOutputForAi, EXCLUDED_OUTPUT_ELEMENTS,
-  isCommandEchoOrPath, isNotesTable, isSystemMetadataText,
+  isCommandEchoOrPath, isLayoutTable, isNotesTable, isSystemMetadataText,
 } from '../ai/outputExplanation';
 
 export interface SpssOutputBlock {
@@ -44,14 +44,14 @@ export function createSpssOutputBlocks(
   const walk = (element: HtmlElement): void => {
     if (EXCLUDED_OUTPUT_ELEMENTS.has(element.tag)) { return; }
     if (element.tag === 'table') {
-      if (isNotesTable(element)) { return; }
-      if (hasDescendantTag(element, EXCLUDED_OUTPUT_ELEMENTS)
-        && ![...descendants(element, 'td'), ...descendants(element, 'th')].some((cell) => htmlText(cell).trim())) { return; }
-      if (descendants(element, 'table').length && !captionOf(element) && !hasClass(element, 'pivot') && !hasClass(element, 'PivotTable')) {
+      if (isLayoutTable(element)) {
         // Layout tables may contain independent statistical tables.
         elementChildren(element).forEach(walk);
         return;
       }
+      if (isNotesTable(element)) { return; }
+      if (hasDescendantTag(element, EXCLUDED_OUTPUT_ELEMENTS)
+        && ![...descendants(element, 'td'), ...descendants(element, 'th')].some((cell) => htmlText(cell).trim())) { return; }
       const original = sourceHtml(element, rawHtml);
       if (!original || !extractSpssOutputForAi(original, language).content) { return; }
       const caption = captionOf(element);

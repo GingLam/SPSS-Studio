@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { createSpssOutputBlocks, buildSelectedOutputQuestion } from '../../src/views/spssOutputBlocks';
 import { isWebviewMessage } from '../../src/views/webviewProtocol';
+import { extractSpssOutputForAi } from '../../src/ai/outputExplanation';
 
 const native = fs.readFileSync(path.resolve(__dirname, '../../../test/fixtures/output-multiple-tables.html'), 'utf8');
 
@@ -123,5 +124,29 @@ describe('SPSS native output table selection', () => {
     const first = blocks[0]; assert.ok(first);
     const question = buildSelectedOutputQuestion(blocks, [first.id]);
     assert.match(question, /12\.4/u); assert.doesNotMatch(question, /GRAPH SECRET/u);
+  });
+
+  it('keeps statistical children selectable when a layout table also contains Notes', () => {
+    const body = /<body\b[^>]*>([\s\S]*?)<\/body>/iu.exec(native)?.[1]; assert.ok(body);
+    const wrapped = `<table class="layout"><tr><td>${body}</td></tr></table>`;
+    const result = createSpssOutputBlocks(wrapped, 'en');
+    assert.equal(result.blocks.length, 12);
+    assert.equal(result.blocks.filter((block) => block.title.startsWith('Regression')).length, 4);
+    const wholeRun = extractSpssOutputForAi(wrapped, 'en').content;
+    assert.match(wholeRun, /Coefficients/u);
+    assert.doesNotMatch(wholeRun, /Output Created|Processor Time/u);
+  });
+
+  it('redacts local paths even when the user selects a warning table itself', () => {
+    const paths = ['C:\\private\\source.sav', 'C:\\My Teaching\\中文数据.sav', '/Users/private/My Course/source.sav', '/Research/Project-A/data.csv', '\\\\server\\share\\private data.sav', 'file:///Users/private/source.sav', 'file:///Users/private/My Course/source.sav'];
+    for (const localPath of paths) {
+      const html = `<table><caption>Warnings</caption><tr><td>File ${localPath} unavailable.</td></tr></table>`;
+      const { blocks } = createSpssOutputBlocks(html);
+      const first = blocks[0]; assert.ok(first);
+      const question = buildSelectedOutputQuestion(blocks, [first.id], 'en');
+      assert.ok(!question.includes(localPath), `Leaked ${localPath}`);
+      assert.doesNotMatch(question, /private|My Teaching|中文数据|Project-A/u);
+      assert.match(question, /PATH OMITTED/u);
+    }
   });
 });

@@ -14,6 +14,18 @@ import {
 
 const MAX_TABLE_ROWS = 50;
 const MAX_OUTPUT_CHARACTERS = 30_000;
+const LOCAL_PATH_ROOT = String.raw`(?:file:\/\/\/?|(?<![\p{L}\p{N}_])[A-Za-z]:[\\/]+|\\{2,}[^\\/\s]+[\\/]+|(?<![\p{L}\p{N}_:/])/(?=[\p{L}_]))`;
+const LOCAL_FILE_PATH = new RegExp(String.raw`${LOCAL_PATH_ROOT}[^\r\n\t<>|"]*?\.(?:sav|zsav|sps|spv|csv|tsv|txt|log|html?|json|xml|xlsx?|docx?|pdf|png|jpe?g|svg|dta|do|ado|py|r|sas|por|dat|db|sqlite|mdb|accdb|zip)(?:[?#][^\s<>|"']*)?(?=$|[\s.,;:!?\])}])`, 'giu');
+const COMPACT_LOCAL_PATH = new RegExp(`${LOCAL_PATH_ROOT}[^\\s<>|"']+`, 'gu');
+
+/** Redact provenance paths in cells, captions, footnotes and paragraph results. */
+export function redactOutputPaths(value: string, language: AiResponseLanguage = DEFAULT_AI_RESPONSE_LANGUAGE): string {
+  const omitted = language === 'en' ? '[PATH OMITTED]' : '[路径已省略]';
+  let text = value;
+  text = text.replace(new RegExp(`"${LOCAL_PATH_ROOT}[^"\\r\\n]*"`, 'gu'), `"${omitted}"`);
+  text = text.replace(new RegExp(`'${LOCAL_PATH_ROOT}[^'\\r\\n]*'`, 'gu'), `'${omitted}'`);
+  return text.replace(LOCAL_FILE_PATH, omitted).replace(COMPACT_LOCAL_PATH, omitted);
+}
 export const EXCLUDED_OUTPUT_ELEMENTS = new Set([
   'audio', 'canvas', 'embed', 'figure', 'iframe', 'img', 'map', 'object',
   'picture', 'script', 'style', 'svg', 'video',
@@ -59,7 +71,7 @@ export function extractSpssOutputForAi(
   const document = parseHtmlDocument(rawHtml);
   const blocks: string[] = [];
   collectBlocks(document, blocks, language);
-  const normalized = blocks.join('\n\n').replace(/\n{3,}/gu, '\n\n').trim();
+  const normalized = redactOutputPaths(blocks.join('\n\n'), language).replace(/\n{3,}/gu, '\n\n').trim();
   if (normalized.length <= MAX_OUTPUT_CHARACTERS) {
     return { content: normalized, truncated: false };
   }
@@ -77,7 +89,7 @@ export function buildOutputExplanationQuestion(
   output: string,
   language: AiResponseLanguage = DEFAULT_AI_RESPONSE_LANGUAGE,
 ): string {
-  const normalized = output.trim();
+  const normalized = redactOutputPaths(output, language).trim();
   if (!normalized) {
     throw new Error('The selected SPSS output contains no statistical text or tables to explain.');
   }
@@ -101,6 +113,10 @@ function collectBlocks(
       continue;
     }
     if (child.tag === 'table') {
+      if (isLayoutTable(child)) {
+        collectBlocks(child, blocks, language);
+        continue;
+      }
       if (!isNotesTable(child)) {
         const markdown = tableToMarkdown(child, language);
         if (markdown) {
@@ -121,6 +137,11 @@ function collectBlocks(
     }
     collectBlocks(child, blocks, language);
   }
+}
+
+export function isLayoutTable(table: HtmlElement): boolean {
+  return !elementChildren(table, 'caption').length && !table.attributes['aria-label']
+    && !hasClass(table, 'pivot') && !hasClass(table, 'PivotTable') && descendants(table, 'table').length > 0;
 }
 
 export function isNotesTable(table: HtmlElement): boolean {

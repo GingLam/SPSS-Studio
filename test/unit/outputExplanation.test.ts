@@ -2,10 +2,19 @@ import assert from 'node:assert/strict';
 import {
   buildOutputExplanationQuestion,
   extractSpssOutputForAi,
+  redactOutputPaths,
 } from '../../src/ai/outputExplanation';
 import { parseMarkdown } from '../../src/ai/markdown';
 
 describe('SPSS output explanation extraction', () => {
+  it('redacts paths in final questions without changing numeric values, ratios or ordinary links', () => {
+    const statistics = 'B=-1.25; SE=0.32; P=.000; 95% CI [-1.88, -.62]; ratio 1/2; label income/education. https://example.org/report.html';
+    assert.equal(redactOutputPaths(statistics, 'en'), statistics);
+    const question = buildOutputExplanationQuestion('Warning: file "C:\\My Course\\private data.sav" unavailable. B=-1.25; P=.000.', 'en');
+    assert.match(question, /PATH OMITTED/u);
+    assert.doesNotMatch(question, /My Course|private data/u);
+    assert.match(question, /B=-1\.25; P=\.000/u);
+  });
   it('keeps statistical text and tables while removing Notes, paths, commands, and figures', () => {
     const html = `<!doctype html><html><head><style>.x{color:red}</style></head><body>
       <p align="left"><html><font>GET FILE='secret.sav'.<br>EXAMINE VARIABLES=income.</font></html></p>
