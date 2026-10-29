@@ -46,7 +46,7 @@ async function main(): Promise<void> {
 
   try {
     const testOptions: Parameters<typeof runTests>[0] = {
-      extensionDevelopmentPath: projectRoot,
+      extensionDevelopmentPath: process.env.SPSS_STUDIO_TEST_EXTENSION_PATH ?? projectRoot,
       extensionTestsPath: path.join(__dirname, 'suite', 'index'),
       launchArgs: [
         workspacePath,

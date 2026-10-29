@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.4.2 — 2026-10-29
+
+- Added left-hand Output checkboxes for individual native statistical tables and result blocks, including separate tables from the same analysis, while preserving native HTML layout and result order.
+- Explain sends checked results in one Chat request and requests separate numbered interpretations. With no selection it retains whole-run explanation. Table captions, merged headers, footnotes, and safe statistical qualifications are preserved; unchecked table bodies, Notes, provenance fields, command echoes, and figures are excluded.
+- Isolated selections by run, retained them across page switches, and rejected stale or malformed selections without reverting to a whole-output request. Added localized labels and a reselection notice when results change.
+- Updated bilingual Quick Start and release documentation without changing engine configuration, data handling, examples, or model credentials.
+
 ## 1.4.1 — 2026-10-28
 
 - Added per-run dataset counts after execution and clearer success messages when commands load data without producing tables. Warning #67 receives localized guidance while retaining native warning content and SPSS multi-dataset behavior; external file-use warnings are not suppressed.

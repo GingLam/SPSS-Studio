@@ -14,6 +14,11 @@
     activeTab: 'output',
     history: [],
     selectedId: undefined,
+    renderedOutputId: undefined,
+    outputBlocks: [],
+    outputSelections: new Map(),
+    invalidOutputSelections: new Set(),
+    explainAvailable: false,
     dataset: undefined,
     datasetRevision: -1,
     page: undefined,
@@ -84,6 +89,14 @@
   }
 
   function renderHistory() {
+    const available = new Set(state.history.map((record) => record.id));
+    if (state.selectedId) available.add(state.selectedId);
+    for (const id of state.outputSelections.keys()) {
+      if (!available.has(id)) state.outputSelections.delete(id);
+    }
+    for (const id of state.invalidOutputSelections) {
+      if (!available.has(id)) state.invalidOutputSelections.delete(id);
+    }
     const container = byId('run-history');
     container.replaceChildren();
     for (const record of state.history) {
@@ -103,9 +116,11 @@
 
   function setOutputActions(record) {
     const enabled = Boolean(record?.hasHtml) && record.status !== 'RUNNING';
+    state.explainAvailable = enabled;
     byId('explain-output').disabled = !enabled;
     byId('export-output').disabled = !enabled;
     byId('print-output').disabled = !enabled;
+    updateOutputSelectionHint();
   }
 
   function updateClearAction() {
@@ -118,8 +133,65 @@
     byId('toggle-history').setAttribute('aria-expanded', String(state.historyVisible));
   }
 
-  function renderExecution(record, html) {
+  function selectedOutputBlockIds() {
+    if (state.renderedOutputId !== state.selectedId) return [];
+    const selected = state.outputSelections.get(state.selectedId);
+    return state.outputBlocks.filter((block) => selected?.has(block.id)).map((block) => block.id);
+  }
+
+  function updateOutputSelectionHint() {
+    const count = selectedOutputBlockIds().length;
+    const invalid = state.invalidOutputSelections.has(state.selectedId);
+    byId('explain-output').disabled = !state.explainAvailable || invalid;
+    byId('explain-output').title = invalid ? strings.outputReselect : count
+      ? formatText(strings.outputExplainSelected, { count: String(count) })
+      : strings.outputExplainAll;
+  }
+
+  function decorateOutputBlocks(output, record, suppliedBlocks) {
+    const blocks = (Array.isArray(suppliedBlocks) ? suppliedBlocks : []).filter((block) => (
+      block && typeof block.id === 'string' && /^block-[1-9]\d{0,5}$/.test(block.id) && typeof block.title === 'string'
+    )).map((block) => ({ ...block, target: output.querySelector(`[data-spss-output-block="${block.id}"]`) }))
+      .filter((block) => block.target?.parentNode);
+    state.outputBlocks = blocks.map(({ id, title }) => ({ id, title }));
+    const available = new Set(blocks.map((block) => block.id));
+    const previous = state.outputSelections.get(record.id) || new Set();
+    if ([...previous].some((id) => !available.has(id))) state.invalidOutputSelections.add(record.id);
+    const selected = new Set([...previous].filter((id) => available.has(id)));
+    state.outputSelections.set(record.id, selected);
+    for (const block of blocks) {
+      const row = document.createElement('section');
+      row.className = 'output-block';
+      row.classList.toggle('output-block-selected', selected.has(block.id));
+      const label = document.createElement('label');
+      label.className = 'output-block-selector';
+      label.title = formatText(strings.selectOutputBlock, { title: block.title });
+      const checkbox = document.createElement('input');
+      checkbox.type = 'checkbox';
+      checkbox.checked = selected.has(block.id);
+      checkbox.setAttribute('aria-label', label.title);
+      checkbox.addEventListener('change', () => {
+        if (state.renderedOutputId !== record.id || state.selectedId !== record.id) return;
+        if (checkbox.checked) selected.add(block.id); else selected.delete(block.id);
+        state.invalidOutputSelections.delete(record.id);
+        row.classList.toggle('output-block-selected', checkbox.checked);
+        updateOutputSelectionHint();
+      });
+      label.append(checkbox);
+      const content = document.createElement('div');
+      content.className = 'output-block-content';
+      // Move the existing native table intact; never reconstruct its rows/cells.
+      block.target.parentNode.insertBefore(row, block.target);
+      content.append(block.target);
+      row.append(label, content);
+    }
+    updateOutputSelectionHint();
+  }
+
+  function renderExecution(record, html, blocks) {
     state.selectedId = record.id;
+    state.renderedOutputId = record.id;
+    state.outputBlocks = [];
     renderHistory();
     setOutputActions(record);
     const seconds = (record.durationMs / 1000).toFixed(2);
@@ -137,7 +209,9 @@
     if (html) {
       // The extension sanitizes this IBM-generated fragment and rewrites local image URIs.
       output.innerHTML = html;
+      decorateOutputBlocks(output, record, blocks);
     } else {
+      state.outputSelections.delete(record.id);
       output.replaceChildren();
       const empty = document.createElement('p');
       empty.className = 'empty';
@@ -399,7 +473,9 @@
     if (!byId('clear-data').disabled) postStudio({ type: 'clearData' });
   });
   byId('explain-output').addEventListener('click', () => {
-    if (state.selectedId) postStudio({ type: 'explainOutput', id: state.selectedId });
+    if (state.selectedId && state.renderedOutputId === state.selectedId && !byId('explain-output').disabled) {
+      postStudio({ type: 'explainOutput', id: state.selectedId, blockIds: selectedOutputBlockIds() });
+    }
   });
   byId('export-output').addEventListener('click', () => {
     if (state.selectedId) postStudio({ type: 'exportOutput', id: state.selectedId });
@@ -523,7 +599,7 @@
       renderHistory();
       setOutputActions(state.history.find((record) => record.id === state.selectedId));
     } else if (message.type === 'executionSelected') {
-      renderExecution(message.record, message.html);
+      renderExecution(message.record, message.html, message.blocks);
     } else if (message.type === 'datasetMetadata') {
       const revisionChanged = message.revision !== state.datasetRevision;
       state.dataset = message.dataset || undefined;
@@ -580,6 +656,10 @@
     } else if (message.type === 'showAi') {
       showTab('ai', false);
     } else if (message.type === 'outputCleared') {
+      state.outputSelections.clear();
+      state.invalidOutputSelections.clear();
+      state.outputBlocks = [];
+      state.renderedOutputId = undefined;
       state.history = [];
       state.selectedId = undefined;
       renderHistory();

@@ -4,6 +4,7 @@ export interface HtmlElement {
   attributes: Record<string, string>;
   children: HtmlNode[];
   parent?: HtmlElement;
+  source?: { start: number; openEnd: number; end?: number };
 }
 
 export interface HtmlText {
@@ -20,6 +21,7 @@ const VOID_ELEMENTS = new Set([
 ]);
 
 const RAW_TEXT_ELEMENTS = new Set(['script', 'style']);
+const NON_STATISTICAL_TEXT_ELEMENTS = new Set(['audio', 'canvas', 'embed', 'figure', 'iframe', 'img', 'map', 'object', 'picture', 'svg', 'video']);
 
 export function parseHtmlDocument(source: string): HtmlElement {
   const root: HtmlElement = {
@@ -29,6 +31,7 @@ export function parseHtmlDocument(source: string): HtmlElement {
     children: [],
   };
   const stack = [root];
+  const lowerSource = source.toLowerCase();
   let offset = 0;
   while (offset < source.length) {
     const opening = source.indexOf('<', offset);
@@ -57,7 +60,7 @@ export function parseHtmlDocument(source: string): HtmlElement {
     if (rawTag.startsWith('/')) {
       const closingName = tagName(rawTag.slice(1));
       if (closingName) {
-        closeElement(stack, closingName);
+        closeElement(stack, closingName, offset);
       }
       continue;
     }
@@ -76,11 +79,11 @@ export function parseHtmlDocument(source: string): HtmlElement {
       attributes: parseAttributes(attributesSource),
       children: [],
       parent,
+      source: { start: opening, openEnd: offset },
     };
     parent.children.push(element);
     if (RAW_TEXT_ELEMENTS.has(name)) {
       const closePattern = `</${name}`;
-      const lowerSource = source.toLowerCase();
       const rawClose = lowerSource.indexOf(closePattern, offset);
       if (rawClose < 0) {
         offset = source.length;
@@ -88,10 +91,13 @@ export function parseHtmlDocument(source: string): HtmlElement {
       }
       const rawCloseEnd = findTagEnd(source, rawClose + 2);
       offset = rawCloseEnd < 0 ? source.length : rawCloseEnd + 1;
+      if (element.source) { element.source.end = offset; }
       continue;
     }
     if (!selfClosing && !VOID_ELEMENTS.has(name)) {
       stack.push(element);
+    } else if (element.source) {
+      element.source.end = offset;
     }
   }
   return root;
@@ -173,9 +179,11 @@ function tagName(value: string): string {
   return value.match(/^([A-Za-z][A-Za-z0-9:-]*)/u)?.[1]?.toLowerCase() ?? '';
 }
 
-function closeElement(stack: HtmlElement[], name: string): void {
+function closeElement(stack: HtmlElement[], name: string, end: number): void {
   for (let index = stack.length - 1; index > 0; index -= 1) {
     if (stack[index]?.tag === name) {
+      const element = stack[index];
+      if (element?.source) { element.source.end = end; }
       stack.length = index;
       return;
     }
@@ -232,7 +240,7 @@ function parseAttributes(source: string): Record<string, string> {
 }
 
 function collectText(element: HtmlElement): string {
-  if (element.tag === 'script' || element.tag === 'style' || hasClass(element, 'details')) {
+  if (element.tag === 'script' || element.tag === 'style' || NON_STATISTICAL_TEXT_ELEMENTS.has(element.tag) || hasClass(element, 'details')) {
     return '';
   }
   const parts: string[] = [];

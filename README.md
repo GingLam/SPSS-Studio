@@ -59,7 +59,7 @@ SPSS Studio expands leading TAB indentation on SPSS command lines only at the fi
 
 Each execution uses one private, uniquely tagged, short-lived OMS HTML destination. The selected result initially receives the full Output width. Use **History** beside **Print** to show or hide the resizable Runs column on the right.
 
-- **Explain** structurally converts the selected run's native SPSS HTML tables—including row spans, column spans, layered headers, and footnotes—into aligned Markdown before sending them to the current Chat model. Figures, Notes, command echoes, paths, and run metadata are excluded.
+- **Explain** uses the left-hand checkboxes to explain individual tables or result blocks, including separate tables from one analysis. Multiple checked items are sent in one request for separate numbered interpretations; with none checked, the whole run is explained. Native HTML row spans, column spans, layered headers, captions, and footnotes are converted to aligned Markdown. Safe model qualifications are retained; unchecked table bodies, figures, Notes, command echoes, paths, and run metadata are excluded.
 - **Export** saves the selected output as a sanitized, self-contained HTML file.
 - **Print** opens a print-ready copy in the default browser.
 - **SPSS: Clear Output** removes output files from the current extension session without changing the Active Dataset.
@@ -213,6 +213,7 @@ SPSS Studio is not an LSP or a full semantic validator. It does not provide stat
 
 | Version | Date | Update summary |
 | --- | --- | --- |
+| 1.4.2 | 2026-10-29 | Added per-table Output multi-selection and separate Chat interpretations, preserving native layout, Markdown table structure, statistical qualifications, and privacy filtering. |
 | 1.4.1 | 2026-10-28 | Added per-run data summaries, native file-use warning guidance, a confirmed session-data Clear action, and prebuilt bilingual SPS/SAV examples in Quick Start. |
 | 1.4.0 | 2026-10-28 | Added built-in one-click runtime detection, configuration, isolated calculation/HTML/data/shutdown verification, rollback and desktop reports; fixed Windows CMD quoting and expanded installation discovery. Windows real-SPSS acceptance remains pending. |
 | 1.3.1 | 2026-10-24 | Strengthened Windows SPSS startup with serialized lifecycle transitions, strict version-matched IBM launcher discovery, isolated UTF-8 bridge environments, process-tree cleanup, a bounded transient retry, and a 120-second default startup timeout. |

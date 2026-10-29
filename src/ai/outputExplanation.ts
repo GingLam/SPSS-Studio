@@ -14,7 +14,7 @@ import {
 
 const MAX_TABLE_ROWS = 50;
 const MAX_OUTPUT_CHARACTERS = 30_000;
-const EXCLUDED_OUTPUT_ELEMENTS = new Set([
+export const EXCLUDED_OUTPUT_ELEMENTS = new Set([
   'audio', 'canvas', 'embed', 'figure', 'iframe', 'img', 'map', 'object',
   'picture', 'script', 'style', 'svg', 'video',
 ]);
@@ -123,7 +123,7 @@ function collectBlocks(
   }
 }
 
-function isNotesTable(table: HtmlElement): boolean {
+export function isNotesTable(table: HtmlElement): boolean {
   const ariaLabel = table.attributes['aria-label'] ?? '';
   if (/^\s*(?:Notes|注释|备注)(?:\s|,|，|$)/iu.test(ariaLabel)) {
     return true;
@@ -304,7 +304,7 @@ function positiveSpan(value: string | undefined): number {
   return Number.isInteger(parsed) && parsed > 0 ? Math.min(parsed, 1_000) : 1;
 }
 
-function isCommandEchoOrPath(block: HtmlElement): boolean {
+export function isCommandEchoOrPath(block: HtmlElement): boolean {
   if (hasDescendantTag(block, new Set(['html', 'font']))) {
     return true;
   }
@@ -313,7 +313,7 @@ function isCommandEchoOrPath(block: HtmlElement): boolean {
     || /^(?:file:\/\/|\/Users\/|\/home\/|[A-Za-z]:[\\/])/u.test(text);
 }
 
-function isSystemMetadataText(text: string): boolean {
+export function isSystemMetadataText(text: string): boolean {
   return /^(?:Run\s*#\d+|Error level:|Duration:|Output Created|Active Dataset|Processor Time|Elapsed Time)\b/iu.test(text);
 }
 

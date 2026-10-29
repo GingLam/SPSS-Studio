@@ -11,7 +11,7 @@ export interface DatasetPageUiRequest extends DatasetPageRequest {
 export type ExtensionToWebviewMessage =
   | { type: 'executionStarted'; history: ExecutionMetadata[]; selectedId: string }
   | { type: 'executionCompleted'; history: ExecutionMetadata[]; selectedId: string }
-  | { type: 'executionSelected'; record: ExecutionMetadata; html: string }
+  | { type: 'executionSelected'; record: ExecutionMetadata; html: string; blocks?: Array<{ id: string; title: string }> }
   | { type: 'datasetMetadata'; dataset: ActiveDatasetInfo | null; revision: number }
   | { type: 'datasetPage'; page: DatasetPage; requestId: number; generation: number }
   | { type: 'engineState'; state: EngineState }
@@ -41,7 +41,7 @@ export type WebviewToExtensionMessage =
   }
   | { type: 'refreshData' }
   | { type: 'refreshVariables' }
-  | { type: 'explainOutput'; id: string }
+  | { type: 'explainOutput'; id: string; blockIds?: string[] }
   | { type: 'exportOutput'; id: string }
   | { type: 'printOutput'; id: string }
   | { type: 'insertVariable'; name: string }
@@ -60,7 +60,13 @@ export function isWebviewMessage(value: unknown): value is WebviewToExtensionMes
   if (['showOutput', 'showData', 'showVariables', 'showAi', 'refreshData', 'refreshVariables', 'clearOutput', 'clearData'].includes(type)) {
     return true;
   }
-  if (['selectExecution', 'explainOutput', 'exportOutput', 'printOutput'].includes(type)) {
+  if (type === 'explainOutput') {
+    return typeof message.id === 'string' && message.id.length > 0
+      && (message.blockIds === undefined || (Array.isArray(message.blockIds) && message.blockIds.length <= 1000
+        && message.blockIds.every((id) => typeof id === 'string' && /^block-[1-9]\d{0,5}$/u.test(id))
+        && new Set(message.blockIds).size === message.blockIds.length));
+  }
+  if (['selectExecution', 'exportOutput', 'printOutput'].includes(type)) {
     return typeof message.id === 'string' && message.id.length > 0;
   }
   if (type === 'insertVariable') {

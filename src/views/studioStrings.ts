@@ -9,6 +9,11 @@ export interface StudioStrings {
   engineStates: Record<EngineState, string>;
   executionStatuses: Record<ExecutionStatus | 'RUNNING', string>;
   outputExplain: string;
+  selectOutputBlock: string;
+  outputExplainSelected: string;
+  outputExplainAll: string;
+  outputSelectionInvalid: string;
+  outputReselect: string;
   outputExport: string;
   outputPrint: string;
   outputHistory: string;
@@ -87,6 +92,11 @@ export const STUDIO_STRINGS_EN: StudioStrings = {
     TIMEOUT: 'Timeout',
   },
   outputExplain: 'Explain',
+  selectOutputBlock: 'Select result: {title}',
+  outputExplainSelected: 'Explain {count} selected results',
+  outputExplainAll: 'Explain all results',
+  outputSelectionInvalid: 'The selected results are unavailable or too large. Reopen the output and select fewer results.',
+  outputReselect: 'Results changed. Select the results again.',
   outputExport: 'Export',
   outputPrint: 'Print',
   outputHistory: 'History',
@@ -165,6 +175,11 @@ export const STUDIO_STRINGS_ZH_CN: StudioStrings = {
     TIMEOUT: '超时',
   },
   outputExplain: '解释',
+  selectOutputBlock: '选择结果：{title}',
+  outputExplainSelected: '解释所选 {count} 项结果',
+  outputExplainAll: '解释全部结果',
+  outputSelectionInvalid: '所选结果已失效或内容过多，请重新打开输出并减少勾选项。',
+  outputReselect: '结果已变更，请重新勾选。',
   outputExport: '导出',
   outputPrint: '打印',
   outputHistory: '历史',

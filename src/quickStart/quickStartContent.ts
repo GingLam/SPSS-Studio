@@ -60,7 +60,7 @@ const ENGLISH_SECTIONS = `
       <tbody>
         <tr><td><strong>Variables</strong></td><td>Filter Name or Label, select variables, <strong>Copy</strong> their names, <strong>Insert</strong> them into Syntax, or use <strong>Explore</strong> for bounded AI-assisted analysis ideas. Double-click a Name cell for immediate insertion.</td></tr>
         <tr><td><strong>Data</strong></td><td>Inspect the Active Dataset in a read-only, paged view. Horizontal scrolling exposes all variables.</td></tr>
-        <tr><td><strong>Output</strong></td><td>Review native SPSS results. <strong>Explain</strong> sends the selected run's principal tables and text—not figures, Notes, paths, or runtime metadata—to Chat. <strong>Export</strong> saves HTML, <strong>Print</strong> opens a print-ready copy, and <strong>History</strong> toggles previous runs.</td></tr>
+        <tr><td><strong>Output</strong></td><td>Review native SPSS results. Check individual tables or result blocks on the left, then click <strong>Explain</strong> for separate interpretations in Chat. With no checks, explain the whole run. Figures, Notes, paths, and runtime metadata are excluded. <strong>Export</strong> saves HTML, <strong>Print</strong> opens a print-ready copy, and <strong>History</strong> toggles previous runs.</td></tr>
         <tr><td><strong>Chat</strong></td><td>Ask focused questions about SPSS Syntax, applied statistics in SPSS, and SPSS output interpretation.</td></tr>
       </tbody>
     </table>
@@ -122,7 +122,7 @@ const CHINESE_SECTIONS = `
       <tbody>
         <tr><td><strong>变量</strong></td><td>按名称或标签筛选变量；选择后可<strong>复制</strong>、<strong>插入</strong>，或通过<strong>探索</strong>获取边界明确的 AI 分析建议。双击名称单元格可立即插入变量名。</td></tr>
         <tr><td><strong>数据</strong></td><td>以只读、分页方式查看活动数据集；通过横向滚动查看全部变量。</td></tr>
-        <tr><td><strong>输出</strong></td><td>查看 SPSS 原生结果。<strong>解释</strong>将所选运行的主要统计表格和文字发送至对话，不发送图形、Notes、路径和运行元数据；<strong>导出</strong>保存 HTML，<strong>打印</strong>打开打印版本，<strong>历史</strong>展开或收起运行记录。</td></tr>
+        <tr><td><strong>输出</strong></td><td>查看 SPSS 原生结果。在左侧勾选表格或结果板块，点击<strong>解释</strong>，由对话逐项解读；未勾选时解释整次运行。不发送图形、Notes、路径和运行元数据。<strong>导出</strong>保存 HTML，<strong>打印</strong>打开打印版本，<strong>历史</strong>展开或收起运行记录。</td></tr>
         <tr><td><strong>对话</strong></td><td>询问 SPSS Syntax、能够在 SPSS 中实现的应用统计方法，以及 SPSS 输出结果的解释。</td></tr>
       </tbody>
     </table>
@@ -152,7 +152,7 @@ function copyFor(language: QuickStartLanguage): QuickStartCopy {
   if (language === 'zh-cn') {
     return {
       title: '快速上手',
-      eyebrow: 'SPSS Studio 1.4.1',
+      eyebrow: 'SPSS Studio 1.4.2',
       introduction: '从打开第一个 .sps 文件开始，完成 Syntax 编辑、SPSS 本地执行、数据与变量查看，以及 AI 辅助解释。',
       preferenceTitle: '更新提醒',
       preferenceText: '此后版本更新时不再自动显示快速上手',
@@ -165,7 +165,7 @@ function copyFor(language: QuickStartLanguage): QuickStartCopy {
   }
   return {
     title: 'Quick Start',
-    eyebrow: 'SPSS Studio 1.4.1',
+    eyebrow: 'SPSS Studio 1.4.2',
     introduction: 'Open your first .sps file, edit and run Syntax locally, inspect data and variables, and use focused AI assistance.',
     preferenceTitle: 'Update reminder',
     preferenceText: 'Do not show Quick Start automatically after future updates',
@@ -204,7 +204,7 @@ export function buildQuickStartHtml(options: QuickStartHtmlOptions): string {
 >
   <main>
     <header class="hero">
-      <div class="eyebrow">SPSS Studio ${escapeAttribute(options.version ?? '1.4.1')}</div>
+      <div class="eyebrow">SPSS Studio ${escapeAttribute(options.version ?? '1.4.2')}</div>
       <h1>${copy.title}</h1>
       <p>${copy.introduction}</p>
     </header>

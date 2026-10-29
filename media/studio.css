@@ -34,6 +34,12 @@ main { height: calc(100vh - 42px); }
 .spss-output table { border-collapse: collapse; margin: 8px 0; }
 .spss-output th, .spss-output td { border: 1px solid var(--vscode-panel-border); padding: 4px 7px; }
 .spss-output img { max-width: 100%; height: auto; }
+.output-block { display: grid; grid-template-columns: 26px minmax(0, 1fr); align-items: start; margin: 6px 0; border-left: 2px solid transparent; }
+.output-block-selected { border-left-color: var(--vscode-focusBorder); background: var(--vscode-list-hoverBackground); }
+.output-block-selector { display: flex; justify-content: center; padding-top: 8px; cursor: pointer; }
+.output-block-selector input { margin: 0; accent-color: var(--vscode-focusBorder); cursor: pointer; }
+.output-block-selector input:focus-visible { outline: 1px solid var(--vscode-focusBorder); outline-offset: 3px; }
+.output-block-content { min-width: 0; overflow-x: auto; }
 #data-view, #variables-view { flex-direction: column; }
 .data-toolbar { min-height: 42px; }
 .variables-toolbar { align-items: center; flex-wrap: wrap; }

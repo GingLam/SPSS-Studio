@@ -18,6 +18,7 @@ import type {
   VariableProfiles,
 } from '../spss/types';
 import { sanitizeSpssHtml } from './htmlSanitizer';
+import { createSpssOutputBlocks, buildSelectedOutputQuestion } from './spssOutputBlocks';
 import { normalizeVariableWindow } from './dataViewportState';
 import type { AiPage, ExtensionToAiWebviewMessage } from './aiWebviewProtocol';
 import type { ExecutionRecord, OutputStore } from './outputStore';
@@ -261,7 +262,7 @@ export class SpssStudioPanel implements vscode.Disposable {
       } else if (message.type === 'refreshVariables') {
         void this.callbacks.refreshVariables();
       } else if (message.type === 'explainOutput') {
-        void this.explainOutput(message.id);
+        void this.explainOutput(message.id, message.blockIds);
       } else if (message.type === 'exportOutput') {
         void this.exportOutput(message.id);
       } else if (message.type === 'printOutput') {
@@ -324,13 +325,14 @@ export class SpssStudioPanel implements vscode.Disposable {
     }
     const record = this.outputStore.select(id);
     const rawHtml = this.outputStore.readHtml(id) ?? '';
+    const presentation = createSpssOutputBlocks(rawHtml, vscode.env.language.toLowerCase() === 'zh-cn' ? 'zh-CN' : 'en');
     const html = record.htmlPath
-      ? sanitizeSpssHtml(rawHtml, (source) => this.resolveImage(panel.webview, record, source))
+      ? sanitizeSpssHtml(presentation.html, (source) => this.resolveImage(panel.webview, record, source))
       : '';
     this.selectedHtmlLength = html.length;
     const metadata = this.outputStore.metadata.find((item) => item.id === id);
     if (metadata) {
-      await this.postStudio({ type: 'executionSelected', record: metadata, html });
+      await this.postStudio({ type: 'executionSelected', record: metadata, html, blocks: presentation.blocks.map(({ id, title }) => ({ id, title })) });
     }
   }
 
@@ -377,25 +379,30 @@ export class SpssStudioPanel implements vscode.Disposable {
     }
   }
 
-  private async explainOutput(id: string): Promise<void> {
+  private async explainOutput(id: string, blockIds?: string[]): Promise<void> {
     const source = this.outputSource(id);
     if (!source) {
       return;
     }
-    const extracted = extractSpssOutputForAi(
-      source.rawHtml,
-      this.aiController.responseLanguage,
-    );
-    if (!extracted.content) {
-      void vscode.window.showInformationMessage(
-        this.runtimeStrings.noExplainableOutput,
+    let question: string;
+    if (blockIds?.length) {
+      const { blocks } = createSpssOutputBlocks(source.rawHtml, this.aiController.responseLanguage);
+      try {
+        question = buildSelectedOutputQuestion(blocks, blockIds, this.aiController.responseLanguage);
+      } catch {
+        void vscode.window.showInformationMessage(this.studioStrings.outputSelectionInvalid);
+        return;
+      }
+    } else {
+      const extracted = extractSpssOutputForAi(source.rawHtml, this.aiController.responseLanguage);
+      if (!extracted.content) {
+        void vscode.window.showInformationMessage(this.runtimeStrings.noExplainableOutput);
+        return;
+      }
+      question = buildOutputExplanationQuestion(
+        extracted.content, this.aiController.responseLanguage,
       );
-      return;
     }
-    const question = buildOutputExplanationQuestion(
-      extracted.content,
-      this.aiController.responseLanguage,
-    );
     this.showAi('chat');
     await this.aiController.sendQuestionFromEditor(question, 'outputExplain');
   }
