@@ -116,6 +116,9 @@ describe('SPSS Studio Extension Host', () => {
     assert.ok((await completionLabels('get d')).includes('GET DATA'));
     assert.ok(!(await completionLabels('TITLE "reg')).includes('REGRESSION'));
 
+    // First-install Quick Start is a Webview. Close startup editors in this
+    // isolated test profile before exercising a native editor Undo command.
+    await vscode.commands.executeCommand('workbench.action.closeAllEditors');
     const document = await vscode.workspace.openTextDocument(
       vscode.Uri.file(path.join(workspacePath, 'commands.sps')),
     );
@@ -126,6 +129,8 @@ describe('SPSS Studio Extension Host', () => {
     const originalText = document.getText();
     await editor.edit((edit) => edit.insert(new vscode.Position(0, 0), 'TITLE "temporary".\n'));
     assert.notEqual(document.getText(), originalText);
+    await vscode.commands.executeCommand('workbench.action.focusActiveEditorGroup');
+    assert.equal(vscode.window.activeTextEditor?.document.uri.toString(), document.uri.toString());
     await vscode.commands.executeCommand('spssStudio.undo');
     await waitForValue(() => document.getText(), originalText, 'the native undo edit');
 
