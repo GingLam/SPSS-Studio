@@ -109,10 +109,18 @@ describe('SPSS Output checkbox behavior', () => {
     second.checked = true; second.fire('change'); first.checked = true; first.fire('change');
     ui.element('explain-output').fire('click');
     assert.equal(ui.posted.at(-1)?.message?.blockIds?.join(','), 'block-1,block-2');
+    for (const button of ['export-output', 'print-output']) {
+      ui.element(button).fire('click');
+      assert.equal(ui.posted.at(-1)?.message?.blockIds?.join(','), 'block-1,block-2');
+    }
     assert.equal(ui.element('explain-output').title, 'Explain 2 selected results');
     first.checked = false; first.fire('change'); second.checked = false; second.fire('change');
     ui.element('explain-output').fire('click');
     assert.equal(ui.posted.at(-1)?.message?.blockIds?.length, 0);
+    for (const button of ['export-output', 'print-output']) {
+      ui.element(button).fire('click');
+      assert.equal(ui.posted.at(-1)?.message?.blockIds?.length, 0);
+    }
   });
   it('preserves choices across page switches and re-render, but isolates runs and blocks stale-result clicks', () => {
     const ui = uiFixture();
@@ -131,7 +139,12 @@ describe('SPSS Output checkbox behavior', () => {
     const second = checkbox(ui, 'block-2'); second.checked = true; second.fire('change');
     render(ui, 'one', [blocks[0]].filter((value): value is { id: string; title: string } => value !== undefined));
     assert.equal(ui.element('explain-output').disabled, true);
-    const count = ui.posted.length; ui.element('explain-output').fire('click'); assert.equal(ui.posted.length, count);
+    const count = ui.posted.length;
+    for (const button of ['explain-output', 'export-output', 'print-output']) {
+      assert.equal(ui.element(button).disabled, true);
+      ui.element(button).fire('click');
+    }
+    assert.equal(ui.posted.length, count);
     const first = checkbox(ui, 'block-1'); first.checked = true; first.fire('change');
     assert.equal(ui.element('explain-output').disabled, false);
     ui.element('explain-output').fire('click');

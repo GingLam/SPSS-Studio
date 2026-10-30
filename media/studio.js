@@ -142,10 +142,14 @@
   function updateOutputSelectionHint() {
     const count = selectedOutputBlockIds().length;
     const invalid = state.invalidOutputSelections.has(state.selectedId);
-    byId('explain-output').disabled = !state.explainAvailable || invalid;
-    byId('explain-output').title = invalid ? strings.outputReselect : count
-      ? formatText(strings.outputExplainSelected, { count: String(count) })
-      : strings.outputExplainAll;
+    for (const [button, selected, all] of [
+      ['explain-output', strings.outputExplainSelected, strings.outputExplainAll],
+      ['export-output', strings.outputExportSelected, strings.outputExportAll],
+      ['print-output', strings.outputPrintSelected, strings.outputPrintAll],
+    ]) {
+      byId(button).disabled = !state.explainAvailable || invalid || state.renderedOutputId !== state.selectedId;
+      byId(button).title = invalid ? strings.outputReselect : count ? formatText(selected, { count: String(count) }) : all;
+    }
   }
 
   function decorateOutputBlocks(output, record, suppliedBlocks) {
@@ -478,10 +482,14 @@
     }
   });
   byId('export-output').addEventListener('click', () => {
-    if (state.selectedId) postStudio({ type: 'exportOutput', id: state.selectedId });
+    if (state.selectedId && state.renderedOutputId === state.selectedId && !byId('export-output').disabled) {
+      postStudio({ type: 'exportOutput', id: state.selectedId, blockIds: selectedOutputBlockIds() });
+    }
   });
   byId('print-output').addEventListener('click', () => {
-    if (state.selectedId) postStudio({ type: 'printOutput', id: state.selectedId });
+    if (state.selectedId && state.renderedOutputId === state.selectedId && !byId('print-output').disabled) {
+      postStudio({ type: 'printOutput', id: state.selectedId, blockIds: selectedOutputBlockIds() });
+    }
   });
   byId('toggle-history').addEventListener('click', () => {
     setHistoryVisible(!state.historyVisible);

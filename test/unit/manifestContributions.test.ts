@@ -26,6 +26,7 @@ interface ExtensionManifest {
       'editor/title'?: MenuContribution[];
       'editor/context'?: MenuContribution[];
       commandPalette?: MenuContribution[];
+      'file/newFile'?: MenuContribution[];
     };
     configuration?: {
       properties?: Record<string, unknown>;
@@ -35,6 +36,20 @@ interface ExtensionManifest {
 }
 
 describe('SPSS editor title actions', () => {
+  it('contributes the standard New File entry and concise localized editor labels', () => {
+    const root = path.resolve(__dirname, '../../..');
+    const manifest = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8')) as ExtensionManifest;
+    assert.deepEqual(manifest.contributes.menus?.['file/newFile'], [{ command: 'spssStudio.newFile', group: 'file' }]);
+    assert.ok(manifest.contributes.commands.some((command) => command.command === 'spssStudio.newFile'));
+    for (const [filename, labels] of [
+      ['package.nls.json', ['Run', 'Run All', 'AI Assistant']],
+      ['package.nls.zh-cn.json', ['运行', '运行全部', 'AI助手']],
+    ] as const) {
+      const strings = JSON.parse(fs.readFileSync(path.join(root, filename), 'utf8')) as Record<string, string>;
+      assert.deepEqual(['runSelection', 'runFile', 'showAi'].map((id) => strings[`spssStudio.command.${id}`]), labels);
+    }
+  });
+
   it('contributes Undo, Run, and Run All only for SPSS editors in the requested order', () => {
     const manifest = JSON.parse(
       fs.readFileSync(path.resolve(__dirname, '../../../package.json'), 'utf8'),

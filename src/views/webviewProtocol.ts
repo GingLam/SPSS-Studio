@@ -42,8 +42,8 @@ export type WebviewToExtensionMessage =
   | { type: 'refreshData' }
   | { type: 'refreshVariables' }
   | { type: 'explainOutput'; id: string; blockIds?: string[] }
-  | { type: 'exportOutput'; id: string }
-  | { type: 'printOutput'; id: string }
+  | { type: 'exportOutput'; id: string; blockIds?: string[] }
+  | { type: 'printOutput'; id: string; blockIds?: string[] }
   | { type: 'insertVariable'; name: string }
   | { type: 'copyVariables'; names: string[] }
   | { type: 'insertVariables'; names: string[] }
@@ -60,13 +60,13 @@ export function isWebviewMessage(value: unknown): value is WebviewToExtensionMes
   if (['showOutput', 'showData', 'showVariables', 'showAi', 'refreshData', 'refreshVariables', 'clearOutput', 'clearData'].includes(type)) {
     return true;
   }
-  if (type === 'explainOutput') {
+  if (['explainOutput', 'exportOutput', 'printOutput'].includes(type)) {
     return typeof message.id === 'string' && message.id.length > 0
       && (message.blockIds === undefined || (Array.isArray(message.blockIds) && message.blockIds.length <= 1000
         && message.blockIds.every((id) => typeof id === 'string' && /^block-[1-9]\d{0,5}$/u.test(id))
         && new Set(message.blockIds).size === message.blockIds.length));
   }
-  if (['selectExecution', 'exportOutput', 'printOutput'].includes(type)) {
+  if (type === 'selectExecution') {
     return typeof message.id === 'string' && message.id.length > 0;
   }
   if (type === 'insertVariable') {

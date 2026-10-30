@@ -2,6 +2,10 @@
 
 ## 1.4.3 — 2026-10-30
 
+- Further October 31 revision, retaining 1.4.3: kept Output actions outside the results scroll area; Export and Print now honor checked native tables/text blocks, preserve original style and footnotes, reject stale selections, and retain whole-run behavior without a selection.
+- Shortened localized editor action titles to Run, Run All, and AI Assistant; added compact SPSS command/comment terminator rules to both response-language prompts.
+- Added the standard File → New File… → SPSS File menu contribution. It opens a new unsaved SPSS editor beside Studio without executing syntax or starting the engine. No Quick Start button or VS Code modification is required.
+
 - October 31 revision, retaining 1.4.3: added an independent, bounded disk scanner for non-C installations, retained discovered results on scan timeout, and removed WMI from the PowerShell fixed-drive query.
 - Resolved Windows tools from SystemRoot/WINDIR without PATH or ComSpec, supported Sysnative for 32-bit hosts, added a real desktop-registry fallback, and recorded OS/process architecture and Windows ARM hints without claiming IBM support on Windows ARM or HarmonyOS.
 

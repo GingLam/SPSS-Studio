@@ -65,6 +65,15 @@ describe('AI conversation request boundaries', () => {
     assert.match(english, /clearly unrelated request/iu);
     assert.match(english, /outside SPSS Studio Chat’s scope/iu);
     assert.ok(english.length < 900);
+    for (const language of ['en', 'zh-CN'] as const) {
+      for (const context of ['standard', 'variableExplore'] as const) {
+        const prompt = buildAssistantInstruction(language, context);
+        assert.match(prompt, /ASCII/u);
+        assert.match(prompt, /BEGIN DATA/u);
+        assert.match(prompt, /END DATA\./u);
+        assert.match(prompt, /[。]/u);
+      }
+    }
   });
 
   it('wraps only the selected syntax in a minimal explanation request', () => {

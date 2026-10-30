@@ -1,13 +1,44 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
-import { createSpssOutputBlocks, buildSelectedOutputQuestion } from '../../src/views/spssOutputBlocks';
+import { createSpssOutputBlocks, buildSelectedOutputQuestion, buildSelectedOutputHtml } from '../../src/views/spssOutputBlocks';
 import { isWebviewMessage } from '../../src/views/webviewProtocol';
 import { extractSpssOutputForAi } from '../../src/ai/outputExplanation';
 
 const native = fs.readFileSync(path.resolve(__dirname, '../../../test/fixtures/output-multiple-tables.html'), 'utf8');
 
 describe('SPSS native output table selection', () => {
+  it('exports only checked native tables in source order, retaining style and footnotes without AI truncation', () => {
+    const raw = '<head><style>td { color: blue; }</style></head><body><h1>Regression &amp; model</h1>'
+      + '<table><caption>Coefficients</caption>' + Array.from({ length: 80 }, (_, i) => `<tr><td>row-${String(i)}</td><td>0.001</td></tr>`).join('')
+      + '<tfoot><tr><td>Dependent Variable: income</td></tr></tfoot></table><p class="footnote">a. selected footnote.</p>'
+      + '<table><caption>Warnings</caption><tr><td>UNCHECKED WARNING BODY</td></tr></table>'
+      + '<table><caption>ANOVA</caption><tr><td>CHECKED SECOND TABLE</td></tr></table><img src="chart.png"></body>';
+    const model = createSpssOutputBlocks(raw, 'en');
+    const first = model.blocks.find((block) => block.title.endsWith('Coefficients'));
+    const last = model.blocks.find((block) => block.title.endsWith('ANOVA'));
+    assert.ok(first && last);
+    const result = buildSelectedOutputHtml(raw, [last.id, first.id], 'en');
+    assert.match(result, /td \{ color: blue; \}/u);
+    assert.match(result, /row-79/u);
+    assert.match(result, /Dependent Variable: income/u);
+    assert.match(result, /selected footnote/u);
+    assert.match(result, /Regression &amp; model/u);
+    assert.ok(result.indexOf('Coefficients') < result.indexOf('ANOVA'));
+    assert.doesNotMatch(result, /UNCHECKED WARNING BODY|chart\.png|TRUNCATED|路径已省略/u);
+    assert.throws(() => buildSelectedOutputHtml(raw, ['block-99999']), /stale or invalid/u);
+    assert.throws(() => buildSelectedOutputHtml(raw, [first.id, first.id]), /stale or invalid/u);
+  });
+
+  it('validates checked IDs identically for Explain, Export, and Print', () => {
+    for (const type of ['explainOutput', 'exportOutput', 'printOutput']) {
+      assert.equal(isWebviewMessage({ type, id: 'one', blockIds: ['block-2'] }), true);
+      assert.equal(isWebviewMessage({ type, id: 'one', blockIds: [] }), true);
+      assert.equal(isWebviewMessage({ type, id: 'one', blockIds: ['block-2', 'block-2'] }), false);
+      assert.equal(isWebviewMessage({ type, id: 'one', blockIds: '<script>' }), false);
+    }
+  });
+
   it('marks each real statistical table independently without changing its original HTML or order', () => {
     const result = createSpssOutputBlocks(native, 'en');
     assert.equal(result.blocks.length, 12);

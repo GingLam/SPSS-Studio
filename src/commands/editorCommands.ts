@@ -3,6 +3,15 @@ import { runtimeStringsForLanguage } from '../localization/runtimeStrings';
 
 const strings = runtimeStringsForLanguage(vscode.env.language);
 
+export async function newSpssFile(showStudio: () => void): Promise<void> {
+  // An unassociated untitled document avoids creating or overwriting a disk file.
+  const document = await vscode.workspace.openTextDocument({ language: 'spss', content: '' });
+  await vscode.window.showTextDocument(document, {
+    viewColumn: vscode.ViewColumn.One, preview: false, preserveFocus: false,
+  });
+  showStudio();
+}
+
 export async function undoLastEdit(): Promise<void> {
   const editor = vscode.window.activeTextEditor;
   if (!editor || editor.document.languageId !== 'spss') {

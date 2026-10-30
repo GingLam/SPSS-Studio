@@ -1,8 +1,8 @@
 {
   "spssStudio.command.configureRuntime": "SPSS：检测并配置",
   "spssStudio.command.undo": "SPSS：撤销上次编辑",
-  "spssStudio.command.runSelection": "SPSS：运行选中内容或当前命令",
-  "spssStudio.command.runFile": "SPSS：运行全部",
+  "spssStudio.command.runSelection": "运行",
+  "spssStudio.command.runFile": "运行全部",
   "spssStudio.command.explainSyntaxInChat": "在对话中解释",
   "spssStudio.command.startEngine": "SPSS：启动引擎",
   "spssStudio.command.stopEngine": "SPSS：停止引擎",
@@ -11,9 +11,10 @@
   "spssStudio.command.showOutput": "SPSS：显示输出",
   "spssStudio.command.showData": "SPSS：显示数据",
   "spssStudio.command.showVariables": "SPSS：显示变量",
-  "spssStudio.command.showAi": "SPSS：显示 AI 助手",
+  "spssStudio.command.showAi": "AI助手",
   "spssStudio.command.configureAi": "SPSS：管理 AI 模型",
   "spssStudio.command.showQuickStart": "快速上手",
   "spssStudio.command.refreshDataPreview": "SPSS：刷新数据预览",
-  "spssStudio.command.clearOutput": "SPSS：清空输出"
+  "spssStudio.command.clearOutput": "SPSS：清空输出",
+  "spssStudio.command.newFile": "SPSS 文件"
 }

@@ -18,7 +18,7 @@ import type {
   VariableProfiles,
 } from '../spss/types';
 import { sanitizeSpssHtml } from './htmlSanitizer';
-import { createSpssOutputBlocks, buildSelectedOutputQuestion } from './spssOutputBlocks';
+import { createSpssOutputBlocks, buildSelectedOutputQuestion, buildSelectedOutputHtml } from './spssOutputBlocks';
 import { normalizeVariableWindow } from './dataViewportState';
 import type { AiPage, ExtensionToAiWebviewMessage } from './aiWebviewProtocol';
 import type { ExecutionRecord, OutputStore } from './outputStore';
@@ -264,9 +264,9 @@ export class SpssStudioPanel implements vscode.Disposable {
       } else if (message.type === 'explainOutput') {
         void this.explainOutput(message.id, message.blockIds);
       } else if (message.type === 'exportOutput') {
-        void this.exportOutput(message.id);
+        void this.exportOutput(message.id, message.blockIds);
       } else if (message.type === 'printOutput') {
-        void this.printOutput(message.id);
+        void this.printOutput(message.id, message.blockIds);
       } else if (message.type === 'insertVariable') {
         void this.callbacks.insertVariable(message.name);
       } else if (message.type === 'copyVariables') {
@@ -343,31 +343,28 @@ export class SpssStudioPanel implements vscode.Disposable {
     }
   }
 
-  private async exportOutput(id: string): Promise<void> {
-    const source = this.outputSource(id);
+  private async exportOutput(id: string, blockIds?: string[]): Promise<void> {
+    const source = this.outputSource(id, blockIds);
     if (!source) {
       return;
     }
-    const timestamp = source.record.timestamp.replace(/[-:]/gu, '').replace(/\..+$/u, '').replace('T', '-');
-    const fileName = `SPSS-output-run-${String(source.record.sequence)}-${timestamp}.html`;
-    const options: vscode.SaveDialogOptions = {
-      filters: { HTML: ['html'] },
-      saveLabel: this.runtimeStrings.exportSaveLabel,
-    };
-    const workspace = vscode.workspace.workspaceFolders?.[0]?.uri;
-    if (workspace) {
-      options.defaultUri = vscode.Uri.joinPath(workspace, fileName);
-    }
-    const target = await vscode.window.showSaveDialog(options);
-    if (!target) {
-      return;
-    }
     try {
+      // Inline images before awaiting the dialog, so clearing history cannot
+      // change either the selected HTML or its local raster images mid-export.
       const html = buildPortableOutputHtml(
         source.rawHtml,
         source.record.outputDirectory,
         source.record.htmlPath,
       );
+      const timestamp = source.record.timestamp.replace(/[-:]/gu, '').replace(/\..+$/u, '').replace('T', '-');
+      const fileName = `SPSS-output-run-${String(source.record.sequence)}-${timestamp}.html`;
+      const options: vscode.SaveDialogOptions = {
+        filters: { HTML: ['html'] }, saveLabel: this.runtimeStrings.exportSaveLabel,
+      };
+      const workspace = vscode.workspace.workspaceFolders?.[0]?.uri;
+      if (workspace) { options.defaultUri = vscode.Uri.joinPath(workspace, fileName); }
+      const target = await vscode.window.showSaveDialog(options);
+      if (!target) { return; }
       await vscode.workspace.fs.writeFile(target, Buffer.from(html, 'utf8'));
       void vscode.window.showInformationMessage(formatLocalized(
         this.runtimeStrings.outputExported,
@@ -437,8 +434,8 @@ export class SpssStudioPanel implements vscode.Disposable {
     }
   }
 
-  private async printOutput(id: string): Promise<void> {
-    const source = this.outputSource(id);
+  private async printOutput(id: string, blockIds?: string[]): Promise<void> {
+    const source = this.outputSource(id, blockIds);
     if (!source) {
       return;
     }
@@ -449,7 +446,7 @@ export class SpssStudioPanel implements vscode.Disposable {
         source.record.htmlPath,
         { print: true },
       );
-      const printPath = path.join(source.record.outputDirectory, 'print.html');
+      const printPath = path.join(source.record.outputDirectory, `print-${randomBytes(8).toString('hex')}.html`);
       await fs.promises.writeFile(printPath, html, 'utf8');
       const opened = await vscode.env.openExternal(vscode.Uri.file(printPath));
       if (!opened) {
@@ -461,16 +458,24 @@ export class SpssStudioPanel implements vscode.Disposable {
     }
   }
 
-  private outputSource(id: string): { record: ExecutionRecord & { htmlPath: string }; rawHtml: string } | undefined {
+  private outputSource(id: string, blockIds?: string[]): { record: ExecutionRecord & { htmlPath: string }; rawHtml: string } | undefined {
     const record = this.outputStore.get(id);
     if (!record?.htmlPath || record.status === 'RUNNING') {
       void vscode.window.showInformationMessage(this.runtimeStrings.selectedRunNoHtml);
       return undefined;
     }
-    const rawHtml = this.outputStore.readHtml(id);
+    let rawHtml = this.outputStore.readHtml(id);
     if (rawHtml === undefined) {
       void vscode.window.showErrorMessage(this.runtimeStrings.selectedHtmlUnavailable);
       return undefined;
+    }
+    if (blockIds?.length) {
+      try {
+        rawHtml = buildSelectedOutputHtml(rawHtml, blockIds, vscode.env.language.startsWith('zh') ? 'zh-CN' : 'en');
+      } catch {
+        void vscode.window.showInformationMessage(this.studioStrings.outputSelectionInvalid);
+        return undefined;
+      }
     }
     return { record: record as ExecutionRecord & { htmlPath: string }, rawHtml };
   }
@@ -542,10 +547,12 @@ export class SpssStudioPanel implements vscode.Disposable {
   </header>
   <main>
     <section id="output-view" class="view active">
-      <article id="output-content">
+      <div id="output-main">
         <div class="output-actions"><button id="explain-output" disabled>${text(strings.outputExplain)}</button><button id="export-output" disabled>${text(strings.outputExport)}</button><button id="print-output" disabled>${text(strings.outputPrint)}</button><button id="clear-data" disabled title="${text(strings.clearData)}">${text(strings.clear)}</button><button id="toggle-history" type="button" aria-expanded="false">${text(strings.outputHistory)}</button></div>
+      <article id="output-content">
         <div id="data-notice" role="status"></div><div id="run-summary" class="summary">${text(strings.noExecutions)}</div><div id="spss-output" class="spss-output"></div>
       </article>
+      </div>
       <div id="output-splitter" role="separator" aria-label="${text(strings.resizeRunHistory)}" aria-orientation="vertical" tabindex="0"></div>
       <aside id="output-history"><div class="aside-title"><strong>${text(strings.runs)}</strong><button id="clear-output" title="${text(strings.clearOutput)}">${text(strings.clear)}</button></div><div id="run-history"></div></aside>
     </section>

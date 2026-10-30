@@ -18,7 +18,7 @@ import {
   type ExecutionCommandDependencies,
 } from './commands/executionCommands';
 import { requireTrustedWorkspace } from './commands/workspaceTrust';
-import { undoLastEdit } from './commands/editorCommands';
+import { newSpssFile, undoLastEdit } from './commands/editorCommands';
 import {
   copyCachedVariables,
   insertCachedVariable,
@@ -239,6 +239,7 @@ export function activate(context: vscode.ExtensionContext): SpssStudioExtensionA
     runtimeSetup,
     aiPanelController,
     vscode.languages.registerCompletionItemProvider('spss', completionProvider, '/', '.'),
+    vscode.commands.registerCommand('spssStudio.newFile', () => newSpssFile(() => studio.showOutput())),
     vscode.commands.registerCommand('spssStudio.undo', undoLastEdit),
     vscode.commands.registerCommand(
       'spssStudio.runSelection',

@@ -43,6 +43,7 @@
     }
   },
   "activationEvents": [
+    "onCommand:spssStudio.newFile",
     "onCommand:spssStudio.configureRuntime",
     "onStartupFinished",
     "onLanguage:spss",
@@ -101,6 +102,10 @@
       }
     ],
     "commands": [
+      {
+        "command": "spssStudio.newFile",
+        "title": "%spssStudio.command.newFile%"
+      },
       {
         "command": "spssStudio.configureRuntime",
         "title": "%spssStudio.command.configureRuntime%"
@@ -177,6 +182,12 @@
       }
     ],
     "menus": {
+      "file/newFile": [
+        {
+          "command": "spssStudio.newFile",
+          "group": "file"
+        }
+      ],
       "editor/title": [
         {
           "command": "spssStudio.undo",

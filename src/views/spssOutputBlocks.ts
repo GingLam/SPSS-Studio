@@ -146,12 +146,7 @@ export function buildSelectedOutputQuestion(
   ids: readonly string[],
   language: AiResponseLanguage = DEFAULT_AI_RESPONSE_LANGUAGE,
 ): string {
-  const wanted = new Set(ids);
-  const availableIds = new Set(blocks.map((block) => block.id));
-  if (!ids.length || wanted.size !== ids.length || ids.some((id) => !availableIds.has(id))) {
-    throw new Error('Output selection is stale or invalid.');
-  }
-  const selected = blocks.filter((block) => wanted.has(block.id));
+  const selected = selectedBlocks(blocks, ids);
   const headings = selected.map((block, index) => {
     const title = block.title.replace(/[\r\n#]/gu, ' ').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
     const qualification = [block.context, block.footnotes].filter(Boolean).join('\n');
@@ -171,4 +166,26 @@ export function buildSelectedOutputQuestion(
     ? 'Interpret each numbered selected table separately using its number and title. Do not merge the interpretations or infer absent model/sample information from other tables. Statistical context contains qualifications, not additional selected results.'
     : '请按编号和标题逐项解释所选表格，不要合并解释，也不要借其他表格推断未提供的模型或样本信息；统计限定仅为必要上下文，并非额外选中的结果。';
   return buildOutputExplanationQuestion(`${instruction}\n\n${content}`, language);
+}
+
+function selectedBlocks(blocks: readonly SpssOutputBlock[], ids: readonly string[]): SpssOutputBlock[] {
+  const wanted = new Set(ids);
+  const availableIds = new Set(blocks.map((block) => block.id));
+  if (!ids.length || wanted.size !== ids.length || ids.some((id) => !availableIds.has(id))) {
+    throw new Error('Output selection is stale or invalid.');
+  }
+  return blocks.filter((block) => wanted.has(block.id));
+}
+
+/** Preserve native selected results for local export/print, without AI limits. */
+export function buildSelectedOutputHtml(rawHtml: string, ids: readonly string[], language: AiResponseLanguage = DEFAULT_AI_RESPONSE_LANGUAGE): string {
+  const blocks = selectedBlocks(createSpssOutputBlocks(rawHtml, language).blocks, ids);
+  const styles = [...rawHtml.matchAll(/<style\b[^>]*>[\s\S]*?<\/style>/giu)].map((match) => match[0]).join('\n');
+  const body = blocks.map((block) => {
+    const title = block.title.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
+    // sourceHtml already contains this result's own table and external footnotes.
+    // Scope qualifiers may include unchecked warnings, so do not copy them here.
+    return `<section><h2>${title}</h2>${block.sourceHtml}</section>`;
+  }).join('\n');
+  return `<html><head>${styles}</head><body>${body}</body></html>`;
 }

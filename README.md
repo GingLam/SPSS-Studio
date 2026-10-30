@@ -18,6 +18,7 @@ Contact：[linjing@nufe.edu.cn](mailto:linjing@nufe.edu.cn)
 - Optional **SPSS Studio Light** and **SPSS Studio Dark** color themes for a complete, contrast-checked syntax palette; installation never changes the user's active theme.
 - Context-aware completion for commands, subcommands, keywords, functions, snippets, and cached Active Dataset variables.
 - Editor-title actions for Undo, Run, and Run All.
+- A standard **File → New File… → SPSS File** entry that opens an empty SPSS editor beside Studio without running syntax.
 - A persistent, serialized local SPSS backend.
 - Native OMS HTML output with run history, structurally aligned Markdown tables for concise AI interpretation, safe standalone HTML export, and browser-based printing.
 - Read-only Data and Variables views for the current Active Dataset.
@@ -41,6 +42,8 @@ No separate Python installation is normally required. On Windows, SPSS Studio re
 
 Install **SPSS Studio** from the Extensions view in Visual Studio Code, then open a `.sps` file. VS Code automatically assigns the **SPSS Syntax** language mode.
 
+To start without an existing file, choose **File → New File… → SPSS File** (**文件 → 新建文件… → SPSS 文件**). The extension opens a fresh, unsaved document in SPSS language mode on the left and Studio on the right. Save it as `.sps` when ready. This uses VS Code's standard extension menu API, requires no editor modifications, and does not start the engine or execute syntax.
+
 On first activation after installation, SPSS Studio opens **Quick Start** for an English VS Code interface or **快速上手** for a Chinese interface. The page explains the complete editor, execution, Studio, Variables, and Chat workflow. Its prominent update-reminder checkbox controls whether later extension versions open the page once after updating. This preference stays in local VS Code global state and is not written beside an `.sps` file or packaged in the VSIX. The page remains available from the book icon between **Show AI Assistant** and VS Code's **Split Editor** action in every `.sps` editor.
 
 On Windows, use **Detect and Configure SPSS** in Quick Start; the progress window opens before detection begins. You can also run **SPSS: Detect and Configure SPSS** from the Command Palette at any time. If automatic discovery fails, choose the SPSS installation, its `bin` directory, or its IBM/SPSS parent folder. Setup distinguishes missing IBM Python integration from residual installation files and records each attempted installation separately. WSL, SSH, and container windows display a local-window requirement; they cannot connect to the SPSS installation on your Windows desktop. Local macOS Quick Start remains unchanged.
@@ -51,7 +54,7 @@ Detection covers SPSS on non-system drives using an independent, time-limited di
 
 - macOS: `Cmd+Enter`
 - Windows/Linux: `Ctrl+Enter`
-- Command Palette: **SPSS: Run Selection / Current Command**
+- Command Palette: **Run**
 
 With a selection, Run submits the selected syntax. Without a selection, it identifies and submits the current SPSS command or structural block. Run All submits the complete in-memory document, including unsaved changes. Undo uses VS Code's native undo stack.
 
@@ -69,6 +72,8 @@ Each execution uses one private, uniquely tagged, short-lived OMS HTML destinati
 - **SPSS: Clear Output** removes output files from the current extension session without changing the Active Dataset.
 
 The extension displays native SPSS HTML rather than reconstructing statistical tables. It does not generate SPV or OXML files and does not use `SpssClient`.
+
+The Output action bar remains visible while results scroll. **Export** and **Print** use the same checked tables/text blocks as Explain; with none checked, they retain the complete output, including figures. Partial export/print preserves the selected native HTML, styles, titles, and footnotes without AI row/character limits. Invalid selections stop the action. Figures currently have no individual checkbox. Creating a print-ready file opens the browser's print dialog; it does not silently submit a print job.
 
 Execution statuses are `SUCCESS`, `SUCCESS_NO_OUTPUT`, `WARNING`, `ERROR`, `ENGINE_ERROR`, and `TIMEOUT`.
 
@@ -135,8 +140,9 @@ Model output is untrusted and can be wrong. Inspect generated syntax before runn
 
 ## Commands
 
-- **SPSS: Run Selection / Current Command**
-- **SPSS: Run File**
+- **SPSS File**
+- **Run**
+- **Run All**
 - **SPSS: Undo Last Edit**
 - **SPSS: Start Engine**
 - **SPSS: Stop Engine**
@@ -145,7 +151,7 @@ Model output is untrusted and can be wrong. Inspect generated syntax before runn
 - **SPSS: Show Output**
 - **SPSS: Show Data**
 - **SPSS: Show Variables**
-- **SPSS: Show AI Assistant**
+- **AI Assistant**
 - **SPSS: Manage AI Model Profiles**
 - **Explain in Chat**
 - **SPSS: Refresh Data Preview**
@@ -217,7 +223,7 @@ SPSS Studio is not an LSP or a full semantic validator. It does not provide stat
 
 | Version | Date | Update summary |
 | --- | --- | --- |
-| 1.4.3 | 2026-10-30 | Fixed SPSS 26/Python 3.4 bridge syntax and legacy UTF-8 streams; improved setup progress, parent-folder/bin discovery, missing-component and per-installation diagnostics, and licensing classification. The October 31 revision adds independent non-system-drive scanning, system-tool and desktop-query fallbacks, and OS/ARM diagnostics. Windows/SPSS 26 real-machine acceptance remains pending. |
+| 1.4.3 | 2026-10-30 | Fixed SPSS 26/Python 3.4 compatibility and setup diagnostics. October 31 revisions add cross-drive Windows setup fallbacks, a persistent Output action bar, selected-result export/print, concise editor labels, compact syntax-generation rules, and the standard SPSS File creation entry. Windows/SPSS 26 real-machine acceptance remains pending. |
 | 1.4.2 | 2026-10-29 | Added per-table Output multi-selection and separate Chat interpretations, preserving native layout, Markdown table structure, statistical qualifications, and privacy filtering. |
 | 1.4.1 | 2026-10-28 | Added per-run data summaries, native file-use warning guidance, a confirmed session-data Clear action, and prebuilt bilingual SPS/SAV examples in Quick Start. |
 | 1.4.0 | 2026-10-28 | Added built-in one-click runtime detection, configuration, isolated calculation/HTML/data/shutdown verification, rollback and desktop reports; fixed Windows CMD quoting and expanded installation discovery. Windows real-SPSS acceptance remains pending. |

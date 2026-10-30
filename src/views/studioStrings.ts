@@ -12,6 +12,10 @@ export interface StudioStrings {
   selectOutputBlock: string;
   outputExplainSelected: string;
   outputExplainAll: string;
+  outputExportSelected: string;
+  outputExportAll: string;
+  outputPrintSelected: string;
+  outputPrintAll: string;
   outputSelectionInvalid: string;
   outputReselect: string;
   outputExport: string;
@@ -95,6 +99,10 @@ export const STUDIO_STRINGS_EN: StudioStrings = {
   selectOutputBlock: 'Select result: {title}',
   outputExplainSelected: 'Explain {count} selected results',
   outputExplainAll: 'Explain all results',
+  outputExportSelected: 'Export {count} selected results',
+  outputExportAll: 'Export all results',
+  outputPrintSelected: 'Print {count} selected results',
+  outputPrintAll: 'Print all results',
   outputSelectionInvalid: 'The selected results are unavailable or too large. Reopen the output and select fewer results.',
   outputReselect: 'Results changed. Select the results again.',
   outputExport: 'Export',
@@ -178,6 +186,10 @@ export const STUDIO_STRINGS_ZH_CN: StudioStrings = {
   selectOutputBlock: '选择结果：{title}',
   outputExplainSelected: '解释所选 {count} 项结果',
   outputExplainAll: '解释全部结果',
+  outputExportSelected: '导出所选 {count} 项结果',
+  outputExportAll: '导出全部结果',
+  outputPrintSelected: '打印所选 {count} 项结果',
+  outputPrintAll: '打印全部结果',
   outputSelectionInvalid: '所选结果已失效或内容过多，请重新打开输出并减少勾选项。',
   outputReselect: '结果已变更，请重新勾选。',
   outputExport: '导出',

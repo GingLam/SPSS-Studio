@@ -19,12 +19,13 @@ main { height: calc(100vh - 42px); }
 .view { display: none; height: 100%; }
 .view.active { display: flex; }
 #ai-view.active { display: block; min-width: 0; min-height: 0; overflow: hidden; }
-#output-content { flex: 1; min-width: 0; overflow: auto; padding: 10px 14px; }
+#output-main { display: flex; flex-direction: column; flex: 1; min-width: 0; min-height: 0; overflow: hidden; }
+#output-content { flex: 1; min-width: 0; min-height: 0; overflow: auto; padding: 10px 14px; }
 #output-history { display: none; width: var(--history-width); min-width: 160px; max-width: 55vw; overflow-y: auto; border-left: 1px solid var(--vscode-panel-border); }
 #output-splitter { display: none; width: 5px; flex: 0 0 5px; cursor: col-resize; background: transparent; }
 #output-view.history-open #output-history, #output-view.history-open #output-splitter { display: block; }
 #output-splitter:hover, #output-splitter:focus { background: var(--vscode-focusBorder); outline: 0; }
-.output-actions { display: flex; justify-content: flex-end; gap: 8px; margin-bottom: 8px; }
+.output-actions { display: flex; flex: 0 0 auto; flex-wrap: wrap; justify-content: flex-end; gap: 8px; padding: 8px 14px; border-bottom: 1px solid var(--vscode-panel-border); background: var(--vscode-editor-background); }
 .aside-title, .data-toolbar, .pager { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px; border-bottom: 1px solid var(--vscode-panel-border); }
 .run { display: block; width: 100%; padding: 7px 9px; text-align: left; color: var(--vscode-foreground); background: transparent; border: 0; border-bottom: 1px solid var(--vscode-panel-border); }
 .run.selected { background: var(--vscode-list-activeSelectionBackground); color: var(--vscode-list-activeSelectionForeground); }

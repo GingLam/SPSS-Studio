@@ -57,7 +57,7 @@ async function waitForValue<T>(read: () => T, expected: T, description: string):
     }
     await new Promise((resolve) => setTimeout(resolve, 50));
   }
-  throw new Error(`Timed out waiting for ${description}.`);
+  throw new Error(`Timed out waiting for ${description}. Expected ${JSON.stringify(expected)}, received ${JSON.stringify(read())}.`);
 }
 
 describe('SPSS Studio Extension Host', () => {
@@ -130,18 +130,23 @@ describe('SPSS Studio Extension Host', () => {
     // First-install Quick Start is a Webview. Close startup editors in this
     // isolated test profile before exercising a native editor Undo command.
     await vscode.commands.executeCommand('workbench.action.closeAllEditors');
+    await vscode.commands.executeCommand('workbench.action.editorLayoutSingle');
     const document = await vscode.workspace.openTextDocument(
       vscode.Uri.file(path.join(workspacePath, 'commands.sps')),
     );
     assert.equal(document.languageId, 'spss');
-    const editor = await vscode.window.showTextDocument(document);
+    const editor = await vscode.window.showTextDocument(document, { viewColumn: vscode.ViewColumn.One, preserveFocus: false });
     await vscode.commands.executeCommand('workbench.action.focusWindow');
     await waitForValue(() => vscode.window.state.focused, true, 'the isolated test window to gain focus');
     const originalText = document.getText();
-    await editor.edit((edit) => edit.insert(new vscode.Position(0, 0), 'TITLE "temporary".\n'));
-    assert.notEqual(document.getText(), originalText);
+    await vscode.commands.executeCommand('workbench.action.focusFirstEditorGroup');
+    // Allow native editor focus to settle after the command RPC.
+    await new Promise((resolve) => setTimeout(resolve, 250));
+    await vscode.commands.executeCommand('default:type', { text: 'x' });
+    await waitForValue(() => document.getText().startsWith('x'), true, 'native editor typing');
     await vscode.commands.executeCommand('workbench.action.focusActiveEditorGroup');
     assert.equal(vscode.window.activeTextEditor?.document.uri.toString(), document.uri.toString());
+    await new Promise((resolve) => setTimeout(resolve, 250));
     await vscode.commands.executeCommand('spssStudio.undo');
     await waitForValue(() => document.getText(), originalText, 'the native undo edit');
 
@@ -204,4 +209,35 @@ describe('SPSS Studio Extension Host', () => {
     await waitForValue(() => api.getEngineState(), 'ready', 'engine restart');
     await vscode.commands.executeCommand('spssStudio.stopEngine');
   });
+  it('creates a fresh SPSS editor beside Studio without starting or executing the engine', async () => {
+    const extension = vscode.extensions.getExtension<SpssStudioExtensionApi>('jinglin.spss-studio');
+    assert.ok(extension);
+    const api = await extension.activate();
+    const history = api.getOutputHistoryCount();
+    const state = api.getEngineState();
+    await vscode.commands.executeCommand('spssStudio.newFile');
+    const firstEditor = vscode.window.activeTextEditor;
+    assert.ok(firstEditor);
+    const first = firstEditor.document;
+    assert.equal(first.isUntitled, true);
+    assert.equal(first.languageId, 'spss');
+    assert.equal(first.getText(), '');
+    assert.equal(firstEditor.viewColumn, vscode.ViewColumn.One);
+    await waitForValue(() => vscode.window.tabGroups.all.some((group) => group.viewColumn === vscode.ViewColumn.Two && group.tabs.some((tab) => tab.input instanceof vscode.TabInputWebview && tab.label === 'SPSS Studio')), true, 'Studio in the second editor group');
+    await vscode.commands.executeCommand('spssStudio.newFile');
+    const second = vscode.window.activeTextEditor;
+    assert.ok(second);
+    assert.notEqual(second.document.uri.toString(), first.uri.toString());
+    await vscode.commands.executeCommand('workbench.action.focusFirstEditorGroup');
+    // Allow native editor focus to settle after the command RPC.
+    await new Promise((resolve) => setTimeout(resolve, 250));
+    await vscode.commands.executeCommand('default:type', { text: 'x' });
+    await waitForValue(() => second.document.getText(), 'x', 'typing in the new SPSS file');
+    await new Promise((resolve) => setTimeout(resolve, 250));
+    await vscode.commands.executeCommand('spssStudio.undo');
+    await waitForValue(() => second.document.getText(), '', 'undo in the new SPSS file');
+    assert.equal(api.getOutputHistoryCount(), history);
+    assert.equal(api.getEngineState(), state);
+  });
+
 });
