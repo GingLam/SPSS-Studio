@@ -62,6 +62,9 @@ describe('SPSS Studio real SPSS Extension Host', () => {
     assert.equal(ageProfile.summary.missingN, 0);
     assert.equal(api.getOutputHistoryCount(), 1);
     await api.configureRuntime();
+    assert.ok(vscode.window.tabGroups.all.some((group) => group.tabs.some((tab) => (
+      tab.input instanceof vscode.TabInputWebview && tab.input.viewType.includes('spssStudio.setup')
+    ))), 'Setup must reveal its progress panel even when invoked outside the setup command');
     assert.equal(api.getSetupSummary()?.success, false);
     assert.equal(api.getSetupSummary()?.error, 'SETUP_ENGINE_BUSY');
     assert.equal(api.getEngineState(), 'ready');

@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import path from 'node:path';
 import { locateMacOS } from '../../src/spss/platform/macos';
 import type { DirectoryEntry, FileSystemAdapter, RegistryProvider } from '../../src/spss/platform/types';
-import { discoverWindowsInstallations, locateWindows } from '../../src/spss/platform/windows';
+import { discoverWindowsInstallations, discoverWindowsRuntime, inspectWindowsRoots, locateWindows } from '../../src/spss/platform/windows';
 
 class FakeFileSystem implements FileSystemAdapter {
   private readonly files = new Map<string, string>();
@@ -154,6 +154,46 @@ describe('macOS SPSS locator', () => {
 });
 
 describe('Windows SPSS locator', () => {
+  it('finds SPSS 26 under a selected parent and canonicalizes bin without duplicate installations', async () => {
+    const root = 'D:\\教学 软件\\IBM\\SPSS\\Statistics\\26';
+    const fake = new FakeFileSystem(path.win32, [], [
+      `${root}\\bin\\statisticspython3.bat`, `${root}\\bin\\stats.exe`,
+    ]);
+    const manual = inspectWindowsRoots(fake, ['D:\\教学 软件']);
+    assert.equal(manual.installations[0]?.installRoot.toLowerCase(), root.toLowerCase());
+    const result = await discoverWindowsInstallations({}, fake, new FakeRegistry([root, `${root}\\bin`]), {});
+    assert.equal(result.length, 1);
+    assert.equal(result[0]?.environment.SPSS_HOME, root);
+    assert.equal((await locateWindows({ explicitInstallPath: `${root}\\bin` }, fake, new FakeRegistry([]), {}))?.installRoot, root);
+  });
+
+  it('reports missing IBM Python launcher separately from residual installation files', async () => {
+    const noPython = 'C:\\Program Files\\IBM\\SPSS\\Statistics\\26';
+    const residual = 'D:\\SPSS 27';
+    const fake = new FakeFileSystem(path.win32, [], [`${noPython}\\stats.exe`, `${residual}\\statisticspython3.bat`]);
+    const found = await discoverWindowsRuntime({}, fake, new FakeRegistry([noPython, residual]), {});
+    assert.equal(found.installations.length, 0);
+    assert.deepEqual(found.issues, [
+      { installRoot: noPython, missing: 'launcher' }, { installRoot: residual, missing: 'executable' },
+    ]);
+  });
+
+  it('honors SPSS_HOME hints and expands registry environment variables without executing them', async () => {
+    const root = 'E:\\研究 工具\\SPSS26';
+    const fake = new FakeFileSystem(path.win32, [], [`${root}\\stats.exe`, `${root}\\statisticspython3.bat`]);
+    const result = await discoverWindowsInstallations({}, fake, new FakeRegistry(['%TOOLS%\\SPSS26']), { TOOLS: 'E:\\研究 工具', SPSS_HOME: root });
+    assert.equal(result.length, 1);
+    assert.equal(result[0]?.installRoot, root);
+  });
+
+  it('still checks a saved installation when registry queries fail', async () => {
+    const root = 'D:\\SPSS26';
+    const fake = new FakeFileSystem(path.win32, [], [`${root}\\stats.exe`, `${root}\\statisticspython3.bat`]);
+    const found = await discoverWindowsRuntime({ explicitInstallPath: root }, fake, { getInstallRoots: () => Promise.reject(new Error('blocked')) }, {});
+    assert.equal(found.installations[0]?.installRoot, root);
+    assert.equal(found.registryUnavailable, true);
+  });
+
   it('discovers a versioned installation under Program Files without registry data', async () => {
     const root = 'C:\\Program Files\\IBM\\SPSS Statistics\\31';
     const fake = new FakeFileSystem(path.win32, [root], [

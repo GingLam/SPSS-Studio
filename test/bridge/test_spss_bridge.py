@@ -1,4 +1,6 @@
 import importlib.util
+import ast
+import io
 import json
 import os
 import re
@@ -6,6 +8,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from unittest.mock import patch
 
 
 BRIDGE_PATH = os.path.abspath(
@@ -14,6 +17,41 @@ BRIDGE_PATH = os.path.abspath(
 SPEC = importlib.util.spec_from_file_location("spss_bridge", BRIDGE_PATH)
 BRIDGE_MODULE = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(BRIDGE_MODULE)
+
+
+class BridgeCompatibilityTests(unittest.TestCase):
+    def test_python_34_grammar_and_dictionary_displays(self) -> None:
+        # feature_version alone misses PEP 448 on current CPython; inspect it too.
+        with open(BRIDGE_PATH, encoding="utf-8") as source:
+            tree = ast.parse(source.read(), feature_version=(3, 4))
+        unpacked_dicts = [node.lineno for node in ast.walk(tree)
+                          if isinstance(node, ast.Dict) and None in node.keys]
+        self.assertEqual(unpacked_dicts, [], "Dictionary unpacking requires Python 3.5")
+
+    def test_utf8_stdio_without_reconfigure(self) -> None:
+        class LegacyStream:
+            def __init__(self, content: bytes = b"") -> None:
+                self.wrapped = io.TextIOWrapper(io.BytesIO(content), encoding="cp1252")
+
+            @property
+            def buffer(self) -> io.BytesIO:
+                return self.wrapped.buffer
+
+            def detach(self) -> io.BytesIO:
+                return self.wrapped.detach()
+
+        with patch.multiple(BRIDGE_MODULE.sys, stdin=LegacyStream("教育\n".encode("utf-8")),
+                            stdout=LegacyStream(), stderr=LegacyStream()):
+            BRIDGE_MODULE._configure_utf8_stdio()
+            try:
+                self.assertEqual(sys.stdin.readline(), "教育\n")
+                sys.stdout.write("中文\n")
+                self.assertEqual(sys.stdout.buffer.getvalue(), "中文\n".encode("utf-8"))
+                self.assertEqual(sys.stderr.errors, "backslashreplace")
+            finally:
+                sys.stdin.close()
+                sys.stdout.close()
+                sys.stderr.close()
 
 
 class FakeSpss(object):
@@ -390,7 +428,7 @@ class SpssBridgeTests(unittest.TestCase):
             responses = [json.loads(line) for line in completed.stdout.splitlines()]
             self.assertEqual([response["id"] for response in responses], ["ping", "status", "stop"])
             self.assertTrue(responses[0]["engineAlive"])
-            self.assertEqual(completed.stderr, "导入噪声\n")
+            self.assertRegex(completed.stderr, r"^SPSS_STUDIO_RUNTIME Python [0-9.]+ \| executable .+\n导入噪声\n$")
 
 
 if __name__ == "__main__":

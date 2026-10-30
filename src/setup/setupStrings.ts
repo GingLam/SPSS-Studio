@@ -8,7 +8,10 @@ export function setupStrings(language: string) {
     busy: '已有 SPSS 会话或启动任务。请先保存需要保留的数据，手动执行“SPSS：停止引擎”，再重试配置。',
     untrusted: '请先通过“工作区：管理工作区信任”信任自己的文件夹，再运行配置。',
     remote: '请在本地 Windows 或 Mac 的 VS Code 窗口中配置；WSL、SSH、容器和浏览器窗口不能连接本机 SPSS。',
-    missing: '未找到完整的 IBM launcher 和 SPSS 安装。请选择 SPSS 安装文件夹，或修复 SPSS 安装后重试。',
+    missing: '未找到可连接的 SPSS 安装。请点击“选择 SPSS 文件夹”，选择安装目录或其 IBM/SPSS 父目录；若报告提示缺少组件，请用匹配版本的 SPSS 安装程序修复。',
+    launcherMissing: '已找到 SPSS 主程序，但缺少 statisticspython3.bat。请用相同版本的 SPSS 安装程序添加或修复 Essentials for Python；单独安装通用 Python 不能替代此组件。',
+    executableMissing: '已找到 IBM Python 启动器，但缺少 stats.exe。可能是残留文件或安装不完整，请选择实际安装目录或修复 SPSS。',
+    noWorking: '检测到的 SPSS 均未通过验证。请分别查看下面各安装的失败原因；最后一项错误不代表其他安装。',
     override: '工作区设置正在覆盖用户配置。是否仅修复本次所需的 SPSS Studio 路径和自动启动设置？其他设置不变。',
     repair: '修复并继续', unknown: '原因尚不能确定，请保存报告。', retry: '请按上述提示处理后重新检测。',
     startup: '验证 Python 集成与 SPSS 启动', analysis: '执行临时数据统计', data: '核对变量、三行数据及均值 30', output: '检查原生 HTML 统计结果', shutdown: '验证正常关闭',
@@ -20,7 +23,9 @@ export function setupStrings(language: string) {
     WINDOWS_VERSION_UNKNOWN: '无法读取程序补丁版本；以实际运行测试判断可用性。',
     importFailed: 'IBM Python 集成无法导入。请使用匹配版本的官方 SPSS 安装程序修复组件。',
     licenseFailed: 'SPSS 启动返回授权相关错误。请检查许可证或学校的许可证服务器。',
-    launchFailed: 'Windows 无法运行 IBM launcher。请检查文件是否存在，并确认使用 1.4.0 插件。',
+    bridgeCompatibility: 'SPSS Python 无法解析插件桥接脚本，这是插件与 Python 版本的兼容问题。请安装 SPSS Studio 1.4.3 或更新版本后重试；无需手动修改环境变量或另装 Python。',
+    backendFailed: 'IBM Python 已响应，但 SPSS 后台引擎未就绪。此信息不足以确认授权故障；请查看本次诊断，检查匹配版本的 Python 集成、SPSS 安装及授权。',
+    launchFailed: '无法运行 IBM Python 启动器或其 Python 程序。请查看诊断中的缺失文件，并用匹配版本的 SPSS 安装程序修复 Python 集成。',
     timeout: '等待 SPSS 超时。请检查授权、启动拦截或磁盘状况；必要时增加启动等待时间。',
     rollback: '恢复旧配置时遇到问题。请保留报告并检查 SPSS Studio 设置。',
     percentPath: 'SPSS 或 VS Code 扩展路径含百分号（%），IBM 批处理会再次展开它。请使用不含百分号的安装/扩展路径后重试。',
@@ -34,7 +39,10 @@ export function setupStrings(language: string) {
     busy: 'An SPSS session or startup is active. Save any data you need, run SPSS: Stop Engine manually, then retry setup.',
     untrusted: 'Trust your own folder using Workspaces: Manage Workspace Trust before running setup.',
     remote: 'Use a local Windows or Mac VS Code window. WSL, SSH, containers, and browser windows cannot use local SPSS.',
-    missing: 'No complete IBM launcher and SPSS installation found. Choose the installation folder or repair SPSS and retry.',
+    missing: 'No connectable SPSS installation found. Use Choose SPSS Folder to select its installation or IBM/SPSS parent folder. Repair any missing components reported below with the matching SPSS installer.',
+    launcherMissing: 'SPSS was found, but statisticspython3.bat is missing. Add or repair Essentials for Python using the matching SPSS installer; a generic Python installation cannot replace it.',
+    executableMissing: 'The IBM Python launcher was found, but stats.exe is missing. These may be residual files or an incomplete installation. Choose the actual installation or repair SPSS.',
+    noWorking: 'None of the detected SPSS installations passed. Review each installation’s failure below; the last error does not describe the others.',
     override: 'Workspace settings override user settings. Repair only the required SPSS Studio paths and auto-start settings?',
     repair: 'Repair and Continue', unknown: 'The cause is not confirmed. Save the report for review.', retry: 'Resolve the issue above, then retry.',
     startup: 'Verify Python integration and SPSS startup', analysis: 'Calculate with temporary data', data: 'Check variables, three rows, and mean 30', output: 'Check native HTML results', shutdown: 'Verify graceful shutdown',
@@ -46,7 +54,9 @@ export function setupStrings(language: string) {
     WINDOWS_VERSION_UNKNOWN: 'Executable patch version is unavailable; actual runtime tests determine compatibility.',
     importFailed: 'IBM Python integration cannot be imported. Repair it with the matching official SPSS installer.',
     licenseFailed: 'SPSS reported a licensing error. Check the license or your institution’s license server.',
-    launchFailed: 'Windows could not run the IBM launcher. Verify the file and use extension 1.4.0.',
+    bridgeCompatibility: 'SPSS Python cannot parse the extension bridge script: an extension/Python compatibility problem. Install SPSS Studio 1.4.3 or newer and retry; no manual environment changes or separate Python installation are needed.',
+    backendFailed: 'IBM Python responded, but the SPSS backend is not ready. This alone does not confirm a licensing failure. Review the diagnostics and check version-matched Python integration, SPSS installation, and licensing.',
+    launchFailed: 'The IBM Python launcher or its Python executable could not run. Check the missing file in the diagnostics and repair Python integration with the matching SPSS installer.',
     timeout: 'SPSS timed out. Check licensing, application blocking, or disk performance; increase the startup timeout if necessary.',
     rollback: 'Restoring prior settings failed. Keep this report and inspect SPSS Studio settings.',
     percentPath: 'The SPSS or VS Code extension path contains %. IBM batch CALL expands this character. Use installation/extension paths without percent signs.',
@@ -60,10 +70,17 @@ export function setupAdvice(error: string, language: string): string {
   if (/SETUP_LOCK_UNAVAILABLE/u.test(error)) { return s.lockUnavailable; }
   if (/SETUP_ROLLBACK_FAILED/u.test(error)) { return s.rollback; }
   if (/SETUP_CANCELLED/u.test(error)) { return s.cancelled; }
+  if (/SETUP_NOT_FOUND/u.test(error)) { return s.missing; }
+  if (/SETUP_NO_WORKING_INSTALLATION/u.test(error)) { return s.noWorking; }
   if (/literal %/u.test(error)) { return s.percentPath; }
+  if (/SyntaxError/iu.test(error) && /spss_bridge\.py/iu.test(error)) { return s.bridgeCompatibility; }
+  if (/not recognized|不是内部|ENOENT|cannot find (?:the )?(?:file|path)|系统找不到指定/iu.test(error)) { return s.launchFailed; }
   if (/Unable to import|No module named|DLL load/iu.test(error)) { return s.importFailed; }
-  if (/license|licen[cs]ing|许可证|授权/iu.test(error)) { return s.licenseFailed; }
-  if (/not recognized|不是内部|ENOENT/iu.test(error)) { return s.launchFailed; }
+  // A directory called "license" is not licensing evidence.
+  const evidence = error.replace(/["'][A-Za-z]:[\\/][^"'\r\n]*["']/gu, '[path]')
+    .replace(/[A-Za-z]:[\\/][^\s"'<>|\r\n]*/gu, '[path]');
+  if (/\b(?:no|invalid|expired|missing|unavailable)\s+(?:valid\s+)?licen[cs]es?\b|\bnot licen[cs]ed\b|\blicen[cs](?:e|ing)(?:\s+|:\s*)[^\r\n]{0,80}(?:error|fail|invalid|expir|not found|not available|unavailable|denied|cannot|could not)|(?:cannot|could not|unable to|failed to)\s+(?:obtain|acquire|check(?: ?out)?|find|validate|verify|renew|use)\s+(?:(?:a|an|the|valid)\s+)*licen[cs]e\b|(?:unanticipated|unexpected) problem with (?:the )?licen[cs]e|(?:许可证|授权)[^\r\n]{0,40}(?:错误|失败|无效|过期|不可用|未找到)/iu.test(evidence)) { return s.licenseFailed; }
+  if (/backend is not ready|后台.*未就绪/iu.test(error)) { return s.backendFailed; }
   if (/timed out/iu.test(error)) { return s.timeout; }
   return s.unknown;
 }

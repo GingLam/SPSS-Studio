@@ -1,5 +1,5 @@
 import type { ProbeResult } from './runtimeProbe';
-import { setupStrings } from './setupStrings';
+import { setupAdvice, setupStrings } from './setupStrings';
 
 export interface SetupReport {
   version: string;
@@ -11,6 +11,7 @@ export interface SetupReport {
   advice: string;
   probes: ProbeResult[];
   warnings: string[];
+  remoteName?: string;
 }
 
 export function redactSetupDiagnostic(text: string): string {
@@ -24,8 +25,9 @@ export function buildSetupReport(report: SetupReport, language: string): string 
   const lines = [s.reportTitle, `SPSS Studio ${report.version}`, report.createdAt,
     `Platform: ${report.platform} · VS Code ${report.vscodeVersion}`,
     `${s.state}: ${report.success ? s.success : s.failed}`, ''];
-  const latest = report.probes.at(-1);
-  for (const probe of latest ? [latest] : []) {
+  if (report.remoteName) { lines.push(`Remote: ${report.remoteName}`, ''); }
+  for (const [index, probe] of report.probes.entries()) {
+    lines.push(`${language.startsWith('zh') ? '验证' : 'Check'} ${String(index + 1)} · ${probe.ok ? s.success : s.failed}`);
     lines.push(`${s.installation}: ${probe.installation.installRoot}`,
       `${s.launcher}: ${probe.installation.pythonLauncher}`,
       `${s.version}: ${probe.installation.version ?? 'unknown'}`);
@@ -33,10 +35,16 @@ export function buildSetupReport(report: SetupReport, language: string): string 
       lines.push(`${probe.passed.includes(stage) ? '✓' : '—'} ${s[stage]}`);
     }
     if (probe.error) { lines.push(`${s.detail}: ${probe.error.slice(0, 1200)}`); }
+    if (probe.stage && !probe.ok) { lines.push(`${s.stage}: ${s[probe.stage]}`); }
+    const runtime = probe.diagnostics.find((line) => line.includes('SPSS_STUDIO_RUNTIME'));
+    if (runtime) { lines.push(`${s.detail}: ${runtime.slice(0, 1200)}`); }
+    if (!probe.ok) {
+      lines.push(`${s.next}: ${setupAdvice(probe.error ?? '', language)}`);
+      for (const diagnostic of [...new Set(probe.diagnostics)].filter((line) => line !== runtime && line !== probe.error).slice(-4)) {
+        lines.push(`${s.detail}: ${diagnostic.slice(0, 1200)}`);
+      }
+    }
     lines.push('');
-  }
-  if (report.probes.length > 1) {
-    lines.push(language.startsWith('zh') ? `已完成 ${String(report.probes.length)} 次独立验证；详细记录保存在插件本地日志中。` : `${String(report.probes.length)} isolated checks completed; details are in the extension's local log.`);
   }
   if (report.error) { lines.push(`${s.detail}: ${report.error.slice(0, 1200)}`); }
   for (const warning of report.warnings) { lines.push(warning); }

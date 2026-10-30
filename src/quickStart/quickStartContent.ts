@@ -8,6 +8,7 @@ export interface QuickStartHtmlOptions {
   nonce: string;
   cspSource: string;
   isWindows?: boolean;
+  isRemote?: boolean;
   version?: string;
 }
 
@@ -152,7 +153,7 @@ function copyFor(language: QuickStartLanguage): QuickStartCopy {
   if (language === 'zh-cn') {
     return {
       title: '快速上手',
-      eyebrow: 'SPSS Studio 1.4.2',
+      eyebrow: 'SPSS Studio 1.4.3',
       introduction: '从打开第一个 .sps 文件开始，完成 Syntax 编辑、SPSS 本地执行、数据与变量查看，以及 AI 辅助解释。',
       preferenceTitle: '更新提醒',
       preferenceText: '此后版本更新时不再自动显示快速上手',
@@ -165,7 +166,7 @@ function copyFor(language: QuickStartLanguage): QuickStartCopy {
   }
   return {
     title: 'Quick Start',
-    eyebrow: 'SPSS Studio 1.4.2',
+    eyebrow: 'SPSS Studio 1.4.3',
     introduction: 'Open your first .sps file, edit and run Syntax locally, inspect data and variables, and use focused AI assistance.',
     preferenceTitle: 'Update reminder',
     preferenceText: 'Do not show Quick Start automatically after future updates',
@@ -204,12 +205,14 @@ export function buildQuickStartHtml(options: QuickStartHtmlOptions): string {
 >
   <main>
     <header class="hero">
-      <div class="eyebrow">SPSS Studio ${escapeAttribute(options.version ?? '1.4.2')}</div>
+      <div class="eyebrow">SPSS Studio ${escapeAttribute(options.version ?? '1.4.3')}</div>
       <h1>${copy.title}</h1>
       <p>${copy.introduction}</p>
     </header>
-    ${options.isWindows ? `<section class="setup-entry"><h2>${options.language === 'zh-cn' ? 'Windows 一键配置' : 'Windows Setup'}</h2>
-    <p>${options.language === 'zh-cn' ? '自动查找 SPSS、配置连接并验证实际运行，无需手动设置环境变量。' : 'Find SPSS, save working settings, and verify execution without manual environment-variable editing.'}</p>
+    ${options.isWindows || options.isRemote ? `<section class="setup-entry"><h2>${options.language === 'zh-cn' ? 'SPSS 一键配置' : 'SPSS Setup'}</h2>
+    <p>${options.isRemote
+      ? options.language === 'zh-cn' ? '当前是远程窗口，无法连接本机 SPSS。请在本机 Windows 或 Mac 的 VS Code 窗口打开 .sps 文件，再运行“SPSS：检测并配置 SPSS”。' : 'This is a remote window and cannot connect to local SPSS. Open the .sps file in a local Windows or Mac VS Code window, then run SPSS: Detect and Configure SPSS.'
+      : options.language === 'zh-cn' ? '自动查找 SPSS、配置连接并验证实际运行，无需手动设置环境变量。未配置成功时，可随时从命令面板运行“SPSS：检测并配置 SPSS”。' : 'Find SPSS, save working settings, and verify execution without manual environment-variable editing. Reopen setup anytime from the command palette: SPSS: Detect and Configure SPSS.'}</p>
     <button id="configure-runtime">${options.language === 'zh-cn' ? '一键检测并配置 SPSS' : 'Detect and Configure SPSS'}</button></section>` : ''}
     <section class="setup-entry">
       <h2>${options.language === 'zh-cn' ? '内置示例' : 'Built-in Example'}</h2>

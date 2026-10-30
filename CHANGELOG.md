@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.4.3 — 2026-10-30
+
+- Removed dictionary unpacking that prevented the Python 3.4 runtime supplied with SPSS 26 from parsing the bridge; added a compatibility regression guard and legacy UTF-8 stream handling.
+- Included the actual Python runtime version in setup diagnostics and distinguished bridge syntax failures, missing launchers, backend-not-ready errors, and explicit licensing failures.
+- Expanded bounded Windows installation discovery to parent folders and SPSS_HOME/registry hints, normalized bin directories, deduplicated installations, and reported missing IBM Python launchers or SPSS executables.
+- Preserved each attempted installation’s own failure evidence in setup reports instead of replacing it with the final candidate’s error.
+- Revealed setup progress from Quick Start and all runtime setup entry points; showed explicit guidance in remote windows while preserving the local macOS Quick Start layout.
+- Windows CMD and real SPSS 26 acceptance remain pending user testing; macOS regression results do not substitute for Windows acceptance.
+
 ## 1.4.2 — 2026-10-29
 
 - Added left-hand Output checkboxes for individual native statistical tables and result blocks, including separate tables from the same analysis, while preserving native HTML layout and result order.

@@ -115,6 +115,7 @@ export class QuickStartController implements vscode.Disposable {
       nonce: randomBytes(18).toString('base64url'),
       cspSource: panel.webview.cspSource,
       isWindows: process.platform === 'win32',
+      isRemote: Boolean(vscode.env.remoteName),
     });
   }
 

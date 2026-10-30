@@ -99,6 +99,8 @@ ${this.reportPath ? `<p>${escape(this.s.reportSaved)}: ${escape(this.reportPath)
   }
 
   public run(manualRoot?: string): Promise<void> {
+    // Quick Start and programmatic entry points must reveal progress too.
+    this.show();
     if (this.task) { return this.task; }
     const task = this.performRun(manualRoot);
     this.task = task;
@@ -120,6 +122,7 @@ ${this.reportPath ? `<p>${escape(this.s.reportSaved)}: ${escape(this.reportPath)
       version: (this.context.extension.packageJSON as { version: string }).version,
       createdAt: new Date().toISOString(), platform: process.platform, vscodeVersion: vscode.version,
       success: false, advice: this.s.retry, probes: [], warnings: [],
+      ...(vscode.env.remoteName ? { remoteName: vscode.env.remoteName } : {}),
     };
     let release: (() => void) | undefined;
     let releaseLock: (() => Promise<void>) | undefined;
@@ -138,8 +141,13 @@ ${this.reportPath ? `<p>${escape(this.s.reportSaved)}: ${escape(this.reportPath)
       const options = { explicitInstallPath: config.installPath, explicitPythonLauncherPath: config.pythonLauncherPath };
       const found = await discoverRuntime(options, manualRoot, controller.signal);
       report.warnings = found.warnings.map((warning) => warning === 'WINDOWS_DISCOVERY_PARTIAL' ? this.s.WINDOWS_DISCOVERY_PARTIAL : this.s.WINDOWS_VERSION_UNKNOWN);
+      for (const issue of found.issues ?? []) {
+        const message = `${issue.installRoot}: ${issue.missing === 'launcher' ? this.s.launcherMissing : this.s.executableMissing}`;
+        report.warnings.push(message);
+        this.log(message);
+      }
       controller.signal.throwIfAborted();
-      if (!found.installations.length) { throw new Error(this.s.missing); }
+      if (!found.installations.length) { throw new Error('SETUP_NOT_FOUND'); }
       const usable: ProbeResult[] = [];
       for (const candidate of found.installations.slice(0, 8)) {
         controller.signal.throwIfAborted();
@@ -147,10 +155,13 @@ ${this.reportPath ? `<p>${escape(this.s.reportSaved)}: ${escape(this.reportPath)
         const tested = await this.probe(candidate, controller.signal);
         report.probes.push(tested);
         if (tested.ok) { usable.push(tested); }
-        else { this.log(setupAdvice(tested.error ?? '', vscode.env.language)); }
+        else {
+          this.log(setupAdvice(tested.error ?? '', vscode.env.language));
+          if (tested.error) { this.log(tested.error); }
+        }
       }
       controller.signal.throwIfAborted();
-      if (!usable.length) { throw new Error(report.probes.at(-1)?.error ?? this.s.missing); }
+      if (!usable.length) { throw new Error('SETUP_NO_WORKING_INSTALLATION'); }
       const selected = usable.length === 1 ? usable[0] : await this.selectInstallation(usable, controller.signal);
       if (!selected) { throw new Error('SETUP_CANCELLED'); }
       controller.signal.throwIfAborted();

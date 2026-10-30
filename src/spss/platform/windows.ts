@@ -32,7 +32,7 @@ function findVersionedChildren(fs: FileSystemAdapter, root: string): string[] {
 }
 
 function normalizedLauncher(launcher: string): string | undefined {
-  const normalized = path.win32.normalize(launcher);
+  const normalized = path.win32.normalize(launcher.trim().replace(/^"(.*)"$/u, '$1'));
   return path.win32.isAbsolute(normalized)
     && path.win32.basename(normalized).toLowerCase() === 'statisticspython3.bat'
     ? normalized
@@ -66,6 +66,8 @@ function installationFromRoot(
   let root = path.win32.normalize(installRoot.trim().replace(/^"(.*)"$/u, '$1'));
   if (!path.win32.isAbsolute(root)) { return undefined; }
   root = path.win32.resolve(root);
+  // A shortcut/registry entry may point to bin; SPSS_HOME must name its parent.
+  if (path.win32.basename(root).toLowerCase() === 'bin') { root = path.win32.dirname(root); }
   const configuredLauncher = explicitLauncher ? normalizedLauncher(explicitLauncher) : undefined;
   if (explicitLauncher && (!configuredLauncher || !launcherBelongsToRoot(root, configuredLauncher))) {
     return undefined;
@@ -125,12 +127,78 @@ export async function discoverWindowsInstallations(
   environment: NodeJS.ProcessEnv,
   additionalRoots: readonly string[] = [],
 ): Promise<SpssInstallation[]> {
+  return (await discoverWindowsRuntime(options, fs, registry, environment, additionalRoots)).installations;
+}
+
+export interface WindowsInstallationIssue {
+  installRoot: string;
+  missing: 'launcher' | 'executable';
+}
+
+export interface WindowsRuntimeDiscovery {
+  installations: SpssInstallation[];
+  issues: WindowsInstallationIssue[];
+  truncated: boolean;
+  registryUnavailable?: boolean;
+}
+
+/** Inspect bounded SPSS-related trees, never an unrestricted recursive drive scan. */
+export function inspectWindowsRoots(fs: FileSystemAdapter, roots: readonly string[]): WindowsRuntimeDiscovery {
+  const candidates = new Map<string, string>();
+  let frontier = uniqueCaseInsensitive([...roots]);
+  let truncated = false;
+  for (let depth = 0; depth <= 4 && frontier.length; depth += 1) {
+    const next: string[] = [];
+    for (const candidate of frontier) {
+      let root = candidate.trim().replace(/^"(.*)"$/u, '$1');
+      if (!path.win32.isAbsolute(root)) { continue; }
+      if (/^(?:stats\.exe|statisticspython3\.bat)$/iu.test(path.win32.basename(root))) { root = path.win32.dirname(root); }
+      if (path.win32.basename(root).toLowerCase() === 'bin') { root = path.win32.dirname(root); }
+      root = path.win32.normalize(root);
+      const key = root.replace(/[\\/]+$/u, '').toLowerCase();
+      if (candidates.has(key)) { continue; }
+      if (candidates.size >= 600) { truncated = true; break; }
+      candidates.set(key, root);
+      if (depth < 4) {
+        const entries = fs.readDirectory(root);
+        if (entries.length > 200) { truncated = true; }
+        for (const entry of entries.slice(0, 200)) {
+          if (entry.isDirectory && /SPSS|Statistics|IBM|^\d{2}(?:\.\d+)*$/iu.test(entry.name)) {
+            next.push(path.win32.join(root, entry.name));
+          }
+        }
+      }
+    }
+    frontier = uniqueCaseInsensitive(next);
+  }
+  const installations: SpssInstallation[] = [];
+  const issues: WindowsInstallationIssue[] = [];
+  for (const root of candidates.values()) {
+    const installation = installationFromRoot(fs, root);
+    if (installation) { installations.push(installation); continue; }
+    const hasStats = ['stats.exe', 'bin\\stats.exe'].some((name) => fs.isFile(path.win32.join(root, name)));
+    const hasLauncher = ['statisticspython3.bat', 'bin\\statisticspython3.bat'].some((name) => fs.isFile(path.win32.join(root, name)));
+    if (hasStats || hasLauncher) { issues.push({ installRoot: root, missing: hasStats ? 'launcher' : 'executable' }); }
+  }
+  return { installations: installations.sort((a, b) => numericVersion(b) - numericVersion(a)), issues, truncated };
+}
+
+export async function discoverWindowsRuntime(
+  options: LocatorOptions,
+  fs: FileSystemAdapter,
+  registry: RegistryProvider,
+  environment: NodeJS.ProcessEnv,
+  additionalRoots: readonly string[] = [],
+): Promise<WindowsRuntimeDiscovery> {
   const explicit = options.explicitInstallPath
     ? installationFromRoot(fs, options.explicitInstallPath, options.explicitPythonLauncherPath)
     : options.explicitPythonLauncherPath
       ? installationFromRoot(fs, rootFromLauncher(options.explicitPythonLauncherPath) ?? '', options.explicitPythonLauncherPath)
       : undefined;
-  const registryRoots = await registry.getInstallRoots();
+  let registryRoots: string[] = [];
+  let registryUnavailable = false;
+  try { registryRoots = await registry.getInstallRoots(); }
+  catch { registryUnavailable = true; }
   const programFiles = uniqueCaseInsensitive(
     [environment.ProgramFiles, environment.ProgramW6432, environment['ProgramFiles(x86)']]
       .filter((value): value is string => Boolean(value)),
@@ -140,17 +208,22 @@ export async function discoverWindowsInstallations(
     path.win32.join(root, 'IBM', 'SPSS', 'Statistics'),
     path.win32.join(root, 'IBM SPSS Statistics'),
   ]);
+  const expandEnvironment = (value: string): string => value.replace(/%([^%]+)%/gu, (literal, name: string) => {
+    const key = Object.keys(environment).find((item) => item.toLowerCase() === name.toLowerCase());
+    return key ? environment[key] ?? literal : literal;
+  });
   const candidates = uniqueCaseInsensitive([
+    options.explicitInstallPath ?? '',
+    options.explicitPythonLauncherPath ?? '',
+    environment.SPSS_HOME ?? environment.spss_home ?? '',
     ...registryRoots,
     ...additionalRoots,
     ...commonRoots.flatMap((root) => findVersionedChildren(fs, root)),
-  ]);
-  const installations = candidates
-    .map((candidate) => installationFromRoot(fs, candidate))
-    .filter((installation): installation is SpssInstallation => installation !== undefined)
-    .sort((left, right) => numericVersion(right) - numericVersion(left));
-  return [
+  ].filter(Boolean).map(expandEnvironment));
+  const found = inspectWindowsRoots(fs, candidates);
+  const installations = [
     ...(explicit ? [explicit] : []),
-    ...installations.filter((item) => item.installRoot.toLowerCase() !== explicit?.installRoot.toLowerCase()),
+    ...found.installations.filter((item) => item.pythonLauncher.toLowerCase() !== explicit?.pythonLauncher.toLowerCase()),
   ];
+  return { ...found, installations, registryUnavailable };
 }

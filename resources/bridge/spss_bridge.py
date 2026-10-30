@@ -2,6 +2,7 @@
 """Persistent JSONL bridge between VS Code and IBM SPSS Statistics."""
 
 import json
+import io
 import datetime
 import math
 import os
@@ -14,11 +15,17 @@ from collections import Counter
 from contextlib import redirect_stdout
 
 
-def _configure_utf8_stdio():
-    for stream, errors in ((sys.stdin, "strict"), (sys.stdout, "strict"), (sys.stderr, "backslashreplace")):
+def _configure_utf8_stdio() -> None:
+    for name, errors in (("stdin", "strict"), ("stdout", "strict"), ("stderr", "backslashreplace")):
+        stream = getattr(sys, name)
         reconfigure = getattr(stream, "reconfigure", None)
         if reconfigure is not None:
             reconfigure(encoding="utf-8", errors=errors)
+        elif hasattr(stream, "detach") and hasattr(stream, "buffer"):
+            # SPSS 26's Python 3.4 has no TextIOWrapper.reconfigure().
+            setattr(sys, name, io.TextIOWrapper(
+                stream.detach(), encoding="utf-8", errors=errors, line_buffering=True,
+            ))
 
 
 def _quote_spss_string(value):
@@ -657,7 +664,7 @@ class SpssBridge(object):
             except Exception:
                 # Counts are advisory; never replace this run's original result.
                 pass
-        return {
+        response = {
             "ok": ok,
             "errorLevel": error_level,
             "output": "",
@@ -668,8 +675,10 @@ class SpssBridge(object):
             "status": status,
             "htmlPath": output_path if output_created else None,
             "runId": run_id,
-            **({"datasetSummary": summary} if summary is not None else {}),
         }
+        if summary is not None:
+            response["datasetSummary"] = summary
+        return response
 
     def status(self):
         alive = self.started
@@ -783,6 +792,10 @@ def _failure_response(request_id, error, duration_ms=0):
 def main():
     _configure_utf8_stdio()
     debug = os.environ.get("SPSS_STUDIO_DEBUG") == "1"
+    sys.stderr.write("SPSS_STUDIO_RUNTIME Python {} | executable {}\n".format(
+        sys.version.split()[0], sys.executable,
+    ))
+    sys.stderr.flush()
     import_error = None
     bridge = None
     try:
@@ -790,7 +803,7 @@ def main():
             import spss  # pylint: disable=import-outside-toplevel
         bridge = SpssBridge(spss, debug=debug)
     except Exception as exc:
-        import_error = "Unable to import IBM SPSS Python module: {}".format(exc)
+        import_error = "Unable to import IBM SPSS Python module: {}: {}".format(type(exc).__name__, exc)
         if debug:
             traceback.print_exc(file=sys.stderr)
 
@@ -808,9 +821,11 @@ def main():
             else:
                 response = bridge.handle(request)
         except Exception as exc:
+            if debug:
+                traceback.print_exc(file=sys.stderr)
             response = _failure_response(
                 request_id,
-                str(exc),
+                "{}: {}".format(type(exc).__name__, exc),
                 int(round((time.monotonic() - started_at) * 1000)),
             )
         sys.stdout.write(json.dumps(response, ensure_ascii=False, separators=(",", ":")) + "\n")

@@ -33,7 +33,7 @@ Contact：[linjing@nufe.edu.cn](mailto:linjing@nufe.edu.cn)
 - A locally installed and licensed IBM SPSS Statistics with the Python Integration Package.
 - A trusted VS Code workspace for execution and Active Dataset access.
 
-IBM SPSS Statistics 27 has been tested on macOS. Version 1.4.0 adds a built-in setup wizard and a Windows CMD transport fix. Windows-specific command tests are included but skipped on macOS; execution against a real Windows SPSS installation remains pending user acceptance. A passed mock test is not a real Windows acceptance result.
+IBM SPSS Statistics 27 has been tested on macOS. Version 1.4.3 fixes bridge syntax and UTF-8 transport compatibility for the Python 3.4 runtime supplied with SPSS 26, expands Windows installation discovery, and improves setup diagnostics. Windows-specific command tests are included but skipped on macOS; execution against a real Windows SPSS installation, including SPSS 26, remains pending user acceptance. A passed mock or grammar test is not a real Windows acceptance result.
 
 No separate Python installation is normally required. On Windows, SPSS Studio requires IBM's `statisticspython3.bat` launcher so that the Python runtime and SPSS installation remain version-matched; it does not silently fall back to a generic Python executable. On macOS, IBM's bundled Python remains available as a compatibility fallback when the IBM launcher is absent.
 
@@ -42,6 +42,8 @@ No separate Python installation is normally required. On Windows, SPSS Studio re
 Install **SPSS Studio** from the Extensions view in Visual Studio Code, then open a `.sps` file. VS Code automatically assigns the **SPSS Syntax** language mode.
 
 On first activation after installation, SPSS Studio opens **Quick Start** for an English VS Code interface or **快速上手** for a Chinese interface. The page explains the complete editor, execution, Studio, Variables, and Chat workflow. Its prominent update-reminder checkbox controls whether later extension versions open the page once after updating. This preference stays in local VS Code global state and is not written beside an `.sps` file or packaged in the VSIX. The page remains available from the book icon between **Show AI Assistant** and VS Code's **Split Editor** action in every `.sps` editor.
+
+On Windows, use **Detect and Configure SPSS** in Quick Start; the progress window opens before detection begins. You can also run **SPSS: Detect and Configure SPSS** from the Command Palette at any time. If automatic discovery fails, choose the SPSS installation, its `bin` directory, or its IBM/SPSS parent folder. Setup distinguishes missing IBM Python integration from residual installation files and records each attempted installation separately. WSL, SSH, and container windows display a local-window requirement; they cannot connect to the SPSS installation on your Windows desktop. Local macOS Quick Start remains unchanged.
 
 ## Running syntax
 
@@ -213,6 +215,7 @@ SPSS Studio is not an LSP or a full semantic validator. It does not provide stat
 
 | Version | Date | Update summary |
 | --- | --- | --- |
+| 1.4.3 | 2026-10-30 | Fixed SPSS 26/Python 3.4 bridge syntax and legacy UTF-8 streams; improved Windows parent-folder discovery, bin normalization, missing-component and per-installation diagnostics, licensing classification, and setup progress visibility. Windows/SPSS 26 real-machine acceptance remains pending. |
 | 1.4.2 | 2026-10-29 | Added per-table Output multi-selection and separate Chat interpretations, preserving native layout, Markdown table structure, statistical qualifications, and privacy filtering. |
 | 1.4.1 | 2026-10-28 | Added per-run data summaries, native file-use warning guidance, a confirmed session-data Clear action, and prebuilt bilingual SPS/SAV examples in Quick Start. |
 | 1.4.0 | 2026-10-28 | Added built-in one-click runtime detection, configuration, isolated calculation/HTML/data/shutdown verification, rollback and desktop reports; fixed Windows CMD quoting and expanded installation discovery. Windows real-SPSS acceptance remains pending. |

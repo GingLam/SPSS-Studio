@@ -75,6 +75,9 @@ describe('Quick Start', () => {
     assert.match(chinese, /script-src 'nonce-test-nonce'/u);
     assert.doesNotMatch(chinese, /id="configure-runtime"/u);
     assert.match(buildQuickStartHtml({ ...common, language: 'zh-cn', suppressAfterUpdates: false, isWindows: true }), /id="configure-runtime">一键检测并配置 SPSS/u);
+    const remote = buildQuickStartHtml({ ...common, language: 'zh-cn', suppressAfterUpdates: false, isWindows: false, isRemote: true });
+    assert.match(remote, /id="configure-runtime"/u);
+    assert.match(remote, /当前是远程窗口，无法连接本机 SPSS/u);
     assert.equal(isQuickStartMessage({ type: 'configureRuntime' }), true);
   });
 });

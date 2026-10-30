@@ -9,7 +9,7 @@ import type { SpssInstallation } from '../../src/spss/platform/types';
 import { configureTransaction } from '../../src/setup/configurationTransaction';
 import { probeRuntime } from '../../src/setup/runtimeProbe';
 import { buildSetupReport } from '../../src/setup/setupReport';
-import { setupAdvice } from '../../src/setup/setupStrings';
+import { setupAdvice, setupStrings } from '../../src/setup/setupStrings';
 import { acquireSetupLock } from '../../src/setup/setupLock';
 import os from 'node:os';
 
@@ -72,6 +72,36 @@ function probeWith(child: ProbeProcess, signal = new AbortController().signal) {
 }
 
 describe('one-click runtime setup', () => {
+  it('identifies the reported bridge syntax error without blaming a license or environment path', () => {
+    const s = setupStrings('zh-cn');
+    const error = 'SPSS bridge exited (code=0, signal=null). File "C:\\license-test\\spss_bridge.py", line 671 **({"datasetSummary": summary}) SyntaxError: invalid syntax';
+    assert.equal(setupAdvice(error, 'zh-cn'), s.bridgeCompatibility);
+    assert.equal(setupAdvice('ENOENT C:\\license-test\\statisticspython3.bat', 'zh-cn'), s.launchFailed);
+    assert.equal(setupAdvice('License information: local license', 'zh-cn'), s.unknown);
+    assert.equal(setupAdvice('Could not start C:\\license-test\\python.exe', 'zh-cn'), s.unknown);
+    assert.equal(setupAdvice('Could not start "C:\\Program Files\\license failed\\python.exe"', 'zh-cn'), s.unknown);
+    assert.equal(setupAdvice('No license found for IBM SPSS Statistics', 'zh-cn'), s.licenseFailed);
+    assert.equal(setupAdvice('No valid licenses found for IBM SPSS Statistics', 'zh-cn'), s.licenseFailed);
+    assert.equal(setupAdvice('SPSS license checkout failed', 'zh-cn'), s.licenseFailed);
+    assert.equal(setupAdvice('Error # 2072. There was an unanticipated problem with the license for this product.', 'zh-cn'), s.licenseFailed);
+    assert.equal(setupAdvice('IBM SPSS Statistics backend is not ready', 'zh-cn'), s.backendFailed);
+    assert.equal(setupAdvice('SETUP_NOT_FOUND', 'zh-cn'), s.missing);
+  });
+
+  it('shows every attempted installation and its own failure evidence in the report', () => {
+    const report = buildSetupReport({ version: '1.4.3', createdAt: '2026-10-30', platform: 'win32', vscodeVersion: '1.143.1', success: false,
+      probes: [
+        { installation: { ...installation, installRoot: 'C:\\SPSS26' }, passed: [], ok: false, stage: 'startup', error: 'SyntaxError: invalid syntax spss_bridge.py', diagnostics: ['SPSS_STUDIO_RUNTIME Python 3.4.3', 'token=private123'] },
+        { installation: { ...installation, installRoot: 'D:\\SPSS27' }, passed: [], ok: false, stage: 'startup', error: 'No license found', diagnostics: [] },
+      ], warnings: [], advice: setupAdvice('SETUP_NO_WORKING_INSTALLATION', 'zh-cn'), error: 'SETUP_NO_WORKING_INSTALLATION' }, 'zh-cn');
+    assert.match(report, /C:\\SPSS26/u);
+    assert.match(report, /D:\\SPSS27/u);
+    assert.match(report, /SyntaxError/u);
+    assert.match(report, /No license found/u);
+    assert.match(report, /Python 3\.4\.3/u);
+    assert.doesNotMatch(report, /private123/u);
+  });
+
   it('prevents concurrent setup from two windows using the same local storage', async () => {
     const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'ssx-lock-test-'));
     try {
