@@ -184,4 +184,13 @@ describe('one-click runtime setup', () => {
     assert.match(setupAdvice('Unable to import IBM SPSS Python module', 'en'), /Repair/u);
     assert.match(setupAdvice('SETUP_ENGINE_BUSY', 'zh-cn'), /手动/u);
   });
+
+  it('records OS and process architecture separately without claiming native x64 support', () => {
+    const report = buildSetupReport({ version: '1.4.3', createdAt: '2026-10-31', platform: 'win32', vscodeVersion: '1.143', success: false,
+      probes: [], warnings: [setupStrings('zh-cn').armWindows], advice: 'Retry',
+      host: { osVersion: 'Windows 11 Home', osRelease: '10.0', processArchitecture: 'x64', machine: 'ARM64', processorArchitecture: 'AMD64', nativeArchitectureHint: 'ARM64' } }, 'zh-cn');
+    assert.match(report, /VS Code process: x64 · Machine: ARM64/u);
+    assert.match(report, /AMD64 \/ ARM64/u);
+    assert.match(report, /IBM 不正式支持/u);
+  });
 });

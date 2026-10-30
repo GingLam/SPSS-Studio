@@ -5,6 +5,7 @@ import { StringDecoder } from 'node:string_decoder';
 import type { Readable, Writable } from 'node:stream';
 import type { EventEmitter } from 'node:events';
 import { ExecutionQueue } from './executionQueue';
+import { windowsChildEnvironment, windowsTool } from './windowsEnvironment';
 import type { SpssInstallation } from './platform/types';
 import type {
   ActiveDatasetInfo,
@@ -79,10 +80,7 @@ function defaultSpawner(
 
 function windowsProcessTreeTerminator(environment: NodeJS.ProcessEnv): ProcessTreeTerminator {
   return (processId) => {
-    const systemRoot = environment.SystemRoot ?? environment.SYSTEMROOT;
-    const executable = systemRoot
-      ? path.win32.join(systemRoot, 'System32', 'taskkill.exe')
-      : 'taskkill.exe';
+    const executable = windowsTool('taskkill.exe', environment);
     const result = spawnSync(executable, ['/PID', String(processId), '/T', '/F'], {
       windowsHide: true,
       timeout: 5_000,
@@ -173,7 +171,7 @@ export class BridgeManager {
       environment.PYTHONIOENCODING = 'utf-8';
     }
     return {
-      ...environment,
+      ...(this.platform === 'win32' ? windowsChildEnvironment(environment) : environment),
       ...installation.environment,
       ...(this.platform === 'win32' ? {
         SPSS_STUDIO_LAUNCHER: installation.pythonLauncher,
@@ -188,7 +186,7 @@ export class BridgeManager {
     bridgePath: string,
   ): { executable: string; args: string[]; cwd: string } {
     if (this.platform === 'win32' && installation.pythonLauncher.toLowerCase().endsWith('.bat')) {
-      const commandInterpreter = this.environment.ComSpec ?? 'cmd.exe';
+      const commandInterpreter = windowsTool('cmd.exe', this.environment);
       if ([installation.pythonLauncher, bridgePath].some((value) => /["\r\n\0]/u.test(value))) {
         throw new Error('Invalid characters in SPSS launcher or bridge path.');
       }

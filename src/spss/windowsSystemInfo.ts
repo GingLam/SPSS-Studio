@@ -1,6 +1,7 @@
 import { execFile } from 'node:child_process';
 import path from 'node:path';
 import { promisify } from 'node:util';
+import { windowsChildEnvironment, windowsEnvironmentValue, windowsTool } from './windowsEnvironment';
 
 const execute = promisify(execFile);
 
@@ -15,8 +16,8 @@ foreach($key in @('HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstal
     if($_.DisplayIcon) { $p=[Environment]::ExpandEnvironmentVariables(([string]$_.DisplayIcon -replace ',\\d+$','').Trim('"')); if(Test-Path -LiteralPath $p -PathType Leaf) { $roots.Add([IO.Path]::GetDirectoryName($p)) } }
   }
 }
-Get-CimInstance Win32_LogicalDisk -Filter 'DriveType=3' | ForEach-Object {
-  $drive=$_.DeviceID+'\\'
+[System.IO.DriveInfo]::GetDrives() | Where-Object { $_.DriveType -eq 'Fixed' -and $_.IsReady } | ForEach-Object {
+  $drive=$_.Name
   foreach($folder in @('SPSS','IBM','Program Files\\IBM','Program Files (x86)\\IBM')) { $roots.Add((Join-Path $drive $folder)) }
   Get-ChildItem -LiteralPath $drive -Directory | Where-Object { $_.Name -match 'SPSS' } | Select-Object -First 30 | ForEach-Object { $roots.Add($_.FullName) }
 }
@@ -31,13 +32,13 @@ ConvertTo-Json -Compress -InputObject @($roots | Select-Object -Unique)
 `;
 
 export async function windowsQuery(script: string, environment: NodeJS.ProcessEnv = process.env, signal?: AbortSignal): Promise<string> {
-  const executable = path.win32.join(environment.SystemRoot ?? environment.SYSTEMROOT ?? 'C:\\Windows', 'System32', 'WindowsPowerShell', 'v1.0', 'powershell.exe');
+  const executable = windowsTool('powershell.exe', environment);
   const { stdout } = await execute(executable, ['-NoLogo', '-NoProfile', '-NonInteractive', '-Command', script], {
     windowsHide: true,
     timeout: 15_000,
     maxBuffer: 256_000,
     encoding: 'utf8',
-    env: environment,
+    env: windowsChildEnvironment(environment),
     ...(signal ? { signal } : {}),
   });
   return stdout.replace(/^\uFEFF/u, '').trim();
@@ -65,5 +66,16 @@ ConvertTo-Json -Compress -InputObject $result
 }
 
 export async function windowsDesktopDirectory(): Promise<string> {
-  return windowsQuery("[Console]::OutputEncoding=New-Object System.Text.UTF8Encoding($false); [Environment]::GetFolderPath('DesktopDirectory')");
+  try {
+    const desktop = await windowsQuery("[Console]::OutputEncoding=New-Object System.Text.UTF8Encoding($false); [Environment]::GetFolderPath('DesktopDirectory')");
+    if (path.win32.isAbsolute(desktop)) { return desktop; }
+  } catch { /* Query the real redirected desktop without PowerShell next. */ }
+  const { stdout } = await execute(windowsTool('reg.exe'), ['query',
+    'HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\User Shell Folders', '/v', 'Desktop'],
+  { windowsHide: true, timeout: 5_000, encoding: 'utf8' });
+  const configured = stdout.match(/^\s*Desktop\s+REG_(?:EXPAND_)?SZ\s+(.+)$/imu)?.[1]?.trim();
+  const expanded = configured?.replace(/%([^%]+)%/gu, (literal, name: string) => windowsEnvironmentValue(process.env, name) ?? literal);
+  if (!expanded || !path.win32.isAbsolute(expanded) || expanded.includes('%')) { throw new Error('Windows desktop location unavailable'); }
+  // The caller verifies writability; never guess a OneDrive or Desktop directory.
+  return expanded;
 }

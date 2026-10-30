@@ -11,6 +11,7 @@ import type {
   SpssInstallation,
 } from './platform/types';
 import { locateWindows } from './platform/windows';
+import { windowsTool } from './windowsEnvironment';
 
 const execFileAsync = promisify(execFile);
 
@@ -57,6 +58,7 @@ export class NodeFileSystem implements FileSystemAdapter {
 }
 
 export class WindowsRegistry implements RegistryProvider {
+  public unavailable = false;
   public constructor(private readonly signal?: AbortSignal) {}
 
   public async getInstallRoots(): Promise<string[]> {
@@ -69,7 +71,7 @@ export class WindowsRegistry implements RegistryProvider {
     for (const key of keys) {
       this.signal?.throwIfAborted();
       try {
-        const { stdout } = await execFileAsync('reg.exe', ['query', key, '/s'], {
+        const { stdout } = await execFileAsync(windowsTool('reg.exe'), ['query', key, '/s'], {
           windowsHide: true,
           timeout: 10_000,
           ...(this.signal ? { signal: this.signal } : {}),
@@ -80,8 +82,11 @@ export class WindowsRegistry implements RegistryProvider {
             roots.add(match[1].trim());
           }
         }
-      } catch {
-        // Missing registry keys are normal on machines without SPSS.
+      } catch (error) {
+        this.signal?.throwIfAborted();
+        const detail = error instanceof Error ? error.message : String(error);
+        // Missing keys are normal; missing/blocked tools must remain diagnosable.
+        if (!/unable to find the specified registry|找不到指定的注册表/iu.test(detail)) { this.unavailable = true; }
       }
     }
     return [...roots];

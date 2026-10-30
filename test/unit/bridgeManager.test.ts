@@ -268,7 +268,8 @@ describe('BridgeManager', () => {
     assert.equal(launchedArguments[4], '""%SPSS_STUDIO_LAUNCHER%" "%SPSS_STUDIO_BRIDGE%""');
     assert.ok(!launchedArguments.join(' ').includes('HOST COMMAND'));
     assert.ok(launchedEnvironment);
-    assert.equal(launchedEnvironment.PATH, 'C:\\Windows\\System32');
+    assert.ok(launchedEnvironment.PATH?.startsWith('C:\\Windows\\System32;'));
+    assert.equal(launchedEnvironment.SystemRoot, 'C:\\Windows');
     assert.equal(launchedEnvironment.SPSS_HOME, 'C:\\Program Files\\IBM\\SPSS Statistics\\32');
     assert.equal(launchedEnvironment.SPSS_STUDIO_LAUNCHER, windowsInstallation.pythonLauncher);
     assert.equal(launchedEnvironment.SPSS_STUDIO_BRIDGE, 'C:\\Extension Path\\resources\\bridge\\spss_bridge.py');
@@ -306,6 +307,24 @@ describe('BridgeManager', () => {
     await manager.stop();
     assert.equal(child.killed, true);
     assert.match(diagnostics.join('\n'), /process-tree cleanup failed.*simulated taskkill failure/iu);
+  });
+
+  it('starts non-C SPSS without PATH or ComSpec using WINDIR', async () => {
+    const child = new FakeBridgeProcess((request, process) => process.send(responseFor(request)));
+    let executable = '';
+    let home: string | undefined;
+    let childPath: string | undefined;
+    const manager = new BridgeManager({ startupTimeoutMs: 100, executionTimeoutMs: 100,
+      platform: 'win32', environment: { windir: 'E:\\Windows' },
+      processTreeTerminator: () => ({ success: true }),
+      spawner: (command, _args, options) => { executable = command; home = options.env?.SPSS_HOME; childPath = options.env?.PATH; return child; },
+    });
+    const root = 'D:\\教学 软件\\SPSS 26';
+    await manager.start({ installRoot: root, pythonLauncher: `${root}\\statisticspython3.bat`, launchMode: 'ibm-launcher', environment: { SPSS_HOME: root } }, 'F:\\VS Code 扩展\\spss_bridge.py');
+    assert.equal(executable, 'E:\\Windows\\System32\\cmd.exe');
+    assert.equal(home, root);
+    assert.ok(childPath?.startsWith('E:\\Windows\\System32;'));
+    await manager.stop();
   });
 
   it('rejects a startup handshake that does not confirm a live SPSS processor', async () => {

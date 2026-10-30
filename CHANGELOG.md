@@ -2,6 +2,9 @@
 
 ## 1.4.3 — 2026-10-30
 
+- October 31 revision, retaining 1.4.3: added an independent, bounded disk scanner for non-C installations, retained discovered results on scan timeout, and removed WMI from the PowerShell fixed-drive query.
+- Resolved Windows tools from SystemRoot/WINDIR without PATH or ComSpec, supported Sysnative for 32-bit hosts, added a real desktop-registry fallback, and recorded OS/process architecture and Windows ARM hints without claiming IBM support on Windows ARM or HarmonyOS.
+
 - Removed dictionary unpacking that prevented the Python 3.4 runtime supplied with SPSS 26 from parsing the bridge; added a compatibility regression guard and legacy UTF-8 stream handling.
 - Included the actual Python runtime version in setup diagnostics and distinguished bridge syntax failures, missing launchers, backend-not-ready errors, and explicit licensing failures.
 - Expanded bounded Windows installation discovery to parent folders and SPSS_HOME/registry hints, normalized bin directories, deduplicated installations, and reported missing IBM Python launchers or SPSS executables.

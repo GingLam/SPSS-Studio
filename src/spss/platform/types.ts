@@ -14,6 +14,7 @@ export interface FileSystemAdapter {
 
 export interface RegistryProvider {
   getInstallRoots(): Promise<string[]>;
+  readonly unavailable?: boolean;
 }
 
 export interface LocatorOptions {

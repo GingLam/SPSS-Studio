@@ -19,8 +19,10 @@ export function setupStrings(language: string) {
     reportWriteFailed: '桌面报告尚未保存。请点击“保存桌面报告”，选择可写入的位置。',
     state: '结果', stage: '步骤', installation: '安装位置', launcher: '启动器', version: 'SPSS 版本', detail: '诊断',
     next: '下一步', nextSuccess: '打开 .sps 文件，点击“运行全部”。',
-    WINDOWS_DISCOVERY_PARTIAL: '部分 Windows 安装线索无法读取；仍会检查注册表和常见目录，可用“选择 SPSS 文件夹”补充。',
+    WINDOWS_DISCOVERY_PARTIAL: '部分 Windows 安装线索无法读取或有界磁盘扫描未完成；其他检测结果仍有效。可用“选择 SPSS 文件夹”指定任意盘符的实际安装目录。',
     WINDOWS_VERSION_UNKNOWN: '无法读取程序补丁版本；以实际运行测试判断可用性。',
+    WINDOWS_POWERSHELL_UNAVAILABLE: 'PowerShell 安装线索不可用；继续使用独立磁盘检测与其他线索。',
+    WINDOWS_REGISTRY_UNAVAILABLE: '部分注册表线索不可用；继续检查磁盘目录与其他安装线索。',
     importFailed: 'IBM Python 集成无法导入。请使用匹配版本的官方 SPSS 安装程序修复组件。',
     licenseFailed: 'SPSS 启动返回授权相关错误。请检查许可证或学校的许可证服务器。',
     bridgeCompatibility: 'SPSS Python 无法解析插件桥接脚本，这是插件与 Python 版本的兼容问题。请安装 SPSS Studio 1.4.3 或更新版本后重试；无需手动修改环境变量或另装 Python。',
@@ -30,6 +32,9 @@ export function setupStrings(language: string) {
     rollback: '恢复旧配置时遇到问题。请保留报告并检查 SPSS Studio 设置。',
     percentPath: 'SPSS 或 VS Code 扩展路径含百分号（%），IBM 批处理会再次展开它。请使用不含百分号的安装/扩展路径后重试。',
     lockUnavailable: '本机配置通道暂不可用。请关闭其他配置窗口后重试；若仍失败，请保存报告。',
+    armWindows: '检测到 ARM64 Windows 线索。IBM 不正式支持此平台的 SPSS 客户端；本次仍尝试实际验证，通过也不等于 IBM 官方兼容认证。',
+    blocked: 'Windows 拒绝启动配置工具或 SPSS 组件。请检查文件权限、安全软件拦截记录及单位的应用控制策略，并保留原始错误。',
+    architecture: 'Windows 无法运行此程序的架构或可执行文件。请核对报告中的系统、进程架构及 SPSS 安装版本；Windows ARM 或不完整的安装不能通过修改路径解决。',
   } : {
     title: 'Detect and Configure SPSS', start: 'Detect and Configure', chooseFolder: 'Choose SPSS Folder', cancel: 'Cancel', report: 'Save Desktop Report',
     introduction: 'Find local SPSS, test its calculation engine, and save working settings. No manual environment-variable editing. Tests use separate temporary data.',
@@ -50,8 +55,10 @@ export function setupStrings(language: string) {
     reportWriteFailed: 'The desktop report was not saved. Use Save Desktop Report to choose a writable location.',
     state: 'Result', stage: 'Stage', installation: 'Installation', launcher: 'Launcher', version: 'SPSS version', detail: 'Diagnostics',
     next: 'Next', nextSuccess: 'Open an .sps file and select Run All.',
-    WINDOWS_DISCOVERY_PARTIAL: 'Some Windows installation hints were unavailable. Registry/common locations are still checked; use Choose SPSS Folder if needed.',
+    WINDOWS_DISCOVERY_PARTIAL: 'Some Windows hints were unavailable or the bounded disk scan was incomplete. Other results remain valid. Use Choose SPSS Folder to select the actual installation on any drive.',
     WINDOWS_VERSION_UNKNOWN: 'Executable patch version is unavailable; actual runtime tests determine compatibility.',
+    WINDOWS_POWERSHELL_UNAVAILABLE: 'PowerShell installation hints are unavailable; independent disk detection and other hints remain in use.',
+    WINDOWS_REGISTRY_UNAVAILABLE: 'Some registry hints are unavailable; disk directories and other installation hints remain in use.',
     importFailed: 'IBM Python integration cannot be imported. Repair it with the matching official SPSS installer.',
     licenseFailed: 'SPSS reported a licensing error. Check the license or your institution’s license server.',
     bridgeCompatibility: 'SPSS Python cannot parse the extension bridge script: an extension/Python compatibility problem. Install SPSS Studio 1.4.3 or newer and retry; no manual environment changes or separate Python installation are needed.',
@@ -61,6 +68,9 @@ export function setupStrings(language: string) {
     rollback: 'Restoring prior settings failed. Keep this report and inspect SPSS Studio settings.',
     percentPath: 'The SPSS or VS Code extension path contains %. IBM batch CALL expands this character. Use installation/extension paths without percent signs.',
     lockUnavailable: 'The local setup channel is unavailable. Close other setup windows and retry; save the report if it persists.',
+    armWindows: 'ARM64 Windows hints detected. IBM does not officially support SPSS clients on this platform. Setup will still attempt real verification; a pass is not IBM compatibility certification.',
+    blocked: 'Windows denied launching a setup tool or SPSS component. Check file permissions, application-blocking records, and institutional application-control policies. Keep the original error.',
+    architecture: 'Windows cannot run this executable or architecture. Check the OS/process architecture in the report and the SPSS installation. Path changes cannot resolve Windows ARM limitations or incomplete binaries.',
   };
 }
 
@@ -74,6 +84,8 @@ export function setupAdvice(error: string, language: string): string {
   if (/SETUP_NO_WORKING_INSTALLATION/u.test(error)) { return s.noWorking; }
   if (/literal %/u.test(error)) { return s.percentPath; }
   if (/SyntaxError/iu.test(error) && /spss_bridge\.py/iu.test(error)) { return s.bridgeCompatibility; }
+  if (/\b(?:EACCES|EPERM)\b|access is denied|拒绝访问|blocked by (?:group policy|your administrator)|此程序被组策略阻止/iu.test(error)) { return s.blocked; }
+  if (/not a valid Win32|不是有效的 Win32|incompatible with (?:the )?version of Windows|\bERROR_BAD_EXE_FORMAT\b/iu.test(error)) { return s.architecture; }
   if (/not recognized|不是内部|ENOENT|cannot find (?:the )?(?:file|path)|系统找不到指定/iu.test(error)) { return s.launchFailed; }
   if (/Unable to import|No module named|DLL load/iu.test(error)) { return s.importFailed; }
   // A directory called "license" is not licensing evidence.

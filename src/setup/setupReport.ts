@@ -1,5 +1,6 @@
 import type { ProbeResult } from './runtimeProbe';
 import { setupAdvice, setupStrings } from './setupStrings';
+import type { SetupHostInfo } from '../spss/windowsEnvironment';
 
 export interface SetupReport {
   version: string;
@@ -12,6 +13,7 @@ export interface SetupReport {
   probes: ProbeResult[];
   warnings: string[];
   remoteName?: string;
+  host?: SetupHostInfo;
 }
 
 export function redactSetupDiagnostic(text: string): string {
@@ -26,6 +28,11 @@ export function buildSetupReport(report: SetupReport, language: string): string 
     `Platform: ${report.platform} · VS Code ${report.vscodeVersion}`,
     `${s.state}: ${report.success ? s.success : s.failed}`, ''];
   if (report.remoteName) { lines.push(`Remote: ${report.remoteName}`, ''); }
+  if (report.host) {
+    const host = report.host;
+    lines.push(`OS: ${host.osVersion} · ${host.osRelease}`, `VS Code process: ${host.processArchitecture} · Machine: ${host.machine}`,
+      `Windows architecture hints: ${host.processorArchitecture || 'unknown'} / ${host.nativeArchitectureHint || 'unknown'}`, '');
+  }
   for (const [index, probe] of report.probes.entries()) {
     lines.push(`${language.startsWith('zh') ? '验证' : 'Check'} ${String(index + 1)} · ${probe.ok ? s.success : s.failed}`);
     lines.push(`${s.installation}: ${probe.installation.installRoot}`,

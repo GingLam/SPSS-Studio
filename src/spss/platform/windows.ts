@@ -1,5 +1,6 @@
 import path from 'node:path';
 import type { FileSystemAdapter, LocatorOptions, RegistryProvider, SpssInstallation } from './types';
+import { windowsEnvironmentValue } from '../windowsEnvironment';
 
 function uniqueCaseInsensitive(values: string[]): string[] {
   const seen = new Set<string>();
@@ -16,19 +17,6 @@ function uniqueCaseInsensitive(values: string[]): string[] {
 function versionFromPath(candidate: string): string | undefined {
   const matches = [...candidate.matchAll(/(?:Statistics|SPSS)[^0-9]*(\d{2,})(?:\.\d+)*/giu)];
   return matches.at(-1)?.[1] ?? candidate.match(/(?:^|[\\/])(\d{2,})(?:\.\d+)*(?:$|[\\/])/u)?.[1];
-}
-
-function findVersionedChildren(fs: FileSystemAdapter, root: string): string[] {
-  if (!fs.isDirectory(root)) {
-    return [];
-  }
-  return [
-    root,
-    ...fs
-      .readDirectory(root)
-      .filter((entry) => entry.isDirectory && /\d{2,}/u.test(entry.name))
-      .map((entry) => path.win32.join(root, entry.name)),
-  ];
 }
 
 function normalizedLauncher(launcher: string): string | undefined {
@@ -163,7 +151,7 @@ export function inspectWindowsRoots(fs: FileSystemAdapter, roots: readonly strin
         const entries = fs.readDirectory(root);
         if (entries.length > 200) { truncated = true; }
         for (const entry of entries.slice(0, 200)) {
-          if (entry.isDirectory && /SPSS|Statistics|IBM|^\d{2}(?:\.\d+)*$/iu.test(entry.name)) {
+          if (entry.isDirectory && /SPSS|Statistics|IBM|^(?:\d{2}(?:\.\d+)*|Apps?|Programs?|Program Files(?: \(x86\))?|Tools?|Software|软件|应用|教学软件|科研软件)$/iu.test(entry.name)) {
             next.push(path.win32.join(root, entry.name));
           }
         }
@@ -195,12 +183,29 @@ export async function discoverWindowsRuntime(
     : options.explicitPythonLauncherPath
       ? installationFromRoot(fs, rootFromLauncher(options.explicitPythonLauncherPath) ?? '', options.explicitPythonLauncherPath)
       : undefined;
+  const candidates = await windowsCandidateRoots(options, registry, environment, additionalRoots);
+  const found = inspectWindowsRoots(fs, candidates.roots);
+  const installations = [
+    ...(explicit ? [explicit] : []),
+    ...found.installations.filter((item) => item.pythonLauncher.toLowerCase() !== explicit?.pythonLauncher.toLowerCase()),
+  ];
+  return { ...found, installations, registryUnavailable: candidates.registryUnavailable };
+}
+
+/** Collect hints without reading any candidate installation directory. */
+export async function windowsCandidateRoots(
+  options: LocatorOptions,
+  registry: RegistryProvider,
+  environment: NodeJS.ProcessEnv,
+  additionalRoots: readonly string[] = [],
+): Promise<{ roots: string[]; registryUnavailable: boolean }> {
   let registryRoots: string[] = [];
   let registryUnavailable = false;
   try { registryRoots = await registry.getInstallRoots(); }
   catch { registryUnavailable = true; }
+  registryUnavailable ||= registry.unavailable === true;
   const programFiles = uniqueCaseInsensitive(
-    [environment.ProgramFiles, environment.ProgramW6432, environment['ProgramFiles(x86)']]
+    ['ProgramFiles', 'ProgramW6432', 'ProgramFiles(x86)'].map((key) => windowsEnvironmentValue(environment, key))
       .filter((value): value is string => Boolean(value)),
   );
   const commonRoots = programFiles.flatMap((root) => [
@@ -215,15 +220,10 @@ export async function discoverWindowsRuntime(
   const candidates = uniqueCaseInsensitive([
     options.explicitInstallPath ?? '',
     options.explicitPythonLauncherPath ?? '',
-    environment.SPSS_HOME ?? environment.spss_home ?? '',
+    windowsEnvironmentValue(environment, 'SPSS_HOME') ?? '',
     ...registryRoots,
     ...additionalRoots,
-    ...commonRoots.flatMap((root) => findVersionedChildren(fs, root)),
+    ...commonRoots,
   ].filter(Boolean).map(expandEnvironment));
-  const found = inspectWindowsRoots(fs, candidates);
-  const installations = [
-    ...(explicit ? [explicit] : []),
-    ...found.installations.filter((item) => item.pythonLauncher.toLowerCase() !== explicit?.pythonLauncher.toLowerCase()),
-  ];
-  return { ...found, installations, registryUnavailable };
+  return { roots: candidates, registryUnavailable };
 }

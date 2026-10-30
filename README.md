@@ -45,6 +45,8 @@ On first activation after installation, SPSS Studio opens **Quick Start** for an
 
 On Windows, use **Detect and Configure SPSS** in Quick Start; the progress window opens before detection begins. You can also run **SPSS: Detect and Configure SPSS** from the Command Palette at any time. If automatic discovery fails, choose the SPSS installation, its `bin` directory, or its IBM/SPSS parent folder. Setup distinguishes missing IBM Python integration from residual installation files and records each attempted installation separately. WSL, SSH, and container windows display a local-window requirement; they cannot connect to the SPSS installation on your Windows desktop. Local macOS Quick Start remains unchanged.
 
+Detection covers SPSS on non-system drives using an independent, time-limited disk scanner, alongside registry and shortcut hints. PowerShell and WMI are not prerequisites for this disk scan; system tools are resolved from Windows directories without requiring PATH or ComSpec. Automatic scanning is bounded to SPSS and common software folders. For arbitrary deep/custom locations, select the installation folder directly. Reports distinguish OS/process architecture and ARM hints. IBM does not officially support SPSS clients on Windows ARM; a setup pass does not constitute IBM compatibility certification. HarmonyOS is a separate platform, and a Windows VM must run VS Code and SPSS together inside that Windows environment.
+
 ## Running syntax
 
 - macOS: `Cmd+Enter`
@@ -215,7 +217,7 @@ SPSS Studio is not an LSP or a full semantic validator. It does not provide stat
 
 | Version | Date | Update summary |
 | --- | --- | --- |
-| 1.4.3 | 2026-10-30 | Fixed SPSS 26/Python 3.4 bridge syntax and legacy UTF-8 streams; improved Windows parent-folder discovery, bin normalization, missing-component and per-installation diagnostics, licensing classification, and setup progress visibility. Windows/SPSS 26 real-machine acceptance remains pending. |
+| 1.4.3 | 2026-10-30 | Fixed SPSS 26/Python 3.4 bridge syntax and legacy UTF-8 streams; improved setup progress, parent-folder/bin discovery, missing-component and per-installation diagnostics, and licensing classification. The October 31 revision adds independent non-system-drive scanning, system-tool and desktop-query fallbacks, and OS/ARM diagnostics. Windows/SPSS 26 real-machine acceptance remains pending. |
 | 1.4.2 | 2026-10-29 | Added per-table Output multi-selection and separate Chat interpretations, preserving native layout, Markdown table structure, statistical qualifications, and privacy filtering. |
 | 1.4.1 | 2026-10-28 | Added per-run data summaries, native file-use warning guidance, a confirmed session-data Clear action, and prebuilt bilingual SPS/SAV examples in Quick Start. |
 | 1.4.0 | 2026-10-28 | Added built-in one-click runtime detection, configuration, isolated calculation/HTML/data/shutdown verification, rollback and desktop reports; fixed Windows CMD quoting and expanded installation discovery. Windows real-SPSS acceptance remains pending. |

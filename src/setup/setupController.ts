@@ -6,6 +6,8 @@ import { randomBytes } from 'node:crypto';
 import type { EngineService, SpssRuntimeConfiguration } from '../spss/engineService';
 import { locateSpss } from '../spss/spssLocator';
 import { windowsDesktopDirectory } from '../spss/windowsSystemInfo';
+import { hasWindowsArmHint, setupHostInfo } from '../spss/windowsEnvironment';
+import { windowsDiskDiscovery } from '../spss/windowsDiskDiscovery';
 import { discoverRuntime } from './discovery';
 import { probeRuntime, type ProbeResult } from './runtimeProbe';
 import { configureTransaction, type ConfigurationEdit } from './configurationTransaction';
@@ -122,6 +124,7 @@ ${this.reportPath ? `<p>${escape(this.s.reportSaved)}: ${escape(this.reportPath)
       version: (this.context.extension.packageJSON as { version: string }).version,
       createdAt: new Date().toISOString(), platform: process.platform, vscodeVersion: vscode.version,
       success: false, advice: this.s.retry, probes: [], warnings: [],
+      host: setupHostInfo(),
       ...(vscode.env.remoteName ? { remoteName: vscode.env.remoteName } : {}),
     };
     let release: (() => void) | undefined;
@@ -140,7 +143,11 @@ ${this.reportPath ? `<p>${escape(this.s.reportSaved)}: ${escape(this.reportPath)
       const config = this.configuration();
       const options = { explicitInstallPath: config.installPath, explicitPythonLauncherPath: config.pythonLauncherPath };
       const found = await discoverRuntime(options, manualRoot, controller.signal);
-      report.warnings = found.warnings.map((warning) => warning === 'WINDOWS_DISCOVERY_PARTIAL' ? this.s.WINDOWS_DISCOVERY_PARTIAL : this.s.WINDOWS_VERSION_UNKNOWN);
+      report.warnings = found.warnings.map((warning) => warning in this.s ? this.s[warning as keyof typeof this.s] : warning);
+      if (process.platform === 'win32' && report.host && hasWindowsArmHint(report.host)) {
+        report.warnings.push(this.s.armWindows);
+        this.log(this.s.armWindows);
+      }
       for (const issue of found.issues ?? []) {
         const message = `${issue.installRoot}: ${issue.missing === 'launcher' ? this.s.launcherMissing : this.s.executableMissing}`;
         report.warnings.push(message);
@@ -190,7 +197,12 @@ ${this.reportPath ? `<p>${escape(this.s.reportSaved)}: ${escape(this.reportPath)
         if (effective.installPath !== selected.installation.installRoot || effective.pythonLauncherPath !== selected.installation.pythonLauncher || !effective.autoStart) {
           throw new Error('SETUP_EFFECTIVE_CONFIGURATION_MISMATCH');
         }
-        const actual = await locateSpss({ options: { explicitInstallPath: effective.installPath, explicitPythonLauncherPath: effective.pythonLauncherPath } });
+        const actual = process.platform === 'win32'
+          ? (await windowsDiskDiscovery(controller.signal, { roots: [effective.installPath] })).installations.find((item) => (
+            item.installRoot.toLowerCase() === effective.installPath.toLowerCase()
+            && item.pythonLauncher.toLowerCase() === effective.pythonLauncherPath.toLowerCase()
+          ))
+          : await locateSpss({ options: { explicitInstallPath: effective.installPath, explicitPythonLauncherPath: effective.pythonLauncherPath } });
         if (!actual) { throw new Error('SETUP_EFFECTIVE_CONFIGURATION_MISMATCH'); }
         if (!actual.version && selected.installation.version) { actual.version = selected.installation.version; }
         const final = await this.probe(actual, controller.signal);

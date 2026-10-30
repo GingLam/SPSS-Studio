@@ -4,6 +4,7 @@ import path from 'node:path';
 import * as vscode from 'vscode';
 import type { BridgeRequest } from '../../src/spss/types';
 import type { SpssStudioExtensionApi } from '../../src/extension';
+import { windowsDiskDiscovery } from '../../src/spss/windowsDiskDiscovery';
 
 async function waitForRequests(capturePath: string, runCount: number): Promise<BridgeRequest[]> {
   const deadline = Date.now() + 10_000;
@@ -60,6 +61,16 @@ async function waitForValue<T>(read: () => T, expected: T, description: string):
 }
 
 describe('SPSS Studio Extension Host', () => {
+  it('launches the packaged discovery worker in the VS Code runtime', async () => {
+    const extension = vscode.extensions.getExtension('jinglin.spss-studio');
+    assert.ok(extension);
+    const result = await windowsDiskDiscovery(undefined, {
+      roots: [], workerPath: path.join(extension.extensionPath, 'out', 'src', 'spss', 'windowsScanWorker.js'),
+    });
+    assert.equal(result.truncated, false, 'Bundled worker must launch without external Node/Python installations');
+    assert.equal(result.installations.length, 0);
+  });
+
   it('registers the language, commands, keybinding, execution paths, output, and status bar', async () => {
     const installRoot = process.env.SPSS_STUDIO_TEST_INSTALL_ROOT;
     const launcherPath = process.env.SPSS_STUDIO_TEST_LAUNCHER;
