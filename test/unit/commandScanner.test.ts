@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { findCurrentCommand, scanCommands } from '../../src/spss/commandScanner';
+import { findCurrentCommand, lexicalRegionAt, scanCommands } from '../../src/spss/commandScanner';
 
 function commandAt(source: string, needle: string): string {
   const offset = source.indexOf(needle);
@@ -33,6 +33,20 @@ describe('SPSS command scanner', () => {
     assert.equal(commandAt(inline, 'y ='), inline);
   });
 
+  it('retains trailing inline comments without swallowing a following command or block end', () => {
+    for (const comment of ['/* explanatory note */', '/* explanatory note']) {
+      for (const ending of ['\n', '\r\n', 'mixed']) {
+        const command = `COMPUTE y=1. ${comment}`;
+        const lines = ['DO IF x=1.', command, 'END IF.', 'EXECUTE.'];
+        const source = lines.map((line, index) => line + (index === lines.length - 1 ? ''
+          : ending === 'mixed' ? index % 2 ? '\r\n' : '\n' : ending)).join('');
+        assert.equal(commandAt(source, 'y=1'), source.slice(0, source.indexOf('END IF.') + 'END IF.'.length));
+        assert.equal(commandAt(`${command}\r\n\r\nEXECUTE.`, 'y=1'), command);
+        assert.equal(commandAt(`${command}\r\n\r\nEXECUTE.`, 'EXECUTE'), 'EXECUTE.');
+      }
+    }
+  });
+
   it('returns the complete multiline command from every line', () => {
     const source = [
       'REGRESSION',
@@ -45,10 +59,70 @@ describe('SPSS command scanner', () => {
     }
   });
 
-  it('uses a blank line as a boundary for unterminated interactive commands', () => {
+  it('does not invent a terminator for syntax missing its command period', () => {
     const source = 'FREQUENCIES VARIABLES=x\n\nDESCRIPTIVES VARIABLES=x.';
-    assert.equal(commandAt(source, 'FREQUENCIES'), 'FREQUENCIES VARIABLES=x');
-    assert.equal(commandAt(source, 'DESCRIPTIVES'), 'DESCRIPTIVES VARIABLES=x.');
+    assert.equal(commandAt(source, 'FREQUENCIES'), source);
+    assert.equal(commandAt(source, 'DESCRIPTIVES'), source);
+  });
+
+  it('preserves internal blank lines and separates only complete commands for every line ending', () => {
+    for (const ending of ['\n', '\r\n', 'mixed']) {
+      const lines = [
+        '* user\'s note.', '',
+        'RECODE I2_1 (1=0) (2=6)', '',
+        '  (3=9) (4 THRU 7=12)', '  INTO edu_year.', '',
+        'COMPUTE x=', '   ', '  1.', '',
+        'REGRESSION', '', '  /DEPENDENT y', '  /METHOD=ENTER x.', '',
+        'EXECUTE.',
+      ];
+      const source = lines.map((line, index) => line + (index === lines.length - 1 ? ''
+        : ending === 'mixed' ? index % 2 ? '\r\n' : '\n' : ending)).join('');
+      const ranges = scanCommands(source);
+      assert.deepEqual(ranges.map((range) => range.type), ['comment', 'command', 'command', 'command', 'command']);
+      for (const [needle, start, end] of [
+        ['THRU', 'RECODE', 'INTO edu_year.'],
+        ['1.', 'COMPUTE', '  1.'],
+        ['METHOD', 'REGRESSION', '/METHOD=ENTER x.'],
+      ]) {
+        assert.ok(needle && start && end);
+        assert.equal(commandAt(source, needle), source.slice(source.indexOf(start), source.indexOf(end) + end.length));
+      }
+    }
+  });
+
+  it('does not interpret quotes inside command comments as string delimiters', () => {
+    for (const comment of ['* user\'s "note.', 'COMMENT user\'s "note.', '* note*.', 'COMMENT note/.']) {
+      const source = `${comment}\r\n\r\nCOMPUTE x=1.\r\n`;
+      assert.deepEqual(findCurrentCommand(source, source.indexOf('note')), { kind: 'none', reason: 'comment' });
+      assert.equal(commandAt(source, 'COMPUTE'), 'COMPUTE x=1.');
+    }
+  });
+
+  it('ignores structural-looking lines inside a continued comment', () => {
+    for (const heading of ['* continued comment', 'COMMENT continued comment']) {
+      const source = [heading, 'BEGIN DATA', 'END DATA.', '', 'COMPUTE x=1.', 'EXECUTE.'].join('\r\n');
+      assert.equal(commandAt(source, 'COMPUTE'), 'COMPUTE x=1.');
+      assert.deepEqual(scanCommands(source).map((range) => range.type), ['comment', 'command', 'command']);
+    }
+  });
+
+  it('does not let fake delimiters inside inline comment text truncate syntax', () => {
+    const source = [
+      '/* BEGIN DATA', 'COMPUTE x=1. /* END DATA.', 'EXECUTE.',
+    ].join('\n');
+    assert.equal(scanCommands(source).some((range) => range.type === 'block'), false);
+    assert.ok(commandAt(source, 'COMPUTE').endsWith('COMPUTE x=1. /* END DATA.'));
+    assert.equal(commandAt(source, 'EXECUTE'), 'EXECUTE.');
+    assert.equal(lexicalRegionAt(source, source.indexOf('BEGIN DATA') + 1), 'comment');
+    assert.equal(lexicalRegionAt(source, source.indexOf('COMPUTE') + 1), 'code');
+  });
+
+  it('recognizes a real data block after an unclosed within-line comment', () => {
+    const block = 'BEGIN DATA\r\n1\r\nEND DATA.';
+    const source = `DATA LIST FREE /x. /* inline note\r\n${block}\r\nEXECUTE.`;
+    assert.equal(commandAt(source, 'BEGIN DATA'), block);
+    assert.equal(lexicalRegionAt(source, source.indexOf('\r\n1') + 3), 'begin-data');
+    assert.equal(commandAt(source, 'EXECUTE'), 'EXECUTE.');
   });
 
   it('returns BEGIN DATA through END DATA as one block', () => {
@@ -83,6 +157,16 @@ describe('SPSS command scanner', () => {
       'END IF.',
     ].join('\n');
     assert.equal(commandAt(nested, 'y +'), nested);
+  });
+
+  it('keeps embedded-language text opaque while locating its closing delimiter', () => {
+    const python = [
+      'BEGIN PROGRAM PYTHON3.', 'message = """', 'BEGIN DATA', 'DO IF x=1.',
+      '"""', 'print(message)', 'END PROGRAM.',
+    ].join('\r\n');
+    const source = `${python}\r\n\r\nEXECUTE.`;
+    assert.equal(commandAt(source, 'message'), python);
+    assert.equal(commandAt(source, 'EXECUTE'), 'EXECUTE.');
   });
 
   it('does not execute comments or unrelated commands from blank space', () => {

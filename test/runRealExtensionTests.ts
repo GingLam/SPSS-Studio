@@ -29,6 +29,11 @@ async function main(): Promise<void> {
   fs.mkdirSync(workspace, { recursive: true });
   fs.mkdirSync(userData, { recursive: true });
   fs.mkdirSync(extensions, { recursive: true });
+  // Reuse an already installed language pack only in the isolated test profile.
+  const languagePack = process.env.SPSS_STUDIO_TEST_LANGUAGE_PACK;
+  if (languagePack) { fs.cpSync(languagePack, path.join(extensions, path.basename(languagePack)), { recursive: true }); }
+  const languagePackCache = process.env.SPSS_STUDIO_TEST_LANGUAGE_PACK_CACHE;
+  if (languagePackCache) { fs.copyFileSync(languagePackCache, path.join(userData, 'languagepacks.json')); }
   fs.writeFileSync(path.join(workspace, 'real.sps'), [
     'DATA LIST FREE /id age income.',
     'BEGIN DATA',
@@ -47,13 +52,16 @@ async function main(): Promise<void> {
   process.env.SPSS_STUDIO_REAL_INSTALL_ROOT = installation.installRoot;
   process.env.SPSS_STUDIO_REAL_LAUNCHER = installation.pythonLauncher;
   process.env.SPSS_STUDIO_REAL_WORKSPACE = workspace;
+  const outputRoot = path.join(os.tmpdir(), 'spss-studio');
+  process.env.SPSS_STUDIO_REAL_BASELINE_OUTPUT_SESSIONS = JSON.stringify(fs.existsSync(outputRoot) ? fs.readdirSync(outputRoot) : []);
   try {
     const options: Parameters<typeof runTests>[0] = {
       extensionDevelopmentPath: process.env.SPSS_STUDIO_TEST_EXTENSION_PATH ?? projectRoot,
       extensionTestsPath: path.join(__dirname, 'suite', 'index'),
       launchArgs: [
         workspace,
-        '--disable-extensions',
+        `--locale=${process.env.SPSS_STUDIO_TEST_UI_LANGUAGE ?? 'en'}`,
+        ...(languagePack ? [] : ['--disable-extensions']),
         '--disable-workspace-trust',
         `--user-data-dir=${userData}`,
         `--extensions-dir=${extensions}`,

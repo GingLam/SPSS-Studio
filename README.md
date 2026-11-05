@@ -57,6 +57,8 @@ The engine uses the VS Code display language for native table headings: Chinese 
 
 GET FILE completion recommends `GET FILE "path/to/data.sav".` without its optional equals sign. String-bearing templates and Chat suggestions use ASCII double quotes; other required equals signs and valid handwritten syntax remain supported. Windows CRLF and Unix/macOS LF source files use the same submission path without changing the source file on disk.
 
+Current-command execution preserves blank lines inside a command until its terminating period, matching SPSS's Python Submit backend. Blank lines between complete commands remain intact. Use ASCII periods to terminate commands; blank lines do not repair a missing period in this execution mode.
+
 - macOS: `Cmd+Enter`
 - Windows/Linux: `Ctrl+Enter`
 - Command Palette: **Run**

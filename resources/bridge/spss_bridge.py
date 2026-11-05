@@ -206,6 +206,9 @@ def _prepare_syntax_for_submit(syntax: str) -> tuple:
             normalized_endings += 1
             ending = "\n"
         normalized_lines.append("".join(output) + ending)
+        # SPSS /* comments end at */ or the physical line ending. Unlike
+        # COMMENT and * command comments, they never consume the following line.
+        block_comment = False
 
     warnings = []
     for collection, label in ((changes, "Normalized"), (suspects, "Potentially unsupported")):

@@ -23,17 +23,18 @@ interface BlockDefinition {
   type: string;
   begin: RegExp;
   end: RegExp;
+  opaque?: boolean;
 }
 
 const BLOCKS: BlockDefinition[] = [
-  { type: 'data', begin: /^BEGIN\s+DATA\.?$/iu, end: /^END\s+DATA\.$/iu },
-  { type: 'program', begin: /^BEGIN\s+PROGRAM(?:\s+[A-Z][A-Z0-9_]*)?\.$/iu, end: /^END\s+PROGRAM\.$/iu },
-  { type: 'gpl', begin: /^BEGIN\s+GPL\.$/iu, end: /^END\s+GPL\.$/iu },
-  { type: 'expr', begin: /^BEGIN\s+EXPR\.$/iu, end: /^END\s+EXPR\.$/iu },
-  { type: 'matrix', begin: /^MATRIX\.$/iu, end: /^END\s+MATRIX\.$/iu },
+  { type: 'data', begin: /^BEGIN\s+DATA\.?$/iu, end: /^END\s+DATA\.$/iu, opaque: true },
+  { type: 'program', begin: /^BEGIN\s+PROGRAM(?:\s+[A-Z][A-Z0-9_]*)?\.$/iu, end: /^END\s+PROGRAM\.$/iu, opaque: true },
+  { type: 'gpl', begin: /^BEGIN\s+GPL\.$/iu, end: /^END\s+GPL\.$/iu, opaque: true },
+  { type: 'expr', begin: /^BEGIN\s+EXPR\.$/iu, end: /^END\s+EXPR\.$/iu, opaque: true },
+  { type: 'matrix', begin: /^MATRIX\.$/iu, end: /^END\s+MATRIX\.$/iu, opaque: true },
   { type: 'input-program', begin: /^INPUT\s+PROGRAM\.$/iu, end: /^END\s+INPUT\s+PROGRAM\.$/iu },
   { type: 'file-type', begin: /^FILE\s+TYPE(?:\s+.*)?\.$/iu, end: /^END\s+FILE\s+TYPE\.$/iu },
-  { type: 'macro', begin: /^DEFINE\b.*$/iu, end: /^!ENDDEFINE\.$/iu },
+  { type: 'macro', begin: /^DEFINE\b.*$/iu, end: /^!ENDDEFINE\.$/iu, opaque: true },
   { type: 'simprep', begin: /^SIMPREP\s+BEGIN\b.*$/iu, end: /^SIMPREP\s+END\.$/iu },
   { type: 'tms', begin: /^TMS\s+BEGIN\b.*$/iu, end: /^TMS\s+END\.$/iu },
   { type: 'do-if', begin: /^DO\s+IF\b.*\.$/iu, end: /^END\s+IF\.$/iu },
@@ -60,23 +61,59 @@ function getLines(text: string): LineInfo[] {
   return lines;
 }
 
-function isCommentLine(trimmed: string): boolean {
-  return trimmed.startsWith('*') || /^COMMENT(?:\s|\.|$)/iu.test(trimmed);
+interface StructuralLexicalState {
+  region: 'code' | 'single' | 'double' | 'inline-comment' | 'command-comment';
+  commandStart: boolean;
 }
 
-function findBlockRanges(text: string): CommandRange[] {
-  const lines = getLines(text);
-  const stack: Array<{ definition: BlockDefinition; line: LineInfo }> = [];
-  const ranges: CommandRange[] = [];
-
-  for (const line of lines) {
-    const trimmed = line.text.trim();
-    if (!trimmed || isCommentLine(trimmed) || trimmed.startsWith('/*')) {
+function advanceStructuralState(line: string, state: StructuralLexicalState): void {
+  for (let index = 0; index < line.length; index += 1) {
+    const character = line[index];
+    const next = line[index + 1];
+    if (state.region === 'single' || state.region === 'double') {
+      const quote = state.region === 'single' ? "'" : '"';
+      if (character === quote && next === quote) { index += 1; }
+      else if (character === quote) { state.region = 'code'; }
       continue;
     }
+    if (state.region === 'inline-comment') {
+      if (character === '*' && next === '/') { state.region = 'code'; index += 1; }
+      continue;
+    }
+    if (state.region === 'command-comment') {
+      if (character === '.' && /^\s*$/u.test(line.slice(index + 1))) {
+        state.region = 'code'; state.commandStart = true;
+      }
+      continue;
+    }
+    if (character === '/' && next === '*') {
+      state.region = 'inline-comment'; index += 1;
+    } else if (state.commandStart && (character === '*' || /^COMMENT(?:\s|\.|$)/iu.test(line.slice(index)))) {
+      state.region = 'command-comment';
+    } else if (character === "'") {
+      state.region = 'single'; state.commandStart = false;
+    } else if (character === '"') {
+      state.region = 'double'; state.commandStart = false;
+    } else if (character === '.' && isTerminatorDot(line, index, 0)) {
+      state.commandStart = true;
+    } else if (character !== undefined && !/\s/u.test(character)) {
+      state.commandStart = false;
+    }
+  }
+  // SPSS within-line comments end at */ or the physical line ending.
+  if (state.region === 'inline-comment') { state.region = 'code'; }
+}
 
+function blockStructure(text: string): { ranges: CommandRange[]; open: BlockDefinition | undefined } {
+  const stack: Array<{ definition: BlockDefinition; line: LineInfo }> = [];
+  const ranges: CommandRange[] = [];
+  const state: StructuralLexicalState = { region: 'code', commandStart: true };
+
+  for (const line of getLines(text)) {
+    const trimmed = line.text.trim();
     const top = stack.at(-1);
-    if (top?.definition.end.test(trimmed)) {
+    const code = state.region === 'code' && state.commandStart;
+    if ((top?.definition.opaque || code) && top?.definition.end.test(trimmed)) {
       stack.pop();
       if (stack.length === 0) {
         const start = top.line.start;
@@ -89,38 +126,30 @@ function findBlockRanges(text: string): CommandRange[] {
           blockType: top.definition.type,
         });
       }
+      state.region = 'code';
+      state.commandStart = true;
       continue;
     }
-
-    for (const definition of BLOCKS) {
-      if (definition.begin.test(trimmed)) {
-        stack.push({ definition, line });
-        break;
+    if (top?.definition.opaque) { continue; }
+    if (code) {
+      for (const definition of BLOCKS) {
+        if (definition.begin.test(trimmed)) {
+          stack.push({ definition, line });
+          break;
+        }
       }
     }
+    advanceStructuralState(line.text, state);
   }
+  return { ranges: ranges.sort((left, right) => left.start - right.start), open: stack.at(-1)?.definition };
+}
 
-  return ranges.sort((left, right) => left.start - right.start);
+function findBlockRanges(text: string): CommandRange[] {
+  return blockStructure(text).ranges;
 }
 
 function openBlockAt(text: string, offset: number): BlockDefinition | undefined {
-  const stack: BlockDefinition[] = [];
-  for (const line of getLines(text.slice(0, offset))) {
-    const trimmed = line.text.trim();
-    if (!trimmed || isCommentLine(trimmed) || trimmed.startsWith('/*')) {
-      continue;
-    }
-    const top = stack.at(-1);
-    if (top?.end.test(trimmed)) {
-      stack.pop();
-      continue;
-    }
-    const opening = BLOCKS.find((definition) => definition.begin.test(trimmed));
-    if (opening) {
-      stack.push(opening);
-    }
-  }
-  return stack.at(-1);
+  return blockStructure(text.slice(0, offset)).open;
 }
 
 function previousNonWhitespace(text: string, from: number, before: number): string | undefined {
@@ -133,10 +162,23 @@ function previousNonWhitespace(text: string, from: number, before: number): stri
   return undefined;
 }
 
+function onlyTrailingComments(suffix: string): boolean {
+  let cursor = 0;
+  while (cursor < suffix.length) {
+    if (/\s/u.test(suffix[cursor] ?? '')) { cursor += 1; continue; }
+    if (!suffix.startsWith('/*', cursor)) { return false; }
+    const close = suffix.indexOf('*/', cursor + 2);
+    if (close < 0) { return true; }
+    cursor = close + 2;
+  }
+  return true;
+}
+
 function isTerminatorDot(text: string, index: number, commandStart: number): boolean {
   const lineEndIndex = text.indexOf('\n', index);
   const lineEnd = lineEndIndex < 0 ? text.length : lineEndIndex;
-  if (!/^\s*$/u.test(text.slice(index + 1, lineEnd))) {
+  const suffix = text.slice(index + 1, lineEnd);
+  if (!onlyTrailingComments(suffix)) {
     return false;
   }
 
@@ -150,17 +192,6 @@ function isTerminatorDot(text: string, index: number, commandStart: number): boo
     return false;
   }
   return true;
-}
-
-function isBlankLineBoundary(text: string, index: number): boolean {
-  if (text[index] !== '\n') {
-    return false;
-  }
-  let cursor = index + 1;
-  while (cursor < text.length && (text[cursor] === ' ' || text[cursor] === '\t' || text[cursor] === '\r')) {
-    cursor += 1;
-  }
-  return text[cursor] === '\n';
 }
 
 function trimEndOffset(text: string, start: number, end: number): number {
@@ -240,12 +271,20 @@ export function scanCommands(text: string): CommandRange[] {
           state = 'normal';
           index += 2;
         } else {
+          if (character === '\n') { state = 'normal'; }
           index += 1;
         }
         continue;
       }
 
-      if (character === '/' && following === '*') {
+      // COMMENT and * bodies are text, not quoted SPSS expressions.
+      const commentTerminator = isComment && character === '.'
+        && /^\s*$/u.test(text.slice(index + 1, text.indexOf('\n', index) < 0 ? text.length : text.indexOf('\n', index)));
+      if (isComment && !commentTerminator) {
+        index += 1;
+        continue;
+      }
+      if (!isComment && character === '/' && following === '*') {
         state = 'inline-comment';
         index += 2;
         continue;
@@ -260,8 +299,12 @@ export function scanCommands(text: string): CommandRange[] {
         index += 1;
         continue;
       }
-      if (character === '.' && isTerminatorDot(text, index, commandStart)) {
-        const end = index + 1;
+      if (character === '.' && (commentTerminator || isTerminatorDot(text, index, commandStart))) {
+        const nextLine = text.indexOf('\n', index);
+        const lineEnd = nextLine < 0 ? text.length : nextLine;
+        // A line-final comment belongs to this command, not the following one.
+        const end = !isComment && /\/\*/u.test(text.slice(index + 1, lineEnd))
+          ? trimEndOffset(text, index + 1, lineEnd) : index + 1;
         ranges.push({
           start: commandStart,
           end,
@@ -269,20 +312,6 @@ export function scanCommands(text: string): CommandRange[] {
           type: isComment ? 'comment' : 'command',
         });
         cursor = end;
-        ended = true;
-        break;
-      }
-      if (!isComment && isBlankLineBoundary(text, index)) {
-        const end = trimEndOffset(text, commandStart, index);
-        if (end > commandStart) {
-          ranges.push({
-            start: commandStart,
-            end,
-            text: text.slice(commandStart, end),
-            type: 'command',
-          });
-        }
-        cursor = index + 1;
         ended = true;
         break;
       }
@@ -388,6 +417,8 @@ export function lexicalRegionAt(text: string, offset: number): LexicalRegion {
       if (character === '*' && following === '/') {
         state = 'code';
         index += 1;
+      } else if (character === '\n') {
+        state = 'code';
       }
       continue;
     }

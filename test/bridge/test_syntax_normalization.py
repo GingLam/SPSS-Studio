@@ -22,7 +22,7 @@ class SyntaxNormalizationTests(unittest.TestCase):
     def test_crlf_physical_endings_are_normalized_in_protected_regions(self):
         source = (
             "TITLE 'line one\r\nline two'.\r\n"
-            "/* comment\r\n\tkeep indentation */\r\n"
+            "/* comment\tkeep indentation */\r\n"
             "BEGIN DATA\r\n\t1\t2\r\nEND DATA.\r\n"
             "BEGIN PROGRAM PYTHON3.\r\n\tprint('keep\\t')\r\nEND PROGRAM.\r\n"
             "DEFINE !macro ()\r\n\t!LET !v = !QUOTE('a\tb')\r\n!ENDDEFINE.\r\n"
@@ -46,16 +46,26 @@ class SyntaxNormalizationTests(unittest.TestCase):
         self.assertEqual(normalized, source.replace("\tCOMPUTE", "    COMPUTE"))
         self.assertEqual((tab_count, tab_lines), (1, [7]))
 
-    def test_multiline_comments_do_not_open_embedded_blocks(self):
+    def test_multiline_command_comments_do_not_open_embedded_blocks(self):
         source = (
-            "/* comment\n\tBEGIN PROGRAM PYTHON3.\n\tunchanged */\n"
+            "/* one-line comment\tunchanged */\n"
             "* comment's unmatched quote\n\tBEGIN DATA\n\tends here.\n"
             "COMMENT another\n\tBEGIN GPL\n\tcomment.\n"
             "\tCOMPUTE x=1.\n"
         )
         normalized, tab_count, tab_lines = BRIDGE_MODULE._normalize_syntax_for_submit(source)
         self.assertEqual(normalized, source.replace("\tCOMPUTE", "    COMPUTE"))
-        self.assertEqual((tab_count, tab_lines), (1, [10]))
+        self.assertEqual((tab_count, tab_lines), (1, [8]))
+
+    def test_unclosed_inline_comment_ends_at_the_physical_line(self):
+        for ending in ("\n", "\r\n"):
+            source = ending.join((
+                "DO IF x=1.", "COMPUTE y=1. /* user's note without a closing marker",
+                "COMPUTE\tz=2.", "END IF.", "EXECUTE.",
+            ))
+            normalized, tab_count, tab_lines = BRIDGE_MODULE._normalize_syntax_for_submit(source)
+            self.assertEqual(normalized, source.replace("\r\n", "\n").replace("COMPUTE\tz", "COMPUTE z"))
+            self.assertEqual((tab_count, tab_lines), (1, [3]))
 
     def test_raw_bodies_macro_functions_and_same_line_payload_are_preserved(self):
         source = (

@@ -80,6 +80,58 @@ async function main(): Promise<void> {
       await run(manager, `GET FILE "${file.replaceAll('"', '""')}".\r\nCODEBOOK age.`);
       assert.equal((await manager.datasetInfo()).caseCount, 60);
       checks.push('GET-FILE-no-equals-double-quotes-unicode-apostrophe');
+      const multiline = [
+        `GET FILE "${file.replaceAll('"', '""')}".`, '', '',
+        '* A researcher\'s note: keep blank lines and don\'t change string payloads.', '',
+        'COMPUTE age_copy=', '', ' age.', '',
+        'DO IF age>0.',
+        'COMPUTE age_copy=age. /* A valid SPSS line-end comment without a closing marker',
+        'COMPUTE age_copy=age.', 'END IF.', '',
+        'RECODE age', '', ' (LOWEST THRU 30=1)', '', ' (31 THRU HIGHEST=2)', '', ' INTO ageband.', '',
+        'VARIABLE LABELS age_copy "Copied age".', '',
+        'EXECUTE.', '',
+        'CODEBOOK age gender edu.', '',
+        'FREQUENCIES VARIABLES=gender ageband.', '',
+        'DESCRIPTIVES VARIABLES=age edu income hours', '', ' /STATISTICS=MEAN STDDEV MIN MAX.', '',
+        'CROSSTABS', '', ' /TABLES=gender BY ageband', '', ' /CELLS=COUNT ROW.', '',
+        'EXAMINE VARIABLES=income', '', ' /PLOT NONE', '', ' /CINTERVAL 95.', '',
+        'T-TEST GROUPS=gender(0 1)', '', ' /VARIABLES=income', '', ' /CRITERIA=CI(.95).', '',
+        'REGRESSION', '', ' /DEPENDENT income', '', ' /METHOD=ENTER age gender edu hours.', '',
+        'GRAPH /BAR(SIMPLE)=COUNT BY gender.', '',
+        'GRAPH /SCATTERPLOT(BIVAR)=edu WITH income.', '',
+      ].join('\n');
+      for (const uiLanguage of ['en', 'zh-cn']) {
+        for (const endings of ['LF', 'CRLF', 'mixed'] as const) {
+          await manager.clearData();
+          const syntax = endings === 'LF' ? multiline : endings === 'CRLF' ? multiline.replace(/\n/gu, '\r\n')
+            : multiline.split('\n').map((line, index) => line + (index % 2 ? '\r\n' : '\n')).join('');
+          const { response, output, cells } = await run(manager, syntax, nativeOutputLanguage(uiLanguage));
+          assert.deepEqual(response.warnings, []);
+          const info = await manager.datasetInfo();
+          const page = await manager.datasetPage({ offset: 0, limit: 60, variableStart: 0, variableLimit: 8 });
+          const age = info.variables.findIndex((variable) => variable.name === 'age');
+          const copy = info.variables.findIndex((variable) => variable.name === 'age_copy');
+          const band = info.variables.findIndex((variable) => variable.name === 'ageband');
+          assert.ok(age >= 0 && copy >= 0 && band >= 0);
+          assert.equal(page.rows.length, 60);
+          for (const row of page.rows) {
+            assert.equal(row[copy], row[age]);
+            assert.equal(row[band], Number(row[age]) <= 30 ? 1 : 2);
+          }
+          if (uiLanguage === 'zh-cn') {
+            assert.match(output, /描述统计/u);
+            assert.match(output, /系数/u);
+            assert.match(output, /独立样本检验/u);
+            assert.ok(!cells.includes('Mean'));
+          } else {
+            assert.match(output, /Descriptive Statistics/u);
+            assert.match(output, /Coefficients/u);
+            assert.match(output, /Independent Samples Test/u);
+            assert.ok(cells.includes('Mean'));
+          }
+          checks.push(`blank-lines-multiple-procedures-${uiLanguage}-${endings}`);
+        }
+      }
       await run(manager, 'TITLE "O\'Brien ""quoted""".\nDESCRIPTIVES age.\nTITLE.');
       checks.push('double-quote-escape-native');
     });

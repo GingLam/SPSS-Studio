@@ -1,7 +1,10 @@
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import * as vscode from 'vscode';
 import type { SpssStudioExtensionApi } from '../../src/extension';
+import { htmlText, parseHtmlDocument } from '../../src/ai/htmlDocument';
 
 async function waitFor<T>(read: () => T | undefined, description: string): Promise<T> {
   const deadline = Date.now() + 60_000;
@@ -48,6 +51,47 @@ describe('SPSS Studio real SPSS Extension Host', () => {
       assert.equal(profile.summary.missingN, 4);
       assert.ok(Math.abs((profile.summary.mean ?? 0) - 111 / 9) < 1e-9);
       assert.equal(document.getText(), source, 'The editor keeps its original Windows CRLF text.');
+      const baseline: unknown = JSON.parse(process.env.SPSS_STUDIO_REAL_BASELINE_OUTPUT_SESSIONS ?? '[]');
+      assert.ok(Array.isArray(baseline));
+      const outputRoot = path.join(os.tmpdir(), 'spss-studio');
+      const sessions = fs.readdirSync(outputRoot).filter((name) => name.startsWith('session-') && !baseline.includes(name));
+      assert.equal(sessions.length, 1);
+      const sessionRoot = path.join(outputRoot, sessions[0] ?? '');
+      const runDirectory = fs.readdirSync(sessionRoot).find((name) => name.startsWith('run-1-'));
+      assert.ok(runDirectory);
+      const nativeOutput = htmlText(parseHtmlDocument(fs.readFileSync(path.join(sessionRoot, runDirectory, 'output.html'), 'utf8')));
+      assert.equal(vscode.env.language, process.env.SPSS_STUDIO_TEST_UI_LANGUAGE ?? 'en');
+      if (/^zh(?:[-_]|$)/iu.test(vscode.env.language)) {
+        assert.match(nativeOutput, /描述统计/u);
+        assert.match(nativeOutput, /平均值|均值|平均数/u);
+      } else { assert.match(nativeOutput, /Descriptive Statistics/u); }
+      const currentSource = [
+        '* A researcher\'s comment.', '',
+        'COMPUTE age_copy=', '', ' I2_1.', '',
+        'COMMENT Don\'t interpret quotes as string delimiters here.', '',
+        'RECODE I2_1 (1=0)', '', ' (2 THRU HIGHEST=1)', '', ' INTO ageband.', '',
+        'VARIABLE LEVEL age_copy (SCALE).',
+        'DO IF I2_1>0.', 'COMPUTE checked=1. /* valid line-end comment without a closing marker',
+        'COMPUTE\tchecked=2.', 'END IF.', '', 'EXECUTE.',
+      ].join('\r\n');
+      const currentDocument = await vscode.workspace.openTextDocument({ language: 'spss', content: currentSource });
+      for (const needle of [' I2_1.', ' INTO ageband.', 'COMPUTE checked=1.', 'EXECUTE.']) {
+        const editor = await vscode.window.showTextDocument(currentDocument);
+        const position = currentDocument.positionAt(currentSource.indexOf(needle));
+        editor.selection = new vscode.Selection(position, position);
+        const before = api.getOutputHistoryCount();
+        await vscode.commands.executeCommand('spssStudio.runSelection');
+        assert.equal(api.getOutputHistoryCount(), before + 1, `Current Run must execute ${needle}`);
+        assert.ok(['SUCCESS', 'SUCCESS_NO_OUTPUT'].includes(api.getSelectedOutput()?.status ?? ''));
+      }
+      assert.equal(api.getVariableCount(), 5);
+      const checked = (await api.getVariableProfiles(['checked'])).profiles[0];
+      assert.ok(checked);
+      assert.equal(checked.summary.validN, 13);
+      assert.equal(checked.summary.missingN, 0);
+      assert.equal(checked.summary.kind, 'categorical');
+      assert.equal(checked.summary.topValues[0]?.value, 2);
+      assert.equal(currentDocument.getText(), currentSource);
     } finally { await vscode.commands.executeCommand('spssStudio.stopEngine'); }
   });
 
