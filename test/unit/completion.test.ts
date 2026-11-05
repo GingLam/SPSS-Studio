@@ -15,6 +15,152 @@ function labels(text: string): string[] {
 }
 
 describe('SPSS completion', () => {
+  it('keeps automatic completion quiet before two characters or after whitespace', () => {
+    for (const text of ['', 'g', 'r', 'GET FILE ', 'COMPUTE x=income ', 'COMPUTE x=MEAN(']) {
+      assert.deepEqual(labels(text), [], text);
+    }
+  });
+
+  it('does not carry a completed command into the next empty line', () => {
+    for (const ending of ['\n', '\r\n']) {
+      for (const command of ['GET FILE "data.sav".', 'COMPUTE x=MEAN(1,2).', 'FREQUENCIES VARIABLES=age.']) {
+        for (const suffix of ['', ending, ending + ending]) {
+          assert.deepEqual(labels(command + suffix), [], command + suffix);
+        }
+      }
+    }
+  });
+
+  it('offers command names without whole-command templates during ordinary typing', () => {
+    assert.ok(labels('reg').includes('REGRESSION'));
+    assert.ok(!labels('reg').includes('REGRESSION snippet'));
+    assert.ok(labels('get fi').includes('GET FILE'));
+  });
+
+  it('recognizes multi-word command phrases across LF CRLF and tabs', () => {
+    for (const text of ['REGRESSION\n /', 'REGRESSION\r\n /', 'REGRESSION\t/', 'GET\tDATA\r\n /', 'LOGISTIC\tREGRESSION\r\n /']) {
+      const context = analyzeCompletionContext(text, text.length, schema);
+      assert.equal(context.commandName, text.startsWith('GET') ? 'GET DATA' : text.startsWith('LOGISTIC') ? 'LOGISTIC REGRESSION' : 'REGRESSION');
+    }
+  });
+
+  it('matches partial multi-word names with tabs or repeated spaces', () => {
+    for (const text of ['GET\tDA', 'get  da', 'LOGISTIC\r\nREG']) {
+      assert.ok(labels(text).includes(text.toUpperCase().startsWith('GET') ? 'GET DATA' : 'LOGISTIC REGRESSION'));
+    }
+  });
+
+  it('keeps short prefixes and complete templates available only on explicit request', () => {
+    for (const text of ['', 'g', 'reg']) {
+      const context = analyzeCompletionContext(text, text.length, schema);
+      const manual = getCompletionCandidates(context, schema, [], 'manual');
+      assert.ok(manual.some((item) => item.kind === 'snippet'));
+      assert.ok(!getCompletionCandidates(context, schema, []).some((item) => item.kind === 'snippet'));
+    }
+    const pathContext = analyzeCompletionContext('GET FILE "reg', 13, schema);
+    assert.deepEqual(getCompletionCandidates(pathContext, schema, [], 'manual'), []);
+  });
+
+  it('only offers verified subcommands belonging to the active command', () => {
+    const regression = labels('REGRESSION\r\n /');
+    assert.ok(regression.includes('/DEPENDENT'));
+    assert.ok(!regression.includes('/CELLS'));
+    assert.ok(!regression.includes('/DESTINATION'));
+    assert.deepEqual(labels('EXAMINE\n /'), []);
+    assert.deepEqual(labels('/'), []);
+  });
+
+  it('preserves macro prefixes instead of offering unrelated ordinary commands', () => {
+    assert.ok(labels('!IF').includes('!IF'));
+    assert.ok(!labels('!IF').includes('IF'));
+    assert.ok(labels('!LE').includes('!LET'));
+    assert.ok(!labels('!LE').includes('LEAVE'));
+  });
+
+  it('keeps dotted-function completion distinct from the command terminator', () => {
+    assert.ok(labels('COMPUTE x=DATE.').includes('DATE.MDY'));
+    assert.ok(labels('COMPUTE x=DATE.M').includes('DATE.MDY'));
+    assert.deepEqual(labels('COMPUTE x=1.'), []);
+  });
+
+  it('uses only the current statement inside an unfinished control block', () => {
+    const text = 'DO IF age>0.\r\n  COMPUTE x=DATE.M';
+    assert.equal(analyzeCompletionContext(text, text.length, schema).commandName, 'COMPUTE');
+    assert.ok(labels(text).includes('DATE.MDY'));
+  });
+
+  it('completes Chinese variable prefixes with their original spelling', () => {
+    const text = 'DESCRIPTIVES VARIABLES=教育';
+    const candidates = getCompletionCandidates(analyzeCompletionContext(text, text.length, schema), schema, [
+      { index: 0, name: '教育程度', label: 'Education', type: 'Numeric', format: 'F3.0', measurementLevel: 'scale' },
+    ]);
+    assert.equal(candidates[0]?.insertText, '教育程度');
+  });
+
+  it('retains variable-only completion for known commands without a dedicated argument map', () => {
+    const text = 'SORT CASES BY ag';
+    const candidates = getCompletionCandidates(analyzeCompletionContext(text, text.length, schema), schema, [
+      { index: 0, name: 'age', label: '', type: 'Numeric', format: 'F3.0' },
+    ]);
+    assert.deepEqual(candidates.map((item) => item.label), ['age']);
+  });
+
+  it('keeps legal dotted variable names available without reopening a completed command', () => {
+    const dotted = { index: 0, name: 'age.month', label: '', type: 'Numeric', format: 'F3.0' };
+    const source = 'COMPUTE x=age.month';
+    const offset = source.indexOf('.') + 1;
+    assert.equal(getCompletionCandidates(analyzeCompletionContext(source, offset, schema), schema, [dotted])[0]?.label, 'age.month');
+    const unfinished = 'DESCRIPTIVES VARIABLES=age.';
+    const context = analyzeCompletionContext(unfinished, unfinished.length, schema);
+    assert.equal(getCompletionCandidates(context, schema, [dotted])[0]?.label, 'age.month');
+    const both = [dotted, { ...dotted, index: 1, name: 'age' }];
+    assert.deepEqual(getCompletionCandidates(context, schema, both), []);
+    assert.equal(getCompletionCandidates(context, schema, both, 'manual')[0]?.label, 'age.month');
+  });
+
+  it('does not let a later control-block closing line change the lexical context at the caret', () => {
+    const source = 'DO IF age>0.\n* It\'s a note.\nCOMPUTE x=mean(age).\nEND IF.';
+    const offset = source.indexOf('mean') + 3;
+    const context = analyzeCompletionContext(source, offset, schema);
+    assert.ok(getCompletionCandidates(context, schema, []).some((item) => item.label === 'MEAN'));
+  });
+
+  it('treats division in conditional control commands as an expression', () => {
+    for (const head of ['ELSE IF', 'LOOP IF', 'END LOOP IF']) {
+      const text = `${head} (age / in`;
+      const context = analyzeCompletionContext(text, text.length, schema);
+      const items = getCompletionCandidates(context, schema, [
+        { index: 0, name: 'income', label: '', type: 'Numeric', format: 'F8.2' },
+      ]);
+      assert.ok(items.some((item) => item.label === 'income'), head);
+      assert.ok(items.every((item) => item.kind !== 'subcommand'), head);
+    }
+  });
+
+  it('preserves variable selection clauses in file commands without suggesting variables as filenames', () => {
+    const variables = [{ index: 0, name: 'age', label: '', type: 'Numeric', format: 'F3.0' }];
+    for (const command of ['SAVE OUTFILE="out.sav"', 'XSAVE OUTFILE="out.sav"', 'GET FILE "input.sav"']) {
+      for (const option of ['KEEP', 'DROP']) {
+        const text = `${command} /${option}=ag`;
+        const items = getCompletionCandidates(analyzeCompletionContext(text, text.length, schema), schema, variables);
+        assert.deepEqual(items.map((item) => item.label), ['age'], text);
+      }
+    }
+    for (const text of ['GET FILE=ag', 'GET FILE ag', 'SAVE OUTFILE=ag', 'GET DATA /FILE=ag']) {
+      const context = analyzeCompletionContext(text, text.length, schema);
+      assert.deepEqual(getCompletionCandidates(context, schema, variables), [], text);
+      assert.deepEqual(getCompletionCandidates(context, schema, variables, 'manual'), [], text);
+    }
+    const dotted = [{ index: 0, name: 'age.month', label: '', type: 'Numeric', format: 'F3.0' }];
+    for (const text of ['GET FILE=age.', 'SAVE OUTFILE=age.', 'GET DATA /FILE=age.']) {
+      const context = analyzeCompletionContext(text, text.length, schema);
+      assert.deepEqual(getCompletionCandidates(context, schema, dotted), [], text);
+      assert.deepEqual(getCompletionCandidates(context, schema, dotted, 'manual'), [], text);
+    }
+    const selection = 'SAVE OUTFILE="out.sav" /KEEP=age.';
+    assert.equal(getCompletionCandidates(analyzeCompletionContext(selection, selection.length, schema), schema, dotted)[0]?.label, 'age.month');
+  });
+
   it('completes single-word and multi-word commands by prefix', () => {
     assert.ok(labels('reg').includes('REGRESSION'));
     assert.ok(labels('freq').includes('FREQUENCIES'));
@@ -23,7 +169,7 @@ describe('SPSS completion', () => {
   });
 
   it('offers double-quoted string templates and omits the optional GET FILE equals sign', () => {
-    const candidates = getCompletionCandidates(analyzeCompletionContext('', 0, schema), schema, []);
+    const candidates = getCompletionCandidates(analyzeCompletionContext('', 0, schema), schema, [], 'manual');
     const expected = new Map([
       ['GET FILE snippet', 'GET FILE "${1:path/to/data.sav}".'],
       ['GET DATA snippet', 'GET DATA\n /TYPE=${1:TXT}\n /FILE="${2:path}".'],
@@ -35,7 +181,7 @@ describe('SPSS completion', () => {
       assert.equal(candidate.snippet, true);
       assert.equal(candidate.insertText, insertText);
     }
-    const getCandidates = getCompletionCandidates(analyzeCompletionContext('get', 3, schema), schema, []);
+    const getCandidates = getCompletionCandidates(analyzeCompletionContext('get', 3, schema), schema, [], 'manual');
     assert.equal(
       getCandidates.find((item) => item.label === 'GET FILE snippet')?.insertText,
       expected.get('GET FILE snippet'),
@@ -43,7 +189,7 @@ describe('SPSS completion', () => {
   });
 
   it('keeps path apostrophes, doubled double quotes, and Windows separators inside the completed string', () => {
-    const candidate = getCompletionCandidates(analyzeCompletionContext('get', 3, schema), schema, [])
+    const candidate = getCompletionCandidates(analyzeCompletionContext('get', 3, schema), schema, [], 'manual')
       .find((item) => item.label === 'GET FILE snippet');
     assert.ok(candidate);
     for (const filePath of ["/data/O'Brien/study.sav", '/data/""quoted"" study.sav', String.raw`C:\data\O'Brien\study.sav`]) {

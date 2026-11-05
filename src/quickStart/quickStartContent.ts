@@ -48,6 +48,7 @@ const ENGLISH_SECTIONS = `
   </section>
   <section>
     <h2>3. Edit and run Syntax</h2>
+    <p>Local completion starts after two characters; <code>/</code> offers the current command's covered subcommands. Press <kbd>Ctrl</kbd>+<kbd>Space</kbd> or use <strong>SPSS: Complete Syntax</strong> for full templates. By default, Enter inserts a newline; explicitly choose a suggestion before accepting it with Tab.</p>
     <div class="feature-grid">
       <article><h3>Undo</h3><p>Uses the native VS Code undo stack and targets the most recently used SPSS editor.</p></article>
       <article><h3>Run</h3><p>Runs the selection. With no selection, it resolves the current SPSS command or structural block.</p></article>
@@ -111,6 +112,7 @@ const CHINESE_SECTIONS = `
   </section>
   <section>
     <h2>3. 编辑和运行 Syntax</h2>
+    <p>本地自动补全从两个字符开始；输入 <code>/</code> 可查看当前命令已覆盖的子命令。按 <kbd>Ctrl</kbd>+<kbd>Space</kbd>，或在命令面板选择<strong>SPSS：补全语法</strong>，可调用完整模板。默认回车用于换行；请明确选择候选后再按 Tab 接受。</p>
     <div class="feature-grid">
       <article><h3>撤销</h3><p>调用 VS Code 原生撤销栈，并以最近使用的 SPSS 编辑器为目标。</p></article>
       <article><h3>运行</h3><p>存在选区时运行选中语法；没有选区时，识别并运行光标所在的完整 SPSS 命令或结构块。</p></article>

@@ -240,6 +240,14 @@ export function activate(context: vscode.ExtensionContext): SpssStudioExtensionA
     runtimeSetup,
     aiPanelController,
     vscode.languages.registerCompletionItemProvider('spss', completionProvider, '/', '.'),
+    vscode.commands.registerCommand('spssStudio.complete', async () => {
+      const editor = vscode.window.activeTextEditor;
+      if (editor?.document.languageId !== 'spss') { return; }
+      // Discard a cached automatic list before requesting the full manual list.
+      await vscode.commands.executeCommand('hideSuggestWidget');
+      completionProvider.prepareManualCompletion(editor.document, editor.selection.active);
+      await vscode.commands.executeCommand('editor.action.triggerSuggest');
+    }),
     vscode.commands.registerCommand('spssStudio.newFile', () => newSpssFile(() => studio.showOutput())),
     vscode.commands.registerCommand('spssStudio.undo', undoLastEdit),
     vscode.commands.registerCommand(

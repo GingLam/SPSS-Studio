@@ -6,6 +6,7 @@ export async function run(): Promise<void> {
   if (process.env.SPSS_STUDIO_REAL_INTEGRATION === '1') {
     mocha.addFile(path.resolve(__dirname, 'realSpss.extension.test.js'));
   } else {
+    mocha.addFile(path.resolve(__dirname, 'balancedCompletion.extension.test.js'));
     mocha.addFile(path.resolve(__dirname, 'spssStudio.extension.test.js'));
   }
   await new Promise<void>((resolve, reject) => {

@@ -16,7 +16,7 @@ Contact：[linjing@nufe.edu.cn](mailto:linjing@nufe.edu.cn)
 
 - Generated TextMate highlighting based on a 309-command IBM SPSS Statistics syntax inventory, with distinct command, subcommand, variable, function, format, literal, operator, macro, and comment families.
 - Optional **SPSS Studio Light** and **SPSS Studio Dark** color themes for a complete, contrast-checked syntax palette; installation never changes the user's active theme.
-- Context-aware completion for commands, subcommands, keywords, functions, snippets, and cached Active Dataset variables.
+- Local context-aware completion with quieter automatic suggestions, verified command-specific subcommands, cached variables, and explicit access to complete syntax templates.
 - Editor-title actions for Undo, Run, and Run All.
 - A standard **File → New File… → SPSS File** entry that opens an empty SPSS editor beside Studio without running syntax.
 - A persistent, serialized local SPSS backend.
@@ -58,6 +58,8 @@ The engine uses the VS Code display language for native table headings: Chinese 
 GET FILE completion recommends `GET FILE "path/to/data.sav".` without its optional equals sign. String-bearing templates and Chat suggestions use ASCII double quotes; other required equals signs and valid handwritten syntax remain supported. Windows CRLF and Unix/macOS LF source files use the same submission path without changing the source file on disk.
 
 Current-command execution preserves blank lines inside a command until its terminating period, matching SPSS's Python Submit backend. Blank lines between complete commands remain intact. Use ASCII periods to terminate commands; blank lines do not repair a missing period in this execution mode.
+
+Automatic completion starts after two characters; `/` can request the current command's covered subcommands. Completed commands and empty lines do not trigger another full command list. Use **Ctrl+Space** or **SPSS: Complete Syntax** in the Command Palette for short prefixes and complete templates. Suggestions identify their source as **SPSS Studio**. By default in SPS editors, automatic lists do not preselect an item, Enter inserts a newline, and Tab accepts a suggestion after an explicit selection. These are language-specific defaults; explicit SPS editor settings can override them. Copilot and other providers remain independent.
 
 - macOS: `Cmd+Enter`
 - Windows/Linux: `Ctrl+Enter`

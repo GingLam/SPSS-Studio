@@ -43,6 +43,7 @@
     }
   },
   "activationEvents": [
+    "onCommand:spssStudio.complete",
     "onCommand:spssStudio.newFile",
     "onCommand:spssStudio.configureRuntime",
     "onStartupFinished",
@@ -102,6 +103,11 @@
       }
     ],
     "commands": [
+      {
+        "command": "spssStudio.complete",
+        "title": "%spssStudio.command.complete%",
+        "enablement": "editorLangId == spss"
+      },
       {
         "command": "spssStudio.newFile",
         "title": "%spssStudio.command.newFile%"
@@ -229,12 +235,26 @@
         }
       ]
     },
+    "configurationDefaults": {
+      "[spss]": {
+        "editor.acceptSuggestionOnEnter": "off",
+        "editor.suggest.selectionMode": "never",
+        "editor.quickSuggestionsDelay": 300,
+        "editor.tabCompletion": "off"
+      }
+    },
     "keybindings": [
       {
         "command": "spssStudio.runSelection",
         "key": "ctrl+enter",
         "mac": "cmd+enter",
         "when": "editorTextFocus && editorLangId == spss"
+      },
+      {
+        "command": "spssStudio.complete",
+        "key": "ctrl+space",
+        "mac": "ctrl+space",
+        "when": "editorTextFocus && editorLangId == spss && !editorReadonly"
       }
     ],
     "configuration": {

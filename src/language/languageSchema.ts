@@ -61,3 +61,12 @@ export function allSchemaFunctions(schema: SpssLanguageSchema): string[] {
   }
   return [...functions];
 }
+
+export function completionCommandNames(schema: SpssLanguageSchema): string[] {
+  return [...new Set([
+    ...schema.commands,
+    ...schema.controlCommands,
+    ...Object.keys(schema.completion.commandSubcommands),
+    ...schema.completion.snippets.map((snippet) => snippet.label),
+  ])];
+}
