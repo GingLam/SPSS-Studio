@@ -1,6 +1,7 @@
 import path from 'node:path';
 import { BridgeManager, type BridgeManagerOptions } from './bridgeManager';
 import { locateSpss } from './spssLocator';
+import { nativeOutputLanguage } from './outputLanguage';
 import type { SpssInstallation } from './platform/types';
 import type {
   ActiveDatasetInfo,
@@ -21,6 +22,8 @@ export interface SpssRuntimeConfiguration {
   dataPreviewPageSize: number;
   autoStart: boolean;
   debugLogging: boolean;
+  /** VS Code display language; omitted by older callers. */
+  uiLanguage?: string;
 }
 
 export interface EngineServiceCallbacks {
@@ -60,7 +63,7 @@ export class EngineService {
 
   private static isRetryableStartupError(error: unknown): boolean {
     const message = error instanceof Error ? error.message : String(error);
-    if (/Unable to import|license|licen[cs]ing|not recognized|不是内部|cannot find|not found|Malformed|Invalid characters/iu.test(message)) {
+    if (/Unable to import|Could not set SPSS output language|Unsupported SPSS output language|license|licen[cs]ing|not recognized|不是内部|cannot find|not found|Malformed|Invalid characters/iu.test(message)) {
       return false;
     }
     return /timed out|SPSS bridge exited|\b(?:EBUSY|EAGAIN|ETIMEDOUT)\b/iu.test(message);
@@ -118,6 +121,7 @@ export class EngineService {
       startupTimeoutMs: configuration.startupTimeoutSeconds * 1_000,
       executionTimeoutMs: configuration.executionTimeoutSeconds * 1_000,
       debug: configuration.debugLogging,
+      outputLanguage: nativeOutputLanguage(configuration.uiLanguage),
       onStateChange: this.callbacks.onStateChange,
       onDiagnostic: this.callbacks.onDiagnostic,
     });
@@ -217,7 +221,7 @@ export class EngineService {
   ): Promise<BridgeResponse> {
     const manager = await this.readyManager(configuration);
     try {
-      const response = await manager.run(syntax, target);
+      const response = await manager.run(syntax, target, nativeOutputLanguage(configuration.uiLanguage));
       this.lastError = response.error ?? undefined;
       return response;
     } catch (error) {

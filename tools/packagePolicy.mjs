@@ -64,6 +64,7 @@ export function assertAllowedSourceFiles(values, phase = 'package input') {
     'media/spss-highlighter.js',
     'media/spss-syntax-data.js',
     'out/src/extension.js',
+    'out/src/spss/outputLanguage.js',
     'resources/bridge/spss_bridge.py',
     'resources/examples/example.en.sps',
     'resources/examples/example.zh-cn.sps',

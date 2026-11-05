@@ -92,6 +92,31 @@ class SilentBridgeProcess extends EventEmitter implements BridgeProcess {
 }
 
 describe('EngineService startup lifecycle', () => {
+  it('uses the current VS Code display language for startup, each run, and restart', async () => {
+    const requests: BridgeRequest[] = [];
+    const service = new EngineService('/extension', { onStateChange: () => undefined, onDiagnostic: () => undefined }, {
+      locate: () => Promise.resolve(installation),
+      createManager: (options) => new BridgeManager({
+        ...options,
+        platform: 'darwin',
+        spawner: () => new ResponsiveBridgeProcess((request) => {
+          requests.push(request);
+          return responseFor(request);
+        }),
+      }),
+    });
+    try {
+      await service.start({ ...configuration, uiLanguage: 'zh-cn' });
+      await service.run('FREQUENCIES id.', { runId: 'zh', outputDirectory: '/tmp' }, { ...configuration, uiLanguage: 'zh-tw' });
+      await service.run('FREQUENCIES id.', { runId: 'en', outputDirectory: '/tmp' }, { ...configuration, uiLanguage: 'en' });
+      await service.restart({ ...configuration, uiLanguage: 'de' });
+      assert.deepEqual(requests.filter((request) => request.op === 'ping' || request.op === 'run')
+        .map((request) => [request.op, request.outputLanguage]), [
+        ['ping', 'Schinese'], ['run', 'Schinese'], ['run', 'English'], ['ping', 'English'],
+      ]);
+    } finally { await service.stop(); }
+  });
+
   it('blocks new Run requests during Clear and preserves a live engine on a rejected clear', async () => {
     const service = new EngineService('/extension', { onStateChange: () => undefined, onDiagnostic: () => undefined }, {
       locate: () => Promise.resolve(installation),
@@ -224,5 +249,28 @@ describe('EngineService startup lifecycle', () => {
 
     await assert.rejects(service.start(configuration), /Unable to import IBM SPSS Python module/iu);
     assert.equal(managerCount, 1);
+  });
+
+  it('reports a native output-language initialization failure without retrying startup', async () => {
+    let managerCount = 0;
+    const service = new EngineService('/extension', { onStateChange: () => undefined, onDiagnostic: () => undefined }, {
+      locate: () => Promise.resolve(installation),
+      createManager: (options) => {
+        managerCount += 1;
+        return new BridgeManager({
+          ...options,
+          platform: 'darwin',
+          spawner: () => new ResponsiveBridgeProcess((request) => ({
+            ...responseFor(request),
+            ok: false,
+            engineAlive: false,
+            error: 'Could not set SPSS output language to Schinese. SPSS bridge exited during language initialization.',
+          })),
+        });
+      },
+    });
+    await assert.rejects(service.start({ ...configuration, uiLanguage: 'zh-cn' }), /output language to Schinese/u);
+    assert.equal(managerCount, 1);
+    assert.equal(service.status().engineAlive, false);
   });
 });

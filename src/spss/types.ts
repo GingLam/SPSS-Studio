@@ -1,5 +1,7 @@
 export type EngineState = 'stopped' | 'starting' | 'ready' | 'running' | 'error';
 
+export type SpssOutputLanguage = 'Schinese' | 'English';
+
 export type BridgeOperation =
   | 'ping'
   | 'status'
@@ -133,6 +135,7 @@ export interface BridgeRequest {
   syntax?: string;
   runId?: string;
   outputDirectory?: string;
+  outputLanguage?: SpssOutputLanguage;
   offset?: number;
   limit?: number;
   variableStart?: number;

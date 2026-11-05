@@ -44,6 +44,7 @@ const ENGLISH_SECTIONS = `
       <li>The first execution starts the persistent local SPSS processor and opens <strong>SPSS Studio</strong> beside the editor on the <strong>Output</strong> tab. You do not normally need to open the SPSS desktop application first.</li>
     </ol>
     <p><kbd>Cmd</kbd>+<kbd>Enter</kbd> runs on macOS; <kbd>Ctrl</kbd>+<kbd>Enter</kbd> runs on Windows and Linux.</p>
+    <p>Native result headings follow the VS Code display language: Chinese uses Simplified Chinese, English and other languages use English. This is independent of Chat language. Windows CRLF and macOS/Unix LF syntax are accepted without rewriting the file. Completion recommends <code>GET FILE "data.sav".</code> and double-quoted strings.</p>
   </section>
   <section>
     <h2>3. Edit and run Syntax</h2>
@@ -106,6 +107,7 @@ const CHINESE_SECTIONS = `
       <li>第一次执行时，插件会启动持久化的本地 SPSS 处理器，并在编辑器右侧打开 <strong>SPSS Studio</strong> 的<strong>输出</strong>页面。通常无须预先手动打开 SPSS 桌面程序。</li>
     </ol>
     <p>macOS 使用 <kbd>Cmd</kbd>+<kbd>Enter</kbd>；Windows 和 Linux 使用 <kbd>Ctrl</kbd>+<kbd>Enter</kbd>。</p>
+    <p>原生结果表头跟随 VS Code 界面语言：中文界面使用简体中文，英文及其他界面使用英文，与 Chat 回答语言分别设置。Windows CRLF 和 macOS/Unix LF 换行均可直接运行，不改写源文件。补全推荐 <code>GET FILE "data.sav".</code> 及双引号字符串。</p>
   </section>
   <section>
     <h2>3. 编辑和运行 Syntax</h2>
@@ -153,7 +155,7 @@ function copyFor(language: QuickStartLanguage): QuickStartCopy {
   if (language === 'zh-cn') {
     return {
       title: '快速上手',
-      eyebrow: 'SPSS Studio 1.4.3',
+      eyebrow: 'SPSS Studio 1.5.0',
       introduction: '从打开第一个 .sps 文件开始，完成 Syntax 编辑、SPSS 本地执行、数据与变量查看，以及 AI 辅助解释。',
       preferenceTitle: '更新提醒',
       preferenceText: '此后版本更新时不再自动显示快速上手',
@@ -166,7 +168,7 @@ function copyFor(language: QuickStartLanguage): QuickStartCopy {
   }
   return {
     title: 'Quick Start',
-    eyebrow: 'SPSS Studio 1.4.3',
+    eyebrow: 'SPSS Studio 1.5.0',
     introduction: 'Open your first .sps file, edit and run Syntax locally, inspect data and variables, and use focused AI assistance.',
     preferenceTitle: 'Update reminder',
     preferenceText: 'Do not show Quick Start automatically after future updates',
@@ -205,7 +207,7 @@ export function buildQuickStartHtml(options: QuickStartHtmlOptions): string {
 >
   <main>
     <header class="hero">
-      <div class="eyebrow">SPSS Studio ${escapeAttribute(options.version ?? '1.4.3')}</div>
+      <div class="eyebrow">SPSS Studio ${escapeAttribute(options.version ?? '1.5.0')}</div>
       <h1>${copy.title}</h1>
       <p>${copy.introduction}</p>
     </header>

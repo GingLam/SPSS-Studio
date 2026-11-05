@@ -70,6 +70,7 @@ function readConfiguration(): SpssRuntimeConfiguration {
     dataPreviewPageSize: configuration.get<number>('dataPreviewPageSize', 100),
     autoStart: configuration.get<boolean>('autoStart', true),
     debugLogging: configuration.get<boolean>('debugLogging', false),
+    uiLanguage: vscode.env.language,
   };
 }
 

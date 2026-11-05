@@ -3,6 +3,7 @@ import path from 'node:path';
 import { analyzeCompletionContext } from '../../src/language/completionContext';
 import { getCompletionCandidates } from '../../src/language/completionEngine';
 import { loadLanguageSchema } from '../../src/language/languageSchema';
+import { scanCommands } from '../../src/spss/commandScanner';
 import type { ActiveDatasetInfo } from '../../src/spss/types';
 import { VariableCache } from '../../src/spss/variableCache';
 
@@ -19,6 +20,51 @@ describe('SPSS completion', () => {
     assert.ok(labels('freq').includes('FREQUENCIES'));
     assert.ok(labels('get d').includes('GET DATA'));
     assert.ok(labels('logistic r').includes('LOGISTIC REGRESSION'));
+  });
+
+  it('offers double-quoted string templates and omits the optional GET FILE equals sign', () => {
+    const candidates = getCompletionCandidates(analyzeCompletionContext('', 0, schema), schema, []);
+    const expected = new Map([
+      ['GET FILE snippet', 'GET FILE "${1:path/to/data.sav}".'],
+      ['GET DATA snippet', 'GET DATA\n /TYPE=${1:TXT}\n /FILE="${2:path}".'],
+      ['RELIABILITY snippet', 'RELIABILITY\n /VARIABLES=${1:items}\n /SCALE("ALL VARIABLES") ALL\n /MODEL=ALPHA.'],
+    ]);
+    for (const [label, insertText] of expected) {
+      const candidate = candidates.find((item) => item.label === label);
+      assert.ok(candidate, label);
+      assert.equal(candidate.snippet, true);
+      assert.equal(candidate.insertText, insertText);
+    }
+    const getCandidates = getCompletionCandidates(analyzeCompletionContext('get', 3, schema), schema, []);
+    assert.equal(
+      getCandidates.find((item) => item.label === 'GET FILE snippet')?.insertText,
+      expected.get('GET FILE snippet'),
+    );
+  });
+
+  it('keeps path apostrophes, doubled double quotes, and Windows separators inside the completed string', () => {
+    const candidate = getCompletionCandidates(analyzeCompletionContext('get', 3, schema), schema, [])
+      .find((item) => item.label === 'GET FILE snippet');
+    assert.ok(candidate);
+    for (const filePath of ["/data/O'Brien/study.sav", '/data/""quoted"" study.sav', String.raw`C:\data\O'Brien\study.sav`]) {
+      // Replace only the editable path, as typing into the snippet placeholder would.
+      const completed: string = candidate.insertText.replace(/\$\{1:[^}]*\}/u, () => filePath);
+      assert.equal(completed, `GET FILE "${filePath}".`);
+      const context = analyzeCompletionContext(completed, completed.length - 2, schema);
+      assert.equal(context.kind, 'STRING');
+      assert.deepEqual(getCompletionCandidates(context, schema, []), []);
+      assert.deepEqual(scanCommands(`${completed}\nFREQUENCIES VARIABLES=age.`).map((command) => command.text), [
+        completed, 'FREQUENCIES VARIABLES=age.',
+      ]);
+    }
+  });
+
+  it('retains completion suppression for handwritten single-quoted paths and optional equals', () => {
+    for (const text of ["GET FILE='O''Brien/study.sav", "GET FILE 'data/\"quoted\" study.sav", 'GET FILE="O\'Brien/study.sav']) {
+      const context = analyzeCompletionContext(text, text.length, schema);
+      assert.equal(context.kind, 'STRING');
+      assert.deepEqual(getCompletionCandidates(context, schema, []), []);
+    }
   });
 
   it('ranks command-specific subcommands before generic fallbacks', () => {

@@ -17,6 +17,7 @@ import type {
   EngineState,
   EngineStatus,
   RunOutputTarget,
+  SpssOutputLanguage,
   VariableProfiles,
 } from './types';
 
@@ -46,6 +47,7 @@ export interface BridgeManagerOptions {
   executionTimeoutMs: number;
   shutdownTimeoutMs?: number;
   debug?: boolean;
+  outputLanguage?: SpssOutputLanguage;
   onStateChange?: (state: EngineState) => void;
   onDiagnostic?: (message: string) => void;
   spawner?: ProcessSpawner;
@@ -269,7 +271,9 @@ export class BridgeManager {
     });
 
     try {
-      const response = await this.request('ping', undefined, this.options.startupTimeoutMs);
+      const response = await this.request('ping', {
+        outputLanguage: this.options.outputLanguage ?? 'English',
+      }, this.options.startupTimeoutMs);
       if (!response.ok || response.engineAlive !== true) {
         throw new Error(response.error ?? 'IBM SPSS Statistics did not become ready.');
       }
@@ -309,11 +313,16 @@ export class BridgeManager {
     });
   }
 
-  public run(syntax: string, target: RunOutputTarget): Promise<BridgeResponse> {
+  public run(
+    syntax: string,
+    target: RunOutputTarget,
+    outputLanguage: SpssOutputLanguage = this.options.outputLanguage ?? 'English',
+  ): Promise<BridgeResponse> {
     return this.enqueueOperation('run', {
       syntax,
       runId: target.runId,
       outputDirectory: target.outputDirectory,
+      outputLanguage,
     });
   }
 

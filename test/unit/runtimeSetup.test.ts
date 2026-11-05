@@ -4,6 +4,7 @@ import path from 'node:path';
 import { EventEmitter } from 'node:events';
 import { PassThrough, Writable } from 'node:stream';
 import { BridgeManager, type BridgeProcess } from '../../src/spss/bridgeManager';
+import type { SpssRuntimeConfiguration } from '../../src/spss/engineService';
 import type { BridgeRequest, BridgeResponse } from '../../src/spss/types';
 import type { SpssInstallation } from '../../src/spss/platform/types';
 import { configureTransaction } from '../../src/setup/configurationTransaction';
@@ -66,12 +67,22 @@ class ProbeProcess extends EventEmitter implements BridgeProcess {
   public kill(): boolean { this.killed = true; return true; }
 }
 
-function probeWith(child: ProbeProcess, signal = new AbortController().signal) {
-  return probeRuntime(installation, '/bridge.py', configuration, signal, () => undefined,
+function probeWith(child: ProbeProcess, signal = new AbortController().signal, runtimeConfiguration: SpssRuntimeConfiguration = configuration) {
+  return probeRuntime(installation, '/bridge.py', runtimeConfiguration, signal, () => undefined,
     (options) => new BridgeManager({ ...options, platform: 'darwin', spawner: () => child }));
 }
 
 describe('one-click runtime setup', () => {
+  it('applies the display-language policy to the real startup and analysis probe pipeline', async () => {
+    for (const [uiLanguage, expected] of [['zh-cn', 'Schinese'], ['en', 'English'], ['fr', 'English']]) {
+      const child = new ProbeProcess();
+      const result = await probeWith(child, new AbortController().signal, { ...configuration, uiLanguage: uiLanguage ?? '' });
+      assert.equal(result.ok, true);
+      assert.deepEqual(child.requests.filter((request) => request.op === 'ping' || request.op === 'run')
+        .map((request) => request.outputLanguage), [expected, expected]);
+    }
+  });
+
   it('identifies the reported bridge syntax error without blaming a license or environment path', () => {
     const s = setupStrings('zh-cn');
     const error = 'SPSS bridge exited (code=0, signal=null). File "C:\\license-test\\spss_bridge.py", line 671 **({"datasetSummary": summary}) SyntaxError: invalid syntax';

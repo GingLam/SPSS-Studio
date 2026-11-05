@@ -67,6 +67,7 @@ describe('VSIX package policy', () => {
       'media/spss-highlighter.js',
       'media/spss-syntax-data.js',
       'out/src/extension.js',
+      'out/src/spss/outputLanguage.js',
       'resources/bridge/spss_bridge.py',
       'resources/examples/example.en.sps',
       'resources/examples/example.zh-cn.sps',
@@ -76,6 +77,7 @@ describe('VSIX package policy', () => {
       'themes/spss-studio-dark-color-theme.json',
     ];
     assert.deepEqual(policy.assertAllowedSourceFiles(required), required);
+    assert.throws(() => policy.assertAllowedSourceFiles(required.filter((name) => !name.endsWith('outputLanguage.js'))), /missing required files/u);
     assert.throws(() => policy.assertAllowedSourceFiles(required.filter((name) => !name.endsWith('.sav'))), /missing required files/u);
     assert.deepEqual(policy.assertAllowedVsixEntries([
       '[Content_Types].xml',

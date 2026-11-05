@@ -4,6 +4,7 @@ import path from 'node:path';
 import { BridgeManager } from '../spss/bridgeManager';
 import type { SpssInstallation } from '../spss/platform/types';
 import type { SpssRuntimeConfiguration } from '../spss/engineService';
+import { nativeOutputLanguage } from '../spss/outputLanguage';
 import { descendants, htmlText, parseHtmlDocument } from '../ai/htmlDocument';
 
 export type ProbeStage = 'startup' | 'analysis' | 'data' | 'output' | 'shutdown';
@@ -41,6 +42,7 @@ export async function probeRuntime(
     executionTimeoutMs: configuration.executionTimeoutSeconds * 1000,
     shutdownTimeoutMs: 10_000,
     debug: true,
+    outputLanguage: nativeOutputLanguage(configuration.uiLanguage),
     onDiagnostic: (message) => {
       diagnostics.push(message.slice(0, 2000));
       if (diagnostics.length > 30) { diagnostics.shift(); }

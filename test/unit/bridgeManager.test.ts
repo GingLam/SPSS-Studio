@@ -141,6 +141,31 @@ function managerWith(
 }
 
 describe('BridgeManager', () => {
+  it('carries native output language through startup and every run without changing the child locale', async () => {
+    let childEnvironment: NodeJS.ProcessEnv | undefined;
+    const child = new FakeBridgeProcess((request, process) => process.send(responseFor(request)));
+    const manager = new BridgeManager({
+      startupTimeoutMs: 100,
+      executionTimeoutMs: 100,
+      outputLanguage: 'Schinese',
+      platform: 'darwin',
+      environment: { LANG: 'en_US.UTF-8', LC_ALL: 'en_US.UTF-8' },
+      spawner: (_executable, _args, options) => {
+        childEnvironment = options.env;
+        return child;
+      },
+    });
+    try {
+      await manager.start(installation, '/bridge.py');
+      await manager.run('FREQUENCIES age.', outputTarget);
+      await manager.run('FREQUENCIES age.', outputTarget, 'English');
+      assert.deepEqual(child.requests.map((request) => request.outputLanguage), ['Schinese', 'Schinese', 'English']);
+      assert.ok(childEnvironment);
+      assert.equal(childEnvironment.LANG, 'en_US.UTF-8');
+      assert.equal(childEnvironment.LC_ALL, 'en_US.UTF-8');
+    } finally { await manager.stop(); }
+  });
+
   it('frames partial JSONL responses and exposes process state', async () => {
     const { manager, process } = managerWith((request, child) => child.send(responseFor(request), true));
     await manager.start(installation, '/extension/resources/bridge/spss_bridge.py');
@@ -149,6 +174,7 @@ describe('BridgeManager', () => {
     assert.equal(manager.status().state, 'ready');
     assert.equal(manager.status().processId, 4242);
     assert.equal(process.requests.length, 2);
+    assert.deepEqual(process.requests.map((request) => request.outputLanguage), ['English', 'English']);
   });
 
   it('serializes multiple run requests', async () => {

@@ -10,6 +10,7 @@ import re
 import sys
 import time
 import traceback
+import unicodedata
 import uuid
 from collections import Counter
 from contextlib import redirect_stdout
@@ -32,58 +33,196 @@ def _quote_spss_string(value):
     return "'{}'".format(value.replace("'", "''"))
 
 
+def _syntax_block_patterns(begin: str, end: str, language: bool = False) -> tuple:
+    spaces = r"[ \t\u00a0\u3000]"
+    opening = (spaces + "+").join(begin.split(" "))
+    closing = (spaces + "+").join(end.split(" "))
+    if language:
+        opening += r"(?:{0}+[A-Z][A-Z0-9_]*)?".format(spaces)
+    return (
+        re.compile(opening + spaces + r"*(?:\.|$)", re.IGNORECASE),
+        re.compile("^" + spaces + "*" + closing + spaces + r"*\.?" + spaces + "*$", re.IGNORECASE),
+    )
+
+
 _PROTECTED_BLOCKS = (
-    (re.compile(r"^\s*BEGIN\s+DATA(?:\s|\.|$)", re.IGNORECASE), re.compile(r"^\s*END\s+DATA(?:\s|\.|$)", re.IGNORECASE)),
-    (re.compile(r"^\s*BEGIN\s+PROGRAM(?:\s|\.|$)", re.IGNORECASE), re.compile(r"^\s*END\s+PROGRAM(?:\s|\.|$)", re.IGNORECASE)),
-    (re.compile(r"^\s*BEGIN\s+GPL(?:\s|\.|$)", re.IGNORECASE), re.compile(r"^\s*END\s+GPL(?:\s|\.|$)", re.IGNORECASE)),
-    (re.compile(r"^\s*BEGIN\s+SCRIPT(?:\s|\.|$)", re.IGNORECASE), re.compile(r"^\s*END\s+SCRIPT(?:\s|\.|$)", re.IGNORECASE)),
-    (re.compile(r"^\s*MATRIX\s*\.?\s*$", re.IGNORECASE), re.compile(r"^\s*END\s+MATRIX(?:\s|\.|$)", re.IGNORECASE)),
+    _syntax_block_patterns("BEGIN DATA", "END DATA"),
+    _syntax_block_patterns("BEGIN PROGRAM", "END PROGRAM", language=True),
+    _syntax_block_patterns("BEGIN GPL", "END GPL"),
+    _syntax_block_patterns("BEGIN SCRIPT", "END SCRIPT"),
+    _syntax_block_patterns("BEGIN EXPR", "END EXPR"),
+    _syntax_block_patterns("MATRIX", "END MATRIX"),
+    (re.compile(r"DEFINE(?=[ \t]|$)", re.IGNORECASE), re.compile(r"^[ \t]*!ENDDEFINE\.[ \t]*$", re.IGNORECASE)),
 )
 
 
-def _expand_leading_tabs(line):
-    indentation = re.match(r"^[ \t]+", line)
-    if indentation is None:
-        return line, 0
-    prefix = indentation.group(0)
-    tab_count = prefix.count("\t")
-    if tab_count == 0:
-        return line, 0
-    return prefix.expandtabs(4) + line[len(prefix):], tab_count
+def _syntax_character_location(character: str, line: int, column: int) -> str:
+    name = {"\r": "CARRIAGE RETURN", "\t": "CHARACTER TABULATION"}.get(character)
+    return "U+{0:04X} {1} at line {2}, column {3}".format(
+        ord(character), name or unicodedata.name(character, "UNNAMED"), line, column,
+    )
 
 
-def _normalize_syntax_for_submit(syntax):
-    """Expand command-indentation tabs that SPSS Submit rejects.
+def _is_command_end(line: str, index: int) -> bool:
+    tail = line[index + 1:].lstrip(" \t\u00a0\u3000")
+    previous = line[:index].rstrip(" \t\u00a0\u3000")
+    return (not tail or tail.startswith("/*")) and bool(previous) and previous[-1] not in "=,(+-*/<>&|~"
 
-    Literal data and embedded-language bodies remain byte-for-byte unchanged.
-    Block delimiter lines are SPSS commands, so their indentation is normalized.
+
+def _prepare_syntax_for_submit(syntax: str) -> tuple:
+    """Normalize verified Submit separators without changing literal payloads.
+
+    CRLF is a physical line ending in every region. A lone CR inside a quoted
+    value or opaque body is ambiguous and is retained. Unsupported characters
+    are diagnosed, never guessed or deleted. Source files are never rewritten.
     """
     normalized_lines = []
     changed_lines = []
     tab_count = 0
+    changes = {"count": 0, "samples": []}
+    suspects = {"count": 0, "samples": []}
+    normalized_endings = 0
     protected_end = None
-    for line_number, line in enumerate(syntax.splitlines(keepends=True), start=1):
-        line_without_ending = line.rstrip("\r\n")
-        if protected_end is not None and protected_end.match(line_without_ending) is None:
-            normalized_lines.append(line)
+    quote = None
+    block_comment = False
+    command_comment = False
+    command_start = True
+    macro_reference = False
+
+    def record(collection: dict, character: str, line: int, column: int) -> None:
+        collection["count"] += 1
+        if len(collection["samples"]) < 4:
+            collection["samples"].append(_syntax_character_location(character, line, column))
+
+    # str.splitlines also treats U+0085/U+2028 as line endings, which would
+    # silently corrupt literal data. Only physical CR/LF boundaries belong here.
+    lines = re.finditer(r"[^\r\n]*(?:\r\n|\r|\n|$)", syntax)
+    for line_number, match in enumerate(lines, start=1):
+        raw_line = match.group(0)
+        if not raw_line:
             continue
-
-        normalized_line, changed_tabs = _expand_leading_tabs(line)
-        normalized_lines.append(normalized_line)
-        if changed_tabs:
-            tab_count += changed_tabs
-            changed_lines.append(line_number)
-
-        normalized_without_ending = normalized_line.rstrip("\r\n")
-        if protected_end is not None:
+        ending = "\r\n" if raw_line.endswith("\r\n") else raw_line[-1:] if raw_line.endswith(("\r", "\n")) else ""
+        line = raw_line[:-len(ending)] if ending else raw_line
+        output = []
+        index = 0
+        line_tabs = 0
+        indentation = True
+        if protected_end is not None and protected_end.match(line):
             protected_end = None
-            continue
-        for block_start, block_end in _PROTECTED_BLOCKS:
-            if block_start.match(normalized_without_ending):
-                protected_end = block_end
-                break
+            command_start = True
+        while index < len(line) and protected_end is None:
+            character = line[index]
+            following = line[index + 1:index + 2]
+            if quote is not None:
+                output.append(character)
+                if character == quote:
+                    if following == quote:
+                        output.append(following)
+                        index += 1
+                    else:
+                        quote = None
+                index += 1
+                continue
+            if block_comment:
+                output.append(character)
+                if character == "*" and following == "/":
+                    output.append(following)
+                    block_comment = False
+                    index += 1
+                index += 1
+                continue
+            if command_comment:
+                output.append(character)
+                if character == "." and not line[index + 1:].strip(" \t\u00a0\u3000"):
+                    command_comment = False
+                    command_start = True
+                index += 1
+                continue
+            if character == "/" and following == "*":
+                output.extend((character, following))
+                block_comment = True
+                index += 2
+                continue
+            if command_start and (character == "*" or re.match(r"COMMENT(?:[ \t\u00a0\u3000]|\.|$)", line[index:], re.IGNORECASE)):
+                command_comment = True
+                continue
+            if character in " \t\u00a0\u3000":
+                if character != " " and not macro_reference:
+                    # Preserve the historical four-column command indentation;
+                    # an internal TAB is a single token separator.
+                    replacement = " " * (4 - len("".join(output)) % 4) if character == "\t" and indentation else " "
+                    output.append(replacement)
+                    record(changes, character, line_number, index + 1)
+                    if character == "\t":
+                        tab_count += 1
+                        line_tabs += 1
+                else:
+                    output.append(character)
+                index += 1
+                continue
+            indentation = False
+            if command_start:
+                for block_start, block_end in _PROTECTED_BLOCKS:
+                    opening = block_start.match(line, index)
+                    if opening:
+                        header = line[index:opening.end()]
+                        # DEFINE headers and body use the macro tokenizer. The
+                        # other opening delimiters are ordinary SPSS commands.
+                        if header.upper().startswith("DEFINE"):
+                            output.append(header)
+                        else:
+                            for offset, item in enumerate(header):
+                                if item in "\t\u00a0\u3000":
+                                    output.append(" ")
+                                    record(changes, item, line_number, index + offset + 1)
+                                    if item == "\t":
+                                        tab_count += 1
+                                        line_tabs += 1
+                                else:
+                                    output.append(item)
+                        index = opening.end()
+                        protected_end = block_end
+                        break
+                if protected_end is not None:
+                    break
+            command_start = False
+            if character in ("'", '"'):
+                quote = character
+            elif character == "!":
+                # Macro arguments can consume whitespace as literal text.
+                macro_reference = True
+            elif character == "." and _is_command_end(line, index):
+                command_start = True
+                macro_reference = False
+            elif not macro_reference and (character.isspace() or character in "\u200b\u200c\u200d\u2060\ufeff\u2018\u2019\u201c\u201d" or ("\uff01" <= character <= "\uff65" and unicodedata.category(character)[0] in "PS")):
+                record(suspects, character, line_number, index + 1)
+            output.append(character)
+            index += 1
+        if index < len(line):
+            output.append(line[index:])
+        if line_tabs:
+            changed_lines.append(line_number)
+        if ending == "\r\n" or (ending == "\r" and protected_end is None and quote is None):
+            normalized_endings += 1
+            ending = "\n"
+        normalized_lines.append("".join(output) + ending)
 
-    return "".join(normalized_lines), tab_count, changed_lines
+    warnings = []
+    for collection, label in ((changes, "Normalized"), (suspects, "Potentially unsupported")):
+        if collection["count"]:
+            suffix = "; further locations omitted" if collection["count"] > len(collection["samples"]) else ""
+            warnings.append("{} {} syntax character{} before SPSS submission ({}{}).{}".format(
+                label, collection["count"], "" if collection["count"] == 1 else "s",
+                "; ".join(collection["samples"]), suffix,
+                " Left unchanged; inspect the source." if collection is suspects else " Source file unchanged.",
+            ))
+    return "".join(normalized_lines), tab_count, changed_lines, warnings, normalized_endings
+
+
+def _normalize_syntax_for_submit(syntax: str) -> tuple:
+    # Keep the original helper contract for callers that only need tab counts.
+    normalized, tab_count, changed_lines, unused_warnings, unused_endings = _prepare_syntax_for_submit(syntax)
+    return normalized, tab_count, changed_lines
 
 
 class SpssBridge(object):
@@ -93,11 +232,12 @@ class SpssBridge(object):
     _PROFILE_MAX_EXACT_DISTINCT = 10000
     _PROFILE_MAX_VALUE_LABELS = 100
 
-    def __init__(self, spss_module, debug=False):
+    def __init__(self, spss_module, debug=False, output_language=None):
         self.spss = spss_module
         self.debug = debug
         self.started = False
         self.last_error = None
+        self.output_language = output_language
 
     def _diagnostic(self, message):
         if self.debug:
@@ -109,13 +249,56 @@ class SpssBridge(object):
         with redirect_stdout(sys.stderr):
             return function(*args, **kwargs)
 
-    def start(self):
+    def _apply_output_language(self) -> None:
+        """Set native output without changing the OS locale or translating HTML."""
+        if self.output_language is None:
+            return  # Compatibility for callers using the pre-language protocol.
+        language = self.output_language
+        if language not in ("Schinese", "English"):
+            raise ValueError("Unsupported SPSS output language: {}".format(language))
+        try:
+            setter = getattr(self.spss, "SetOutputLanguage", None)
+            if callable(setter):
+                self._invoke(setter, language)
+            else:
+                # SET OLANG is documented for external Python sessions too.
+                self._invoke(self.spss.Submit, "SET OLANG={}.".format(language))
+            actual = self._invoke(self.spss.GetSetting, "OLANG")
+            if str(actual).strip().lower() != language.lower():
+                raise RuntimeError("SPSS reported OLANG={!r} after the request.".format(actual))
+        except Exception as exc:
+            message = (
+                "Could not set SPSS output language to {}. "
+                "Verify that the corresponding SPSS language files are installed. {}"
+            ).format(language, exc)
+            self.last_error = message
+            raise RuntimeError(message)
+        self._diagnostic("SPSS output language: {}".format(language))
+
+    def start(self, output_language=None):
+        if output_language is not None:
+            if output_language not in ("Schinese", "English"):
+                raise ValueError("Unsupported SPSS output language: {}".format(output_language))
+            self.output_language = output_language
         if self.started:
             return
         self._diagnostic("Starting IBM SPSS Statistics processor")
         self._invoke(self.spss.StartSPSS)
         self.started = True
-        self.last_error = None
+        try:
+            self._apply_output_language()
+            self.last_error = None
+        except Exception as exc:
+            # Startup is not ready until the requested output language is usable.
+            # Keep started=True if cleanup fails so EOF/shutdown retries StopSPSS.
+            message = str(exc)
+            try:
+                self._invoke(self.spss.StopSPSS)
+                self.started = False
+            except Exception as cleanup_error:
+                message += " SPSS startup cleanup failed: {}".format(cleanup_error)
+            self.last_error = message
+            raise RuntimeError(message)
 
     def _error_level(self):
         try:
@@ -580,8 +763,11 @@ class SpssBridge(object):
             },
         }
 
-    def run(self, syntax, output_directory, run_id):
-        self.start()
+    def run(self, syntax, output_directory, run_id, output_language=None):
+        self.start(output_language)
+        # User syntax can change OLANG, so restore the display-language policy
+        # before every submission, before opening this run's OMS destination.
+        self._apply_output_language()
         started_at = time.monotonic()
         tag = "__SPSS_STUDIO_{}".format(uuid.uuid4().hex.upper())
         os.makedirs(output_directory, exist_ok=True)
@@ -601,15 +787,10 @@ class SpssBridge(object):
             " IMAGES=YES IMAGEFORMAT=PNG."
         ).format(tag=_quote_spss_string(tag), outfile=_quote_spss_string(output_path))
         oms_end = "OMSEND TAG=[{}].".format(_quote_spss_string(tag))
-        submitted_syntax, normalized_tabs, normalized_lines = _normalize_syntax_for_submit(syntax)
-        if normalized_tabs:
-            warnings.append(
-                "Normalized {} leading tab character{} before SPSS submission (lines {}).".format(
-                    normalized_tabs,
-                    "" if normalized_tabs == 1 else "s",
-                    ", ".join(str(line) for line in normalized_lines),
-                )
-            )
+        submitted_syntax, unused_tabs, unused_lines, normalization_warnings, normalized_endings = _prepare_syntax_for_submit(syntax)
+        warnings.extend(normalization_warnings)
+        if normalized_endings:
+            self._diagnostic("Normalized {} physical CR/CRLF line endings before SPSS submission".format(normalized_endings))
 
         try:
             try:
@@ -620,8 +801,8 @@ class SpssBridge(object):
                 warnings.append(capture_error)
 
             try:
-                # Normalize only command indentation required by the Submit API.
-                # Literal data, embedded code, and all other text remain unchanged.
+                # Normalize the in-memory copy once; never retry user commands.
+                # Preserve literal payloads while making physical CRLF lines safe.
                 self._invoke(self.spss.Submit, submitted_syntax)
                 error_level, error_message = self._last_error()
             except Exception as exc:
@@ -741,7 +922,7 @@ class SpssBridge(object):
         if not isinstance(request_id, str) or not request_id:
             raise ValueError("Request id must be a non-empty string.")
         if operation == "ping":
-            self.start()
+            self.start(request.get("outputLanguage"))
             response = self.status()
         elif operation == "status":
             response = self.status()
@@ -755,7 +936,7 @@ class SpssBridge(object):
                 raise ValueError("Run request outputDirectory must be a non-empty string.")
             if not isinstance(run_id, str) or not run_id:
                 raise ValueError("Run request runId must be a non-empty string.")
-            response = self.run(syntax, output_directory, run_id)
+            response = self.run(syntax, output_directory, run_id, request.get("outputLanguage"))
         elif operation == "datasetInfo":
             response = self.dataset_info()
         elif operation == "datasetPage":

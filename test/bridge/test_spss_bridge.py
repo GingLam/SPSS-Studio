@@ -224,7 +224,9 @@ class SpssBridgeTests(unittest.TestCase):
         self.assertEqual(fake.submissions[1], "EXAMINE VARIABLES=age\n    /PLOT NONE\n    /CINTERVAL 99.")
         self.assertEqual(
             response["warnings"],
-            ["Normalized 2 leading tab characters before SPSS submission (lines 2, 3)."],
+            ["Normalized 2 syntax characters before SPSS submission "
+             "(U+0009 CHARACTER TABULATION at line 2, column 1; "
+             "U+0009 CHARACTER TABULATION at line 3, column 1). Source file unchanged."],
         )
 
     def test_persistent_session_and_oms_cleanup(self):

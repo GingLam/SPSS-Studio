@@ -34,7 +34,7 @@ if (planned.status !== 0) {
   process.exit(planned.status ?? 1);
 }
 const plannedFiles = assertAllowedSourceFiles(planned.stdout.split(/\r?\n/u).filter(Boolean));
-const result = spawnSync(vsceExecutable, ['package', '--allow-missing-repository', '--out', outputPath], {
+const result = spawnSync(vsceExecutable, ['package', '--no-gitHubIssueLinking', '--allow-missing-repository', '--out', outputPath], {
   cwd: projectRoot,
   stdio: 'inherit',
   shell: false,

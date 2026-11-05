@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.5.0 — 2026-11-05
+
+- Native statistical output follows the VS Code display language: Chinese interfaces request Simplified Chinese, while English and other interfaces request English. Engine startup, restart, every execution and configuration probes pass the policy to SPSS, which sets and verifies OLANG before capturing output.
+- GET FILE completion recommends a double-quoted path without the optional equals sign. All existing string-bearing completion templates use double quotes. The compact bilingual Chat instruction follows the same convention while retaining required equals signs elsewhere and valid handwritten syntax.
+- Fixed Windows CRLF syntax submission: carriage returns were passed to the Python Submit API as command characters. The reported multiline RECODE reproduces all five `Warning #206` columns and `Error #4293` in 1.4.3; the same code now runs with LF, CRLF and mixed line endings. Source files are not rewritten.
+- Added code-only separator normalization with lexical protection for strings, comments, raw data, macros and embedded languages. Routine CRLF handling is silent; remaining suspicious characters receive bounded line/column diagnostics rather than broad identifier or punctuation rewriting.
+- Added native-engine regression checks for exact recode values, localized HTML headers, language after restart, GET FILE without equals, and double-quote escaping. Retained Python 3.4 grammar compatibility and existing Studio workflows. Real Windows acceptance remains a separate requirement.
+
 ## 1.4.3 — 2026-10-30
 
 - Further October 31 revision, retaining 1.4.3: kept Output actions outside the results scroll area; Export and Print now honor checked native tables/text blocks, preserve original style and footnotes, reject stale selections, and retain whole-run behavior without a selection.
@@ -26,7 +34,7 @@
 
 ## 1.4.1 — 2026-10-28
 
-- Added per-run dataset counts after execution and clearer success messages when commands load data without producing tables. Warning #67 receives localized guidance while retaining native warning content and SPSS multi-dataset behavior; external file-use warnings are not suppressed.
+- Added per-run dataset counts after execution and clearer success messages when commands load data without producing tables. `Warning #67` receives localized guidance while retaining native warning content and SPSS multi-dataset behavior; external file-use warnings are not suppressed.
 - Added Clear between Print and History in Output. After one confirmation, it clears all datasets and unsaved changes in this Studio engine, refreshes Data/Variables/completion state, and preserves original files, output history, and Chat.
 - Bundled a 1.8 KB original simulated SAV dataset (60 cases, six variables) and English/Chinese SPS tutorials. Quick Start's Example action opens an editable local copy with a resolved data path; it never automatically executes syntax or sends AI requests, and subsequent openings preserve edits.
 - Examples cover import, labels, codebook, descriptive statistics, bar/scatter plots, t tests, regression, and Studio/Chat interactions. Only the example resources receive permission for free reuse; the extension remains proprietary.

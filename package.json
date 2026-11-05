@@ -2,7 +2,7 @@
   "name": "spss-studio",
   "displayName": "SPSS Studio",
   "description": "An exceptionally powerful integrated SPSS Syntax development, execution, interpretation, data, output, and AI environment for researchers.",
-  "version": "1.4.3",
+  "version": "1.5.0",
   "publisher": "jinglin",
   "author": {
     "name": "Jing LIN (林景)",
@@ -271,7 +271,13 @@
         "spssStudio.dataPreviewPageSize": {
           "type": "number",
           "default": 100,
-          "enum": [25, 50, 100, 200, 500],
+          "enum": [
+            25,
+            50,
+            100,
+            200,
+            500
+          ],
           "scope": "machine-overridable",
           "description": "Number of Active Dataset cases loaded per Data Preview page."
         },
@@ -302,7 +308,8 @@
     "test:extension:real": "npm run compile && node out/test/runRealExtensionTests.js",
     "verify": "npm run check:grammar && npm run compile && npm run lint && npm test",
     "vscode:prepublish": "npm run compile",
-    "package": "npm run verify && node tools/package.mjs"
+    "package": "npm run verify && node tools/package.mjs",
+    "test:integration:150": "npm run compile && node out/test/integration/release150.js"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",

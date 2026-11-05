@@ -662,14 +662,14 @@
       {"label": "DESCRIPTIVES", "body": "DESCRIPTIVES VARIABLES=${1:variables}\n /STATISTICS=MEAN STDDEV MIN MAX.", "description": "Descriptive statistics"},
       {"label": "FACTOR", "body": "FACTOR\n /VARIABLES=${1:variables}\n /MISSING=LISTWISE\n /ANALYSIS=${1:variables}\n /EXTRACTION=PC\n /ROTATION=VARIMAX.", "description": "Factor analysis"},
       {"label": "FREQUENCIES", "body": "FREQUENCIES VARIABLES=${1:variables}\n /ORDER=ANALYSIS.", "description": "Frequency tables"},
-      {"label": "GET DATA", "body": "GET DATA\n /TYPE=${1:TXT}\n /FILE=${2:'path'}.", "description": "Read an external data source"},
-      {"label": "GET FILE", "body": "GET FILE=${1:'path/to/data.sav'}.", "description": "Open an SPSS data file"},
+      {"label": "GET DATA", "body": "GET DATA\n /TYPE=${1:TXT}\n /FILE=\"${2:path}\".", "description": "Read an external data source"},
+      {"label": "GET FILE", "body": "GET FILE \"${1:path/to/data.sav}\".", "description": "Open an SPSS data file"},
       {"label": "GLM", "body": "GLM ${1:dependent} BY ${2:factors}\n /METHOD=SSTYPE(3)\n /PRINT=DESCRIPTIVE ETASQ\n /DESIGN=${2:factors}.", "description": "General linear model"},
       {"label": "LOGISTIC REGRESSION", "body": "LOGISTIC REGRESSION VARIABLES ${1:dependent}\n /METHOD=ENTER ${2:predictors}\n /PRINT=CI(95).", "description": "Binary logistic regression"},
       {"label": "ONEWAY", "body": "ONEWAY ${1:dependent} BY ${2:factor}\n /STATISTICS DESCRIPTIVES\n /MISSING ANALYSIS.", "description": "One-way ANOVA"},
       {"label": "RECODE", "body": "RECODE ${1:variable} (${2:old_values}=${3:new_value}) INTO ${4:new_variable}.", "description": "Recode values into a variable"},
       {"label": "REGRESSION", "body": "REGRESSION\n /DEPENDENT ${1:dependent}\n /METHOD=ENTER ${2:predictors}.", "description": "Linear regression"},
-      {"label": "RELIABILITY", "body": "RELIABILITY\n /VARIABLES=${1:items}\n /SCALE('ALL VARIABLES') ALL\n /MODEL=ALPHA.", "description": "Reliability analysis"},
+      {"label": "RELIABILITY", "body": "RELIABILITY\n /VARIABLES=${1:items}\n /SCALE(\"ALL VARIABLES\") ALL\n /MODEL=ALPHA.", "description": "Reliability analysis"},
       {"label": "T-TEST", "body": "T-TEST GROUPS=${1:group}(${2:1} ${3:2})\n /VARIABLES=${4:outcomes}\n /MISSING=ANALYSIS.", "description": "Independent-samples t test"},
       {"label": "UNIANOVA", "body": "UNIANOVA ${1:dependent} BY ${2:factors}\n /METHOD=SSTYPE(3)\n /PRINT=DESCRIPTIVE ETASQ\n /DESIGN=${2:factors}.", "description": "Univariate general linear model"}
     ]

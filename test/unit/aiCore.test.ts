@@ -88,6 +88,43 @@ describe('AI conversation request boundaries', () => {
     assert.throws(() => buildSyntaxExplanationQuestion('  \n '), /empty/iu);
   });
 
+  it('recommends double-quoted strings and limits equals omission to GET FILE in both contexts', () => {
+    for (const language of ['en', 'zh-CN'] as const) {
+      for (const context of ['standard', 'variableExplore'] as const) {
+        const prompt = buildAssistantInstruction(language, context);
+        assert.match(prompt, /GET FILE "(?:path|路径)"/u);
+        if (language === 'en') {
+          assert.match(prompt, /double-quoted strings/iu);
+          assert.match(prompt, /GET FILE "path" without its optional =/u);
+          assert.match(prompt, /keep required = elsewhere/iu);
+        } else {
+          assert.match(prompt, /ASCII双引号/u);
+          assert.match(prompt, /省略该处可选等号/u);
+          assert.match(prompt, /其他命令及选项所需等号保留/u);
+        }
+      }
+    }
+  });
+
+  it('preserves handwritten quotes, path contents, and equals signs in chat history', () => {
+    const history: AiChatMessage[] = [{
+      role: 'user',
+      content: [
+        "GET FILE='O''Brien/study.sav'.",
+        'GET FILE "data/""quoted"" study.sav".',
+        'GET DATA /TYPE=TXT /FILE="data/O\'Brien.txt".',
+        'TITLE \'User "title"\'.',
+        'VARIABLE LABELS age "O\'Brien\'s age".',
+      ].join('\n'),
+    }];
+    const original = structuredClone(history);
+    for (const language of ['en', 'zh-CN'] as const) {
+      const request = buildChatCompletionRequest('model-a', history, language);
+      assert.deepEqual(request.messages.slice(1), original);
+      assert.deepEqual(history, original);
+    }
+  });
+
   it('builds a minimal streamed request containing only system and chat text', () => {
     const request = buildChatCompletionRequest('model-a', [
       { role: 'user', content: 'How do I run FREQUENCIES?' },

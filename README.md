@@ -20,6 +20,7 @@ Contact：[linjing@nufe.edu.cn](mailto:linjing@nufe.edu.cn)
 - Editor-title actions for Undo, Run, and Run All.
 - A standard **File → New File… → SPSS File** entry that opens an empty SPSS editor beside Studio without running syntax.
 - A persistent, serialized local SPSS backend.
+- Native statistical output in Simplified Chinese for Chinese VS Code display languages, and in English for English or other display languages.
 - Native OMS HTML output with run history, structurally aligned Markdown tables for concise AI interpretation, safe standalone HTML export, and browser-based printing.
 - Read-only Data and Variables views for the current Active Dataset.
 - A read-only Variables table with Name/Label filtering, persistent multi-selection, Copy, Insert, and bounded AI-assisted Explore actions; Name cells can also be double-clicked for immediate insertion.
@@ -34,7 +35,7 @@ Contact：[linjing@nufe.edu.cn](mailto:linjing@nufe.edu.cn)
 - A locally installed and licensed IBM SPSS Statistics with the Python Integration Package.
 - A trusted VS Code workspace for execution and Active Dataset access.
 
-IBM SPSS Statistics 27 has been tested on macOS. Version 1.4.3 fixes bridge syntax and UTF-8 transport compatibility for the Python 3.4 runtime supplied with SPSS 26, expands Windows installation discovery, and improves setup diagnostics. Windows-specific command tests are included but skipped on macOS; execution against a real Windows SPSS installation, including SPSS 26, remains pending user acceptance. A passed mock or grammar test is not a real Windows acceptance result.
+IBM SPSS Statistics 27 has been tested on macOS. Version 1.5.0 retains bridge syntax and UTF-8 transport compatibility for the Python 3.4 runtime supplied with SPSS 26, and adds native output-language control plus compatible Windows CRLF syntax submission. Windows-specific command tests are included but skipped on macOS; execution against a real Windows SPSS installation, including SPSS 26, remains pending user acceptance. A passed mock or grammar test is not a real Windows acceptance result.
 
 No separate Python installation is normally required. On Windows, SPSS Studio requires IBM's `statisticspython3.bat` launcher so that the Python runtime and SPSS installation remain version-matched; it does not silently fall back to a generic Python executable. On macOS, IBM's bundled Python remains available as a compatibility fallback when the IBM launcher is absent.
 
@@ -51,6 +52,10 @@ On Windows, use **Detect and Configure SPSS** in Quick Start; the progress windo
 Detection covers SPSS on non-system drives using an independent, time-limited disk scanner, alongside registry and shortcut hints. PowerShell and WMI are not prerequisites for this disk scan; system tools are resolved from Windows directories without requiring PATH or ComSpec. Automatic scanning is bounded to SPSS and common software folders. For arbitrary deep/custom locations, select the installation folder directly. Reports distinguish OS/process architecture and ARM hints. IBM does not officially support SPSS clients on Windows ARM; a setup pass does not constitute IBM compatibility certification. HarmonyOS is a separate platform, and a Windows VM must run VS Code and SPSS together inside that Windows environment.
 
 ## Running syntax
+
+The engine uses the VS Code display language for native table headings: Chinese interfaces request Simplified Chinese; English and other interfaces request English. This is independent of Chat's response-language setting. SPSS supplies its own translations, and existing outputs retain the language used when they were generated. The corresponding SPSS language resources must be installed; inability to apply the requested language is reported explicitly.
+
+GET FILE completion recommends `GET FILE "path/to/data.sav".` without its optional equals sign. String-bearing templates and Chat suggestions use ASCII double quotes; other required equals signs and valid handwritten syntax remain supported. Windows CRLF and Unix/macOS LF source files use the same submission path without changing the source file on disk.
 
 - macOS: `Cmd+Enter`
 - Windows/Linux: `Ctrl+Enter`
@@ -165,7 +170,7 @@ Quick Start includes **Load Example** (or **一键加载示例** in a Chinese VS
 
 The Output toolbar's **Clear**, between **Print** and **History**, discards all loaded datasets and unsaved changes in this Studio engine after confirmation. It preserves source files, output history, and Chat. The Runs sidebar's separate Clear still clears output history only.
 
-Data-loading commands can succeed without producing statistical tables; their run now includes the available case and variable counts. SPSS Warning #67 indicates a file-use condition and does not alone establish a failed read. Its native text is retained with concise guidance. Studio preserves named datasets rather than silently clearing them before imports; use Clear when you intentionally want an empty session. Another process's file use can still require action outside this session.
+Data-loading commands can succeed without producing statistical tables; their run now includes the available case and variable counts. SPSS `Warning #67` indicates a file-use condition and does not alone establish a failed read. Its native text is retained with concise guidance. Studio preserves named datasets rather than silently clearing them before imports; use Clear when you intentionally want an empty session. Another process's file use can still require action outside this session.
 
 ### Runtime configuration
 
@@ -223,6 +228,7 @@ SPSS Studio is not an LSP or a full semantic validator. It does not provide stat
 
 | Version | Date | Update summary |
 | --- | --- | --- |
+| 1.5.0 | 2026-11-05 | Native Chinese/English statistical output follows VS Code. Completion and Chat recommend double-quoted strings and GET FILE without optional equals. Fixed CRLF-triggered multiline RECODE errors and added protected character handling and native-engine regressions. |
 | 1.4.3 | 2026-10-30 | Fixed SPSS 26/Python 3.4 compatibility and setup diagnostics. October 31 revisions add cross-drive Windows setup fallbacks, a persistent Output action bar, selected-result export/print, concise editor labels, compact syntax-generation rules, and the standard SPSS File creation entry. Windows/SPSS 26 real-machine acceptance remains pending. |
 | 1.4.2 | 2026-10-29 | Added per-table Output multi-selection and separate Chat interpretations, preserving native layout, Markdown table structure, statistical qualifications, and privacy filtering. |
 | 1.4.1 | 2026-10-28 | Added per-run data summaries, native file-use warning guidance, a confirmed session-data Clear action, and prebuilt bilingual SPS/SAV examples in Quick Start. |
