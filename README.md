@@ -35,7 +35,7 @@ Contact：[linjing@nufe.edu.cn](mailto:linjing@nufe.edu.cn)
 - A locally installed and licensed IBM SPSS Statistics with the Python Integration Package.
 - A trusted VS Code workspace for execution and Active Dataset access.
 
-IBM SPSS Statistics 27 has been tested on macOS. Version 1.5.0 retains bridge syntax and UTF-8 transport compatibility for the Python 3.4 runtime supplied with SPSS 26, and adds native output-language control plus compatible Windows CRLF syntax submission. Windows-specific command tests are included but skipped on macOS; execution against a real Windows SPSS installation, including SPSS 26, remains pending user acceptance. A passed mock or grammar test is not a real Windows acceptance result.
+IBM SPSS Statistics 27 has been tested on macOS. Version 1.5.1 includes the finalized 1.5.0 fixes: bridge syntax and UTF-8 transport compatibility for the Python 3.4 runtime supplied with SPSS 26, native output-language control, compatible Windows CRLF syntax submission, and balanced local completion. Windows-specific command tests are included but skipped on macOS; execution against a real Windows SPSS installation, including SPSS 26, remains pending user acceptance. A passed mock or grammar test is not a real Windows acceptance result.
 
 No separate Python installation is normally required. On Windows, SPSS Studio requires IBM's `statisticspython3.bat` launcher so that the Python runtime and SPSS installation remain version-matched; it does not silently fall back to a generic Python executable. On macOS, IBM's bundled Python remains available as a compatibility fallback when the IBM launcher is absent.
 
@@ -232,6 +232,7 @@ SPSS Studio is not an LSP or a full semantic validator. It does not provide stat
 
 | Version | Date | Update summary |
 | --- | --- | --- |
+| 1.5.1 | 2026-11-06 | Repackages the finalized 1.5.0 behavior for Marketplace upload. Includes balanced local completion, explicit template selection, quieter automatic suggestions, and SPS-specific Enter/Tab defaults. |
 | 1.5.0 | 2026-11-05 | Native Chinese/English statistical output follows VS Code. Completion and Chat recommend double-quoted strings and GET FILE without optional equals. Fixed CRLF-triggered multiline RECODE errors and added protected character handling and native-engine regressions. |
 | 1.4.3 | 2026-10-30 | Fixed SPSS 26/Python 3.4 compatibility and setup diagnostics. October 31 revisions add cross-drive Windows setup fallbacks, a persistent Output action bar, selected-result export/print, concise editor labels, compact syntax-generation rules, and the standard SPSS File creation entry. Windows/SPSS 26 real-machine acceptance remains pending. |
 | 1.4.2 | 2026-10-29 | Added per-table Output multi-selection and separate Chat interpretations, preserving native layout, Markdown table structure, statistical qualifications, and privacy filtering. |

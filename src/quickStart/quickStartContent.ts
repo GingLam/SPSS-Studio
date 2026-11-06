@@ -157,7 +157,7 @@ function copyFor(language: QuickStartLanguage): QuickStartCopy {
   if (language === 'zh-cn') {
     return {
       title: '快速上手',
-      eyebrow: 'SPSS Studio 1.5.0',
+      eyebrow: 'SPSS Studio 1.5.1',
       introduction: '从打开第一个 .sps 文件开始，完成 Syntax 编辑、SPSS 本地执行、数据与变量查看，以及 AI 辅助解释。',
       preferenceTitle: '更新提醒',
       preferenceText: '此后版本更新时不再自动显示快速上手',
@@ -170,7 +170,7 @@ function copyFor(language: QuickStartLanguage): QuickStartCopy {
   }
   return {
     title: 'Quick Start',
-    eyebrow: 'SPSS Studio 1.5.0',
+    eyebrow: 'SPSS Studio 1.5.1',
     introduction: 'Open your first .sps file, edit and run Syntax locally, inspect data and variables, and use focused AI assistance.',
     preferenceTitle: 'Update reminder',
     preferenceText: 'Do not show Quick Start automatically after future updates',
@@ -209,7 +209,7 @@ export function buildQuickStartHtml(options: QuickStartHtmlOptions): string {
 >
   <main>
     <header class="hero">
-      <div class="eyebrow">SPSS Studio ${escapeAttribute(options.version ?? '1.5.0')}</div>
+      <div class="eyebrow">SPSS Studio ${escapeAttribute(options.version ?? '1.5.1')}</div>
       <h1>${copy.title}</h1>
       <p>${copy.introduction}</p>
     </header>

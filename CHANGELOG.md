@@ -1,8 +1,12 @@
 # Changelog
 
+## 1.5.1 — 2026-11-06
+
+- Incremented the package version for Marketplace upload, preserving the behavior of the finalized local 1.5.0 package.
+- Includes balanced local completion with a two-character automatic threshold, command-specific subcommands, no whole-command templates in automatic lists, and explicit Ctrl+Space / Complete Syntax access to templates. Fixes stale contexts after command termination, CRLF/TAB multi-word names, macros, dotted variables, and control-block expression context. Provides SPS-only anti-accidental Enter/Tab defaults and visible completion-source labels, without changing global settings or Copilot.
+
 ## 1.5.0 — 2026-11-05
 
-- November 6 revision, retaining 1.5.0: added balanced local completion with a two-character automatic threshold, command-specific subcommands, no whole-command templates in automatic lists, and explicit Ctrl+Space / Complete Syntax access to templates. Fixed stale contexts after command termination, CRLF/TAB multi-word names, macros, dotted variables, and control-block expression context. Added SPS-only anti-accidental Enter/Tab defaults and visible completion-source labels, without changing global settings or Copilot.
 - Native statistical output follows the VS Code display language: Chinese interfaces request Simplified Chinese, while English and other interfaces request English. Engine startup, restart, every execution and configuration probes pass the policy to SPSS, which sets and verifies OLANG before capturing output.
 - GET FILE completion recommends a double-quoted path without the optional equals sign. All existing string-bearing completion templates use double quotes. The compact bilingual Chat instruction follows the same convention while retaining required equals signs elsewhere and valid handwritten syntax.
 - Fixed Windows CRLF syntax submission: carriage returns were passed to the Python Submit API as command characters. The reported multiline RECODE reproduces all five `Warning #206` columns and `Error #4293` in 1.4.3; the same code now runs with LF, CRLF and mixed line endings. Source files are not rewritten.
