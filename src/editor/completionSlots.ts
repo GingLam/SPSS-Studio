@@ -36,6 +36,36 @@ function updateAnchors(item: InstalledTemplate, edit: vscode.TextDocumentContent
   return true;
 }
 
+function matchInsertedTemplate(
+  document: vscode.TextDocument, start: number, template: RenderedTemplate, nativeInline: boolean,
+): InstalledTemplate | undefined {
+  const origin = document.positionAt(start);
+  const templateLines = template.text.split('\n');
+  const lines: { shift: number; offset: number }[] = [];
+  let offset = 0;
+  let end = start;
+  for (const [index, expected] of templateLines.entries()) {
+    const lineNumber = origin.line + index;
+    if (lineNumber >= document.lineCount) return undefined;
+    const actual = document.lineAt(lineNumber).text;
+    const adjustIndent = nativeInline && index > 0;
+    const expectedIndent = adjustIndent ? expected.length - expected.trimStart().length : 0;
+    const from = index === 0 ? origin.character : adjustIndent ? actual.length - actual.trimStart().length : 0;
+    const content = expected.slice(expectedIndent);
+    if (!actual.startsWith(content, from)
+      || (index < templateLines.length - 1 && from + content.length !== actual.length)) return undefined;
+    const actualOffset = document.offsetAt(new vscode.Position(lineNumber, from));
+    lines.push({ offset, shift: actualOffset - offset - expectedIndent });
+    end = actualOffset + content.length;
+    offset += expected.length + 1;
+  }
+  const slots = template.slots.map((slot) => {
+    const line = lines.filter(({ offset: lineOffset }) => lineOffset <= slot.start).at(-1);
+    return shift(slot, line?.shift ?? start);
+  });
+  return { start, end, slots };
+}
+
 export class CompletionSlots implements vscode.Disposable {
   private readonly installed = new Map<string, InstalledTemplate[]>();
   private readonly hint = vscode.window.createTextEditorDecorationType({
@@ -47,10 +77,14 @@ export class CompletionSlots implements vscode.Disposable {
 
   public constructor() {
     this.subscriptions = [
-      vscode.commands.registerCommand(TRACK_TEMPLATE, (uri: string, version: number, start: number, template: RenderedTemplate) => {
+      vscode.commands.registerCommand(TRACK_TEMPLATE, (
+        uri: string, version: number, start: number, template: RenderedTemplate, nativeInline: boolean = false,
+      ) => {
         const editor = vscode.window.activeTextEditor;
-        if (editor?.document.uri.toString() === uri && editor.document.version === version + 1) {
-          this.track(editor, start, template);
+        if (editor?.document.uri.toString() !== uri) return;
+        const change = editor.document.version - version;
+        if (change === 1 || (nativeInline && change === 2)) {
+          this.track(editor, start, template, nativeInline);
         }
       }),
       vscode.commands.registerCommand(FINISH_SLOT, () => this.finish()),
@@ -62,19 +96,13 @@ export class CompletionSlots implements vscode.Disposable {
     ];
   }
 
-  public track(editor: vscode.TextEditor, start: number, template: RenderedTemplate): void {
+  public track(editor: vscode.TextEditor, start: number, template: RenderedTemplate, nativeInline = false): void {
     if (!template.slots.length || editor.document.languageId !== 'spss' || editor.selections.length !== 1) return;
-    const document = editor.document;
-    const crlf = document.eol === vscode.EndOfLine.CRLF;
-    const text = crlf ? template.text.replace(/\n/gu, '\r\n') : template.text;
-    if (document.getText(new vscode.Range(document.positionAt(start), document.positionAt(start + text.length))) !== text) return;
-    const key = document.uri.toString();
+    const item = matchInsertedTemplate(editor.document, start, template, nativeInline);
+    if (!item) return;
+    const key = editor.document.uri.toString();
     const existing = this.installed.get(key) ?? [];
-    const slots = template.slots.map((slot) => {
-      const extra = crlf ? (template.text.slice(0, slot.start).match(/\n/gu)?.length ?? 0) : 0;
-      return shift(slot, start + extra);
-    });
-    this.installed.set(key, [...existing.slice(-99), { start, end: start + text.length, slots }]);
+    this.installed.set(key, [...existing.slice(-99), item]);
     this.refresh();
   }
 

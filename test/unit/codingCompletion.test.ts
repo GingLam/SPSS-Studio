@@ -43,6 +43,17 @@ describe('SPSS next-command context', () => {
       'DESCRIPTIVES variablescore.');
   });
 
+  it('retains multiline suggestions from the same localized template catalog', () => {
+    const result = context('DESCRIPTIVES income age.\n');
+    assert.ok(result?.payload);
+    const response = '{"template":"regression","bindings":{}}';
+    const zh = parseCodingChoice(response, result, true);
+    const en = parseCodingChoice(response, result, false);
+    assert.equal(zh?.snippet, 'REGRESSION\n /DEPENDENT $1\n /METHOD=ENTER $2.');
+    assert.equal(zh.preview, 'REGRESSION\n /DEPENDENT 结果变量\n /METHOD=ENTER 解释变量.');
+    assert.equal(en?.preview, 'REGRESSION\n /DEPENDENT outcome\n /METHOD=ENTER predictors.');
+  });
+
   it('discovers typed declarations without running the file', () => {
     const source = 'NUMERIC education (F4.0).\nSTRING ethnicity (A15).\nDESCRIPTIVES e';
     assert.deepEqual(declaredVariablesBefore(source, source.length, schema).map(({ name }) => name),

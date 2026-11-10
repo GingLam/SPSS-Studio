@@ -5,9 +5,9 @@ import {
   analyzeCodingDocument, CODING_INSTRUCTION, nextCommandContext, parseCodingChoice,
   type CodingDocument, type NextCommandContext,
 } from '../language/codingCompletion';
-import type { RenderedTemplate } from '../language/completionTemplates';
+import { usesChineseCompletionHints, type RenderedTemplate } from '../language/completionTemplates';
 import type { SpssLanguageSchema } from '../language/languageSchema';
-import type { CompletionSlots } from './completionSlots';
+import { TRACK_TEMPLATE, type CompletionSlots } from './completionSlots';
 
 export const ACCEPT_CODING = 'spssStudio.acceptNextCommand';
 export const DISMISS_CODING = 'spssStudio.dismissNextCommand';
@@ -28,7 +28,7 @@ interface ScannedPage {
 const MAX_DOCUMENT_CHARS = 1_000_000;
 const REQUEST_DELAY_MS = 600;
 
-export class CodingCompletionController implements vscode.Disposable {
+export class CodingCompletionController implements vscode.Disposable, vscode.InlineCompletionItemProvider {
   private readonly decoration = vscode.window.createTextEditorDecorationType({
     after: { color: new vscode.ThemeColor('editorGhostText.foreground') },
   });
@@ -43,7 +43,7 @@ export class CodingCompletionController implements vscode.Disposable {
   private lastNetworkStart = 0;
   private visible = false;
   private disposed = false;
-  private readonly chinese = vscode.env.language.startsWith('zh');
+  private readonly chinese = usesChineseCompletionHints(vscode.env.language);
 
   public constructor(
     private readonly schema: SpssLanguageSchema,
@@ -53,6 +53,7 @@ export class CodingCompletionController implements vscode.Disposable {
   ) {
     this.lastSelectedEditor = vscode.window.activeTextEditor;
     this.subscriptions = [
+      vscode.languages.registerInlineCompletionItemProvider({ language: 'spss' }, this),
       vscode.commands.registerCommand(ACCEPT_CODING, () => this.accept()),
       vscode.commands.registerCommand(DISMISS_CODING, () => this.invalidate()),
       vscode.window.onDidChangeActiveTextEditor((editor) => {
@@ -72,6 +73,26 @@ export class CodingCompletionController implements vscode.Disposable {
         if (document === this.lastSelectedEditor?.document) this.lastSelectedEditor = undefined;
       }),
     ];
+  }
+
+  public provideInlineCompletionItems(
+    document: vscode.TextDocument,
+    position: vscode.Position,
+    context: vscode.InlineCompletionContext,
+    token: vscode.CancellationToken,
+  ): vscode.InlineCompletionItem[] {
+    const { location, preview } = this;
+    if (token.isCancellationRequested || context.selectedCompletionInfo || !preview?.text.includes('\n')
+      || !location || document !== location.editor.document || document.offsetAt(position) !== location.offset
+      || !this.matches(location)) return [];
+    // Native ghost text reserves editor space for the continuation lines. Empty
+    // snippet slots keep the localized hints out of the accepted document.
+    return [new vscode.InlineCompletionItem(new vscode.SnippetString(preview.snippet),
+      new vscode.Range(position, position), {
+        command: TRACK_TEMPLATE,
+        title: 'Track SPSS completion fields',
+        arguments: [document.uri.toString(), document.version, location.offset, preview, true],
+      })];
   }
 
   public scanActiveEditor(): void {
@@ -196,9 +217,15 @@ export class CodingCompletionController implements vscode.Disposable {
   }
 
   private show(location: Location, template: RenderedTemplate): void {
-    if (!this.matches(location) || /[\r\n]/u.test(template.preview) || template.preview.length > 240) return;
-    const position = location.editor.document.positionAt(location.offset);
+    if (!this.matches(location) || template.preview.length > 2_048) return;
     this.preview = template;
+    if (template.text.includes('\n')) {
+      if (vscode.workspace.getConfiguration('editor', location.editor.document).get<boolean>('inlineSuggest.enabled', true)) {
+        void vscode.commands.executeCommand('editor.action.inlineSuggest.trigger');
+      }
+      return;
+    }
+    const position = location.editor.document.positionAt(location.offset);
     location.editor.setDecorations(this.decoration, [{
       range: new vscode.Range(position, position),
       renderOptions: { after: { contentText: template.preview } },
@@ -208,7 +235,7 @@ export class CodingCompletionController implements vscode.Disposable {
 
   private async accept(): Promise<void> {
     const { location, preview } = this;
-    if (!location || !preview || !this.matches(location)) {
+    if (!location || !preview || preview.text.includes('\n') || !this.matches(location)) {
       this.invalidate();
       await vscode.commands.executeCommand('tab');
       return;
@@ -225,7 +252,11 @@ export class CodingCompletionController implements vscode.Disposable {
     this.timer = undefined;
     this.request?.abort();
     this.request = undefined;
-    if (this.preview && this.location) this.location.editor.setDecorations(this.decoration, []);
+    if (this.preview && this.location) {
+      const { editor } = this.location;
+      if (!this.preview.text.includes('\n')) editor.setDecorations(this.decoration, []);
+      else if (vscode.window.activeTextEditor === editor) void vscode.commands.executeCommand('editor.action.inlineSuggest.hide');
+    }
     this.location = undefined;
     this.preview = undefined;
     this.setVisible(false);

@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import path from 'node:path';
 import { analyzeCompletionContext } from '../../src/language/completionContext';
 import { getCompletionCandidates } from '../../src/language/completionEngine';
+import { COMMAND_TEMPLATES, renderSyntaxTemplate, usesChineseCompletionHints } from '../../src/language/completionTemplates';
 import { loadLanguageSchema } from '../../src/language/languageSchema';
 import { scanCommands } from '../../src/spss/commandScanner';
 import type { ActiveDatasetInfo } from '../../src/spss/types';
@@ -180,14 +181,39 @@ describe('SPSS completion', () => {
     const candidates = getCompletionCandidates(analyzeCompletionContext('', 0, schema), schema, [], 'manual');
     const expected = new Map([
       ['GET FILE', 'GET FILE "$1".'],
-      ['GET DATA', 'GET DATA /TYPE=XLSX /FILE="$1".'],
-      ['RELIABILITY', 'RELIABILITY /VARIABLES=$1.'],
+      ['GET DATA', 'GET DATA\n /TYPE=XLSX\n /FILE="$1".'],
+      ['RELIABILITY', 'RELIABILITY\n /VARIABLES=$1.'],
     ]);
     for (const [label, insertText] of expected) {
       const candidate = candidates.find((item) => item.label === label);
       assert.ok(candidate, label);
       assert.equal(candidate.snippet, true);
       assert.equal(candidate.insertText, insertText);
+    }
+  });
+
+  it('uses Chinese hints for Chinese interface variants and English for other interfaces', () => {
+    assert.ok(['zh', 'zh-cn', 'zh-TW', 'zh-Hans'].every(usesChineseCompletionHints));
+    assert.ok(['en', 'fr', 'ja', 'ko'].every((language) => !usesChineseCompletionHints(language)));
+  });
+
+  it('splits each subcommand and localizes all catalog placeholders without inserting them', () => {
+    const source = 'GET DATA';
+    const context = analyzeCompletionContext(source, source.length, schema);
+    const csv = getCompletionCandidates(context, schema, [], 'automatic', true)
+      .find((item) => item.label === 'GET DATA · CSV');
+    assert.equal(csv?.template?.text, [
+      'GET DATA', ' /TYPE=TXT', ' /FILE=""', ' /ARRANGEMENT=DELIMITED',
+      ' /DELIMITERS=","', ' /VARIABLES=.',
+    ].join('\n'));
+    assert.deepEqual(csv.template.slots.map(({ hint }) => hint), ['数据.csv', '变量及格式']);
+    for (const { id, pattern } of COMMAND_TEMPLATES) {
+      const zh = renderSyntaxTemplate(pattern, true);
+      const en = renderSyntaxTemplate(pattern, false);
+      assert.equal(zh.text, en.text, id);
+      assert.doesNotMatch(pattern, /[^\n] \/[A-Z{]/u, id);
+      assert.ok(zh.slots.every(({ hint }) => /\p{Script=Han}/u.test(hint)), id);
+      assert.ok(en.slots.every(({ hint }) => !/\p{Script=Han}/u.test(hint)), id);
     }
   });
 

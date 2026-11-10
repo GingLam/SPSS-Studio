@@ -160,6 +160,11 @@ describe('SPSS AI Webview contract', () => {
     assert.match(style, /cursor: ns-resize/u);
   });
 
+  it('places the active model before the New, Current, and History controls', () => {
+    const panel = fs.readFileSync(path.resolve(__dirname, '../../../src/views/spssStudioPanel.ts'), 'utf8');
+    assert.match(panel, /class="ai-header"[\s\S]*?id="active-profile"[\s\S]*?id="new-chat"[\s\S]*?id="tab-chat"[\s\S]*?id="tab-history"/u);
+  });
+
   it('distinguishes chat roles and highlights SPSS code without unsafe HTML rendering', () => {
     const script = fs.readFileSync(path.resolve(__dirname, '../../../media/ai.js'), 'utf8');
     const style = fs.readFileSync(path.resolve(__dirname, '../../../media/ai.css'), 'utf8');

@@ -3,7 +3,7 @@ import type { VariableCache } from '../spss/variableCache';
 import { declaredVariablesBefore } from './codingCompletion';
 import { analyzeCompletionContext } from './completionContext';
 import { getCompletionCandidates, type CompletionCandidateKind } from './completionEngine';
-import type { RenderedTemplate } from './completionTemplates';
+import { usesChineseCompletionHints, type RenderedTemplate } from './completionTemplates';
 import type { SpssLanguageSchema } from './languageSchema';
 
 const kinds: Record<CompletionCandidateKind, vscode.CompletionItemKind> = {
@@ -52,7 +52,7 @@ export class SpssCompletionProvider implements vscode.CompletionItemProvider {
     const names = new Set(cached.map(({ name }) => name.toUpperCase()));
     const variables = [...cached, ...local.filter(({ name }) => !names.has(name.toUpperCase()))];
     const candidates = getCompletionCandidates(context, this.schema, variables,
-      manual ? 'manual' : 'automatic', vscode.env.language.startsWith('zh'));
+      manual ? 'manual' : 'automatic', usesChineseCompletionHints(vscode.env.language));
     const suffix = document.lineAt(position.line).text.slice(position.character);
     if (/^[\p{L}\p{M}\p{N}_@#$]/u.test(suffix)) return new vscode.CompletionList([], false);
     const range = new vscode.Range(document.positionAt(context.replaceStart), position);
@@ -72,8 +72,11 @@ export class SpssCompletionProvider implements vscode.CompletionItemProvider {
       item.preselect = index === 0;
       item.commitCharacters = [];
       item.filterText = candidate.filterText ?? (candidate.kind === 'subcommand' ? candidate.label.slice(1) : candidate.label);
-      item.detail = `SPSS Studio · ${template?.preview ?? candidate.detail ?? candidate.kind}`;
-      if (candidate.documentation) {
+      const multilinePreview = template?.preview.includes('\n') ? template.preview : undefined;
+      item.detail = `SPSS Studio · ${multilinePreview ? candidate.label : template?.preview ?? candidate.detail ?? candidate.kind}`;
+      if (multilinePreview) {
+        item.documentation = new vscode.MarkdownString().appendCodeblock(multilinePreview, 'spss');
+      } else if (candidate.documentation) {
         item.documentation = new vscode.MarkdownString(candidate.documentation);
       }
       return item;

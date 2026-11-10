@@ -293,7 +293,7 @@ export function parseCodingChoice(
     if (!choice || typeof choice.template !== 'string' || !context.allowed.has(choice.template)) return undefined;
     const entry = syntaxTemplate(choice.template);
     const fields = limitedTemplates[choice.template];
-    if (!entry || !fields || entry.pattern.includes('\n')) return undefined;
+    if (!entry || !fields) return undefined;
     if (choice.bindings !== undefined && (!choice.bindings || typeof choice.bindings !== 'object' || Array.isArray(choice.bindings))) return undefined;
     const bindings: Record<string, string> = {};
     for (const [field, ids] of Object.entries(choice.bindings ?? {})) {

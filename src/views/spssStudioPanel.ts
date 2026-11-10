@@ -570,14 +570,12 @@ export class SpssStudioPanel implements vscode.Disposable {
     <section id="ai-view" class="view">
       <div id="spss-ai">
         <header class="ai-header">
+          <label class="profile-selector"><span id="active-profile-label"></span><select id="active-profile"></select></label>
           <nav id="tabs" class="tabs" aria-label="SPSS AI">
+            <button id="new-chat" type="button"></button>
             <button type="button" data-page="chat" id="tab-chat"></button>
             <button type="button" data-page="history" id="tab-history"></button>
           </nav>
-          <div class="header-actions">
-            <label class="profile-selector"><span id="active-profile-label"></span><select id="active-profile"></select></label>
-            <button id="new-chat" type="button"></button>
-          </div>
         </header>
         <div id="banner" class="banner" hidden></div>
         <section id="page-chat" class="page chat-page">
