@@ -43,7 +43,7 @@
   };
 
   const byId = (id) => document.getElementById(id);
-  const tabs = ['output', 'data', 'variables', 'ai'];
+  const tabs = ['output', 'data', 'variables', 'ai', 'settings'];
 
   function formatText(template, values) {
     return String(template).replace(/\{([a-z]+)\}/giu, (match, key) => values[key] ?? match);
@@ -59,7 +59,9 @@
   }
 
   const aiModule = window.createSpssAiModule({
-    root: byId('spss-ai'),
+    root: byId('studio-views'),
+    showSettings: () => showTab('settings'),
+    showingSettings: () => state.activeTab === 'settings',
     postMessage: (message) => vscode.postMessage({ scope: 'ai', message }),
     getState: () => persistedState.ai || {},
     setState: (value) => updatePersistedState('ai', value),
@@ -77,6 +79,7 @@
         data: 'showData',
         variables: 'showVariables',
         ai: 'showAi',
+        settings: 'showSettings',
       };
       postStudio({ type: messages[tab] });
     }
@@ -472,6 +475,7 @@
   byId('data-tab').addEventListener('click', () => showTab('data'));
   byId('variables-tab').addEventListener('click', () => showTab('variables'));
   byId('ai-tab').addEventListener('click', () => showTab('ai'));
+  byId('settings-tab').addEventListener('click', () => showTab('settings'));
   byId('clear-output').addEventListener('click', () => postStudio({ type: 'clearOutput' }));
   byId('clear-data').addEventListener('click', () => {
     if (!byId('clear-data').disabled) postStudio({ type: 'clearData' });
@@ -663,6 +667,8 @@
       showTab('variables', false);
     } else if (message.type === 'showAi') {
       showTab('ai', false);
+    } else if (message.type === 'showSettings') {
+      showTab('settings', false);
     } else if (message.type === 'outputCleared') {
       state.outputSelections.clear();
       state.invalidOutputSelections.clear();

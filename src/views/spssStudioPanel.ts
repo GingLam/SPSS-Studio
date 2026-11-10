@@ -115,9 +115,9 @@ export class SpssStudioPanel implements vscode.Disposable {
 
   public showAi(page: AiPage = 'chat'): void {
     const panel = this.ensurePanel();
-    this.activeTab = 'ai';
+    this.activeTab = page === 'profiles' ? 'settings' : 'ai';
     panel.reveal(vscode.ViewColumn.Beside, false);
-    void this.postStudio({ type: 'showAi' });
+    void this.postStudio({ type: page === 'profiles' ? 'showSettings' : 'showAi' });
     void this.aiController.showPage(page);
   }
 
@@ -254,8 +254,8 @@ export class SpssStudioPanel implements vscode.Disposable {
         if (!this.dataset) {
           void this.callbacks.refreshVariables();
         }
-      } else if (message.type === 'showAi') {
-        this.activeTab = 'ai';
+      } else if (message.type === 'showAi' || message.type === 'showSettings') {
+        this.activeTab = message.type === 'showSettings' ? 'settings' : 'ai';
         void this.aiController.refresh();
       } else if (message.type === 'refreshData') {
         void this.callbacks.refreshData();
@@ -314,6 +314,7 @@ export class SpssStudioPanel implements vscode.Disposable {
       data: 'showData',
       variables: 'showVariables',
       ai: 'showAi',
+      settings: 'showSettings',
     };
     await this.postStudio({ type: showType[this.activeTab] } as ExtensionToWebviewMessage);
   }
@@ -542,10 +543,10 @@ export class SpssStudioPanel implements vscode.Disposable {
 </head>
 <body>
   <header class="toolbar">
-    <nav><button id="variables-tab" class="tab">${text(strings.tabVariables)}</button><button id="data-tab" class="tab">${text(strings.tabData)}</button><button id="output-tab" class="tab active">${text(strings.tabOutput)}</button><button id="ai-tab" class="tab">${text(strings.tabChat)}</button></nav>
+    <nav><button id="variables-tab" class="tab">${text(strings.tabVariables)}</button><button id="data-tab" class="tab">${text(strings.tabData)}</button><button id="output-tab" class="tab active">${text(strings.tabOutput)}</button><button id="ai-tab" class="tab">${text(strings.tabChat)}</button><button id="settings-tab" class="tab">${text(strings.tabSettings)}</button></nav>
     <span id="engine-state">${text(strings.enginePrefix)}: ${text(strings.engineStates.stopped)}</span>
   </header>
-  <main>
+  <main id="studio-views">
     <section id="output-view" class="view active">
       <div id="output-main">
         <div class="output-actions"><button id="explain-output" disabled>${text(strings.outputExplain)}</button><button id="export-output" disabled>${text(strings.outputExport)}</button><button id="print-output" disabled>${text(strings.outputPrint)}</button><button id="clear-data" disabled title="${text(strings.clearData)}">${text(strings.clear)}</button><button id="toggle-history" type="button" aria-expanded="false">${text(strings.outputHistory)}</button></div>
@@ -576,7 +577,6 @@ export class SpssStudioPanel implements vscode.Disposable {
           <div class="header-actions">
             <label class="profile-selector"><span id="active-profile-label"></span><select id="active-profile"></select></label>
             <button id="new-chat" type="button"></button>
-            <button id="manage-profiles" type="button" aria-pressed="false"></button>
           </div>
         </header>
         <div id="banner" class="banner" hidden></div>
@@ -596,7 +596,11 @@ export class SpssStudioPanel implements vscode.Disposable {
           <div class="page-toolbar"><span id="history-heading"></span><button id="clear-history" type="button"></button></div>
           <div id="history-list" class="history-list"></div>
         </section>
-        <section id="page-profiles" class="page profiles-page" hidden>
+      </div>
+    </section>
+    <section id="settings-view" class="view">
+      <div id="settings-banner" class="banner" role="status" hidden></div>
+      <section id="page-profiles" class="profiles-page">
           <div class="response-language-setting">
             <label for="response-language" id="response-language-label"></label>
             <select id="response-language">
@@ -614,20 +618,23 @@ export class SpssStudioPanel implements vscode.Disposable {
             <label class="wide"><span id="base-url-label"></span><input id="base-url" type="url" autocomplete="off"></label>
             <label><span id="model-label"></span><input id="model" type="text" autocomplete="off"></label>
             <label><span id="api-key-label"></span><input id="api-key" type="password" autocomplete="off"></label>
-            <label class="reasoning-setting wide"><input id="reasoning-enabled" type="checkbox"><span id="reasoning-enabled-label"></span></label>
+            <div class="profile-options wide">
+              <label class="reasoning-setting"><input id="reasoning-enabled" type="checkbox"><span id="reasoning-enabled-label"></span></label>
+              <label class="reasoning-setting"><input id="coding-enabled" type="checkbox" aria-describedby="coding-hint"><span id="coding-enabled-label"></span></label>
+            </div>
+            <div id="coding-hint" class="key-status wide"></div>
             <div id="reasoning-status" class="key-status wide"></div>
             <div id="key-status" class="key-status wide"></div>
             <div class="profile-actions wide">
               <button id="save-profile" type="submit"></button>
-              <button id="duplicate-profile" type="button"></button>
+              <button id="test-profile" type="button"></button>
               <button id="make-active" type="button"></button>
-              <button id="delete-key" type="button"></button>
               <button id="delete-profile" type="button"></button>
               <button id="provider-help" type="button"></button>
             </div>
+            <div id="profile-test-status" class="key-status wide" role="status"></div>
           </form>
-        </section>
-      </div>
+      </section>
     </section>
   </main>
   <script nonce="${nonce}">globalThis.SPSS_STUDIO_STRINGS = ${serializedStrings};</script>

@@ -24,6 +24,8 @@ import {
   insertCachedVariable,
   insertCachedVariables,
 } from './commands/variableCommands';
+import { CodingCompletionController } from './editor/codingCompletionController';
+import { CompletionSlots, TRACK_TEMPLATE } from './editor/completionSlots';
 import { SpssEditorTargetTracker } from './editor/spssEditorTargetTracker';
 import { SpssCompletionProvider } from './language/completionProvider';
 import { loadLanguageSchema } from './language/languageSchema';
@@ -117,6 +119,10 @@ export function activate(context: vscode.ExtensionContext): SpssStudioExtensionA
   );
   const variableCommandDependencies = { variableCache, editorTarget };
   const modelProfiles = new ModelProfileStore(context.globalState, context.secrets);
+  const aiClient = new OpenAiCompatibleClient();
+  const languageSchema = loadLanguageSchema(context.extensionPath);
+  const completionSlots = new CompletionSlots();
+  const codingCompletion = new CodingCompletionController(languageSchema, modelProfiles, aiClient, completionSlots);
   const conversationStore = new ConversationStore(
     vscode.Uri.joinPath(context.globalStorageUri, 'ai-history').fsPath,
     {
@@ -134,7 +140,7 @@ export function activate(context: vscode.ExtensionContext): SpssStudioExtensionA
     void vscode.window.showErrorMessage(`${runtimeStrings.configurationMigrationFailed}: ${message}`);
   });
   const aiPanelController = new SpssAiPanelController(
-    new AiSessionController(modelProfiles, conversationStore, new OpenAiCompatibleClient()),
+    new AiSessionController(modelProfiles, conversationStore, aiClient),
     {
       insertCode: (code) => editorTarget.insert(code),
       runCode: async (code) => {
@@ -172,6 +178,11 @@ export function activate(context: vscode.ExtensionContext): SpssStudioExtensionA
     context.globalState,
     aiInitialization,
     vscode.env.language,
+    {
+      profiles: modelProfiles, client: aiClient,
+      scanCoding: () => codingCompletion.scanActiveEditor(),
+      invalidateCoding: () => codingCompletion.modelChanged(),
+    },
   );
   outputStore = new OutputStore();
   studioPanel = new SpssStudioPanel(context.extensionUri, outputStore, {
@@ -219,6 +230,7 @@ export function activate(context: vscode.ExtensionContext): SpssStudioExtensionA
 
   const executionDependencies: ExecutionCommandDependencies = {
     studio,
+    hasIncompleteTemplate: (document, start, end) => completionSlots.intersectsIncomplete(document, start, end),
   };
   const engineDependencies: EngineCommandDependencies = {
     engine: engineService,
@@ -226,8 +238,12 @@ export function activate(context: vscode.ExtensionContext): SpssStudioExtensionA
     getConfiguration: readConfiguration,
   };
   const completionProvider = new SpssCompletionProvider(
-    loadLanguageSchema(context.extensionPath),
+    languageSchema,
     variableCache,
+    (document, start, template) => ({
+      command: TRACK_TEMPLATE, title: 'Track SPSS completion fields',
+      arguments: [document.uri.toString(), document.version, start, template],
+    }),
   );
   context.subscriptions.push(
     output,
@@ -239,6 +255,8 @@ export function activate(context: vscode.ExtensionContext): SpssStudioExtensionA
     quickStart,
     runtimeSetup,
     aiPanelController,
+    completionSlots,
+    codingCompletion,
     vscode.languages.registerCompletionItemProvider('spss', completionProvider, '/', '.'),
     vscode.commands.registerCommand('spssStudio.complete', async () => {
       const editor = vscode.window.activeTextEditor;

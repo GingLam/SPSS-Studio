@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.5.2 — 2026-11-10
+
+- Move model profiles to a dedicated Settings tab with compact numbering, a connection test, and an independent coding model.
+- Start local completion after one character. Tab accepts ranked minimal syntax with gray input hints.
+- Offer opt-in next-command suggestions from local SPSS workflows and anonymized context validated against built-in templates.
+
 ## 1.5.1 — 2026-11-06
 
 - Incremented the package version for Marketplace upload, preserving the behavior of the finalized local 1.5.0 package.

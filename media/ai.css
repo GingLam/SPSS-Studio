@@ -128,7 +128,7 @@
   border-bottom-color: var(--vscode-focusBorder);
 }
 
-#manage-profiles.active {
+#settings-tab.active {
   color: var(--vscode-button-foreground);
   background: var(--vscode-button-hoverBackground);
   border-color: var(--vscode-focusBorder);
@@ -462,7 +462,9 @@
 
 .profiles-page {
   display: grid;
-  grid-template-columns: minmax(190px, 30%) minmax(280px, 1fr);
+  grid-template-columns: 80px minmax(0, 1fr);
+  flex: 1;
+  min-height: 0;
   grid-template-rows: auto minmax(0, 1fr);
   overflow: auto;
 }
@@ -492,7 +494,7 @@
 .profiles-sidebar {
   grid-row: 2;
   min-height: 0;
-  padding: 10px;
+  padding: 8px 6px;
   overflow: auto;
   border-right: 1px solid var(--vscode-panel-border);
 }
@@ -508,14 +510,13 @@
 }
 
 .profile-row {
-  display: grid;
-  gap: 3px;
+  white-space: nowrap;
   width: 100%;
   padding: 8px;
   color: var(--vscode-foreground);
   background: transparent;
   border: 1px solid transparent;
-  text-align: left;
+  text-align: center;
 }
 
 .profile-row:hover {
@@ -581,20 +582,22 @@
     max-width: 180px;
   }
 
-  .profiles-page {
-    grid-template-columns: 1fr;
-  }
+}
 
-  .profiles-sidebar {
-    grid-row: auto;
-    max-height: 190px;
-    border-right: 0;
-    border-bottom: 1px solid var(--vscode-panel-border);
-  }
+#settings-view.active { flex-direction: column; min-height: 0; overflow: hidden; }
+#settings-view { font: var(--vscode-font-size) var(--vscode-font-family); }
+#settings-view button, #settings-view input, #settings-view select { font: inherit; }
+#settings-banner { flex: none; }
+.profile-options { display: flex; gap: 12px; flex-wrap: wrap; }
+.profile-form label { min-width: 0; }
+.profile-actions { flex-wrap: wrap; }
 
-  .profile-form {
-    grid-row: auto;
-  }
+@media (max-width: 300px) {
+  .profiles-page { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto auto minmax(0, 1fr); }
+  .profiles-sidebar { grid-row: 2; display: flex; align-items: center; gap: 5px; border-right: 0; }
+  .profiles-sidebar > button { width: auto; margin: 0; }
+  .profile-list { display: flex; }
+  .profile-form { grid-row: 3; }
 }
 
 @media (max-width: 520px) {
@@ -618,3 +621,5 @@
     grid-column: auto;
   }
 }
+
+.profile-test-status.test-error, #profile-test-status.test-error { color: var(--vscode-errorForeground); }

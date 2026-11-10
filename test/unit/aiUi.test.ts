@@ -67,6 +67,13 @@ describe('SPSS AI Webview contract', () => {
     assert.equal(isAiWebviewMessage({ type: 'executeCode', code: 'DELETE EVERYTHING' }), false);
   });
 
+  it('accepts a bounded connection test and a separate coding profile action', () => {
+    assert.equal(isAiWebviewMessage({ type: 'testProfile', requestId: 1, providerId: 'custom',
+      baseUrl: 'https://example.com/v1', model: 'model', reasoningEnabled: false }), true);
+    assert.equal(isAiWebviewMessage({ type: 'setCodingProfile', profileId: 'profile-1', enabled: true }), true);
+    assert.equal(isAiWebviewMessage({ type: 'setCodingProfile', profileId: 'profile-1', enabled: 'yes' }), false);
+  });
+
   it('uses inert DOM rendering and localized code actions inside a host-independent module', () => {
     const script = fs.readFileSync(path.resolve(__dirname, '../../../media/ai.js'), 'utf8');
     const studioScript = fs.readFileSync(path.resolve(__dirname, '../../../media/studio.js'), 'utf8');
@@ -122,7 +129,7 @@ describe('SPSS AI Webview contract', () => {
     assert.doesNotMatch(panel, /script-src[^\n]*unsafe-inline/u);
   });
 
-  it('keeps model profiles behind Settings and exposes an adjustable composer boundary', () => {
+  it('puts model profiles on the Studio Settings tab and exposes an adjustable composer boundary', () => {
     const panel = fs.readFileSync(
       path.resolve(__dirname, '../../../src/views/spssStudioPanel.ts'),
       'utf8',
@@ -132,13 +139,18 @@ describe('SPSS AI Webview contract', () => {
     assert.match(panel, /data-page="chat"/u);
     assert.match(panel, /data-page="history"/u);
     assert.doesNotMatch(panel, /data-page="profiles"/u);
-    assert.match(panel, /id="manage-profiles"/u);
+    assert.doesNotMatch(panel, /id="(?:manage-profiles|duplicate-profile|delete-key)"/u);
+    assert.match(panel, /id="ai-tab"[\s\S]*id="settings-tab"/u);
+    assert.match(panel, /id="settings-view"[\s\S]*id="page-profiles"/u);
+    assert.match(panel, /id="test-profile"[\s\S]*id="make-active"/u);
+    assert.match(panel, /id="reasoning-enabled"[\s\S]*id="coding-enabled"/u);
+    assert.match(style, /grid-template-columns: 80px minmax\(0, 1fr\)/u);
     assert.match(panel, /id="page-profiles"/u);
     assert.match(panel, /id="response-language"/u);
     assert.match(panel, /id="reasoning-enabled"/u);
     assert.match(script, /reasoningEnabled: elements\.reasoningEnabled\.checked/u);
     assert.match(script, /reasoningControl !== 'none'/u);
-    assert.match(script, /manageProfiles\.addEventListener\('click', \(\) => showPage\('profiles'\)\)/u);
+    assert.match(script, /strings\.modelNumber\.replace/u);
     assert.match(panel, /role="separator"/u);
     assert.match(panel, /aria-orientation="horizontal"/u);
     assert.match(script, /ArrowUp/u);

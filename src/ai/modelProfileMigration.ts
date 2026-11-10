@@ -48,7 +48,8 @@ export async function migrateLegacyProviderConfiguration(
   }
 
   const oldKey = await secrets.get(legacyProviderSecretKey(legacy.providerId));
-  const newSecretKey = profileSecretKey(target.id);
+  const storedTarget = profiles.readStoredIndex().profiles.find(({ id }) => id === target.id);
+  const newSecretKey = profileSecretKey(target.id, storedTarget?.credentialRevision);
   if (oldKey) {
     const currentKey = await secrets.get(newSecretKey);
     if (!currentKey) {

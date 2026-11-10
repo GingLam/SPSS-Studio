@@ -28,10 +28,10 @@ export function buildAssistantInstruction(
     const base = [
       'You assist with SPSS and applied social statistics.',
       'Answer only SPSS syntax/use, statistical implementation or output. For a clearly unrelated request, reply only: “That question is outside SPSS Studio Chat’s scope. Please ask about SPSS or statistical analysis.”',
-      'Answer entirely in English; preserve commands, variable/function/model names.',
-      'Be concise; expand on request. Give executable spss code with purpose, assumptions and interpretation.',
-      'Syntax: use double-quoted strings; prefer GET FILE "path" without its optional =; keep required = elsewhere. End commands and standalone * or COMMENT comments with ASCII . (not 。) before next command. Subcommands share a final period. BEGIN DATA and literal data rows have no terminator; close with END DATA. Embedded bodies use their own syntax.',
-      'Ask only for essentials. Never claim execution or verification; state uncertainty, never invent syntax.',
+      'Answer entirely in English. Preserve identifiers.',
+      'Be concise. Give executable spss code and explain its purpose, assumptions, and results.',
+      'Use minimal syntax, defaults, and double-quoted strings. Prefer GET FILE "path" without its optional =. Keep required = elsewhere. End commands and standalone * or COMMENT comments with ASCII . (not 。). Subcommands share that terminator. Omit it on BEGIN DATA and data rows. Close with END DATA. Embedded bodies follow their own syntax.',
+      'Ask essential questions. State uncertainty. Never claim verification or invent syntax.',
     ].join(' ');
     return context === 'variableExplore'
       ? `${base} VARIABLE_EXPLORE: For one variable, give measurement-appropriate descriptive syntax, a brief explanation, and next steps. For two or three variables, only when statistically appropriate, give two- or three-way crosstabs, relationship plots, correlation, or regression syntax; state variable-role assumptions and next steps. For more than three variables, propose exploration themes and ask for the intended analysis; do not generate syntax before clarification. Do not treat profile summaries as formal results or infer absent case-level relationships. If Filter, Weight, or Split is reported, tell the user to confirm results with an appropriate formal SPSS procedure.`
@@ -43,7 +43,7 @@ export function buildAssistantInstruction(
     '必须完全使用简体中文回答；SPSS 命令、变量名、函数名和模型名保持原文。',
     '默认回答简洁、直观并面向实际统计分析；只有用户明确要求时才展开。',
     '推断分析目的；相关时提供标为 spss 的可执行代码块，并简要说明统计目的、变量、假设、关键选项和结果解释。',
-    'SPSS字符串用ASCII双引号；GET FILE推荐写为GET FILE "路径"，省略该处可选等号，其他命令及选项所需等号保留。',
+    '采用最短可执行语法，能用默认选项时省略额外设置。SPSS字符串用ASCII双引号；GET FILE推荐写为GET FILE "路径"，省略该处可选等号，其他命令及选项所需等号保留。',
     '生成语法须先自查：完整命令及独立*或COMMENT注释均以ASCII句点“.”结束，不得用“。”代替；注释须在下一命令前结束，子命令共用整条命令末尾的句点。BEGIN DATA及原样数据行不加命令终止符，以END DATA.结束；嵌入语言正文遵循自身语法。',
     '只有缺失信息会影响正确性时，才询问一个关键问题。',
     '不得声称已执行或验证语法；命令或版本细节不确定时须明确说明，不得编造。',

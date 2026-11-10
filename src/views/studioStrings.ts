@@ -5,6 +5,7 @@ export interface StudioStrings {
   tabData: string;
   tabOutput: string;
   tabChat: string;
+  tabSettings: string;
   enginePrefix: string;
   engineStates: Record<EngineState, string>;
   executionStatuses: Record<ExecutionStatus | 'RUNNING', string>;
@@ -78,6 +79,7 @@ export const STUDIO_STRINGS_EN: StudioStrings = {
   tabData: 'Data',
   tabOutput: 'Output',
   tabChat: 'Chat',
+  tabSettings: 'Settings',
   enginePrefix: 'SPSS',
   engineStates: {
     stopped: 'Stopped',
@@ -165,6 +167,7 @@ export const STUDIO_STRINGS_ZH_CN: StudioStrings = {
   tabData: '数据',
   tabOutput: '输出',
   tabChat: '对话',
+  tabSettings: '设置',
   enginePrefix: 'SPSS',
   engineStates: {
     stopped: '已停止',

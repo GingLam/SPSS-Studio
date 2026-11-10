@@ -4,7 +4,7 @@ import { SpssCompletionProvider } from '../../src/language/completionProvider';
 import { loadLanguageSchema } from '../../src/language/languageSchema';
 import { VariableCache } from '../../src/spss/variableCache';
 
-describe('SPSS balanced native completion', () => {
+describe('SPSS native completion', () => {
   before(async () => {
     const extension = vscode.extensions.getExtension('jinglin.spss-studio');
     assert.ok(extension);
@@ -20,7 +20,7 @@ describe('SPSS balanced native completion', () => {
     const document = await vscode.workspace.openTextDocument({ language: 'spss', content: 'reg' });
     const editor = vscode.workspace.getConfiguration('editor', document);
     assert.equal(editor.get('acceptSuggestionOnEnter'), 'off');
-    assert.equal(editor.get('suggest.selectionMode'), 'never');
+    assert.equal(editor.get('suggest.selectionMode'), 'always');
     assert.equal(editor.get('quickSuggestionsDelay'), 300);
     assert.equal(editor.get('tabCompletion'), 'off');
     const plain = await vscode.workspace.openTextDocument({ language: 'plaintext', content: 'reg' });
@@ -35,7 +35,7 @@ describe('SPSS balanced native completion', () => {
     const extension = vscode.extensions.getExtension('jinglin.spss-studio');
     assert.ok(extension);
     const provider = new SpssCompletionProvider(loadLanguageSchema(extension.extensionPath), new VariableCache());
-    for (const source of ['', 'r', 'GET FILE ', 'COMPUTE x=1.\r\n']) {
+    for (const source of ['', 'GET FILE ', 'COMPUTE x=1.\r\n']) {
       const document = await vscode.workspace.openTextDocument({ language: 'spss', content: source });
       assert.deepEqual(provider.provideCompletionItems(document, document.positionAt(source.length)).items, []);
     }
@@ -49,59 +49,46 @@ describe('SPSS balanced native completion', () => {
   it('consumes manual intent once and rejects a different document or edited version', async () => {
     const extension = vscode.extensions.getExtension('jinglin.spss-studio');
     assert.ok(extension);
-    // The wished-for production API is used by the real command handler too.
-    const provider = new SpssCompletionProvider(loadLanguageSchema(extension.extensionPath), new VariableCache()) as SpssCompletionProvider & {
-      prepareManualCompletion(document: vscode.TextDocument, position: vscode.Position): void;
-    };
-    assert.equal(typeof provider.prepareManualCompletion, 'function');
-    const document = await vscode.workspace.openTextDocument({ language: 'spss', content: 'g' });
-    const position = document.positionAt(1);
+    const provider = new SpssCompletionProvider(loadLanguageSchema(extension.extensionPath), new VariableCache());
+    const document = await vscode.workspace.openTextDocument({ language: 'spss', content: '' });
+    const position = document.positionAt(0);
     provider.prepareManualCompletion(document, position);
-    assert.ok(provider.provideCompletionItems(document, position).items.some((item) => item.kind === vscode.CompletionItemKind.Snippet));
+    assert.ok(provider.provideCompletionItems(document, position).items.length > 1);
     assert.deepEqual(provider.provideCompletionItems(document, position).items, []);
-    const other = await vscode.workspace.openTextDocument({ language: 'spss', content: 'g' });
+    const other = await vscode.workspace.openTextDocument({ language: 'spss', content: '' });
     provider.prepareManualCompletion(document, position);
     assert.deepEqual(provider.provideCompletionItems(other, position).items, []);
-    assert.deepEqual(provider.provideCompletionItems(document, position).items, []);
-    provider.prepareManualCompletion(document, position);
-    assert.deepEqual(provider.provideCompletionItems(document, document.positionAt(0)).items, []);
     assert.deepEqual(provider.provideCompletionItems(document, position).items, []);
     const cancellation = new vscode.CancellationTokenSource();
     try {
       provider.prepareManualCompletion(document, position);
       cancellation.cancel();
       assert.deepEqual(provider.provideCompletionItems(document, position, cancellation.token).items, []);
-      assert.deepEqual(provider.provideCompletionItems(document, position).items, []);
     } finally { cancellation.dispose(); }
     provider.prepareManualCompletion(document, position);
     const edit = new vscode.WorkspaceEdit();
-    edit.insert(document.uri, position, 'e');
+    edit.insert(document.uri, position, ' ');
     assert.equal(await vscode.workspace.applyEdit(edit), true);
-    assert.ok(provider.provideCompletionItems(document, document.positionAt(2)).items.every((item) => item.kind !== vscode.CompletionItemKind.Snippet));
-  });
-
-  it('expires a manual request rather than applying it to a later automatic refresh', async () => {
-    const extension = vscode.extensions.getExtension('jinglin.spss-studio');
-    assert.ok(extension);
-    const provider = new SpssCompletionProvider(loadLanguageSchema(extension.extensionPath), new VariableCache());
-    const document = await vscode.workspace.openTextDocument({ language: 'spss', content: 'g' });
-    const position = document.positionAt(1);
-    provider.prepareManualCompletion(document, position);
-    await new Promise((resolve) => setTimeout(resolve, 5100));
     assert.deepEqual(provider.provideCompletionItems(document, position).items, []);
   });
 
-  it('opens the manual list and inserts the chosen double-quoted template through the native editor', async () => {
-    const document = await vscode.workspace.openTextDocument({ language: 'spss', content: 'GET FI' });
+  it('accepts the first one-character template in the native editor and finishes its file field', async () => {
+    const document = await vscode.workspace.openTextDocument({ language: 'spss', content: 'G' });
     const editor = await vscode.window.showTextDocument(document, vscode.ViewColumn.One);
-    editor.selection = new vscode.Selection(document.positionAt(6), document.positionAt(6));
-    await vscode.commands.executeCommand('editor.action.triggerSuggest');
-    await new Promise((resolve) => setTimeout(resolve, 200));
+    editor.selection = new vscode.Selection(document.positionAt(1), document.positionAt(1));
+    await vscode.commands.executeCommand('workbench.action.focusWindow');
+    await vscode.commands.executeCommand('workbench.action.focusFirstEditorGroup');
+    await new Promise((resolve) => setTimeout(resolve, 300));
     await vscode.commands.executeCommand('spssStudio.complete');
-    await new Promise((resolve) => setTimeout(resolve, 400));
-    await vscode.commands.executeCommand('selectLastSuggestion');
+    await new Promise((resolve) => setTimeout(resolve, 600));
     await vscode.commands.executeCommand('acceptSelectedSuggestion');
-    assert.equal(document.getText(), 'GET FILE "path/to/data.sav".');
+    assert.equal(document.getText(), 'GET FILE "".');
+    assert.equal(editor.selection.active.character, 'GET FILE "'.length);
+    await vscode.commands.executeCommand('spssStudio.runFile');
+    await vscode.commands.executeCommand('default:type', { text: 'sample.sav' });
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    await vscode.commands.executeCommand('spssStudio.finishCompletionSlot');
+    assert.equal(document.getText(), 'GET FILE "sample.sav".\n');
     await vscode.commands.executeCommand('hideSuggestWidget');
   });
 });

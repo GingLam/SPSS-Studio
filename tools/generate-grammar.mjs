@@ -43,12 +43,6 @@ for (const [command, subcommands] of Object.entries(manifest.completion.commandS
   }
   assertUnique(`completion.commandSubcommands.${command}`, subcommands);
 }
-for (const functionName of Object.keys(manifest.completion.functionSnippets)) {
-  if (!manifest.functions.includes(functionName)) {
-    throw new Error(`Completion schema references unknown function: ${functionName}`);
-  }
-}
-assertUnique('completion.snippets labels', manifest.completion.snippets.map((snippet) => snippet.label));
 
 if (manifest.commands.length < 300) {
   throw new Error(`Expected at least 300 canonical commands, found ${manifest.commands.length}.`);
@@ -429,7 +423,7 @@ Dedicated block scopes cover BEGIN DATA, BEGIN PROGRAM, BEGIN GPL, BEGIN EXPR, M
 
 ## Completion schema
 
-The same manifest supplies deterministic command completion, ${Object.keys(manifest.completion.commandSubcommands).length} command-specific subcommand vocabularies, ${manifest.completion.keywords.length} contextual keywords, ${Object.keys(manifest.completion.functionSnippets).length} verified function snippets, and ${manifest.completion.snippets.length} verified command snippets. Variable completion is supplied separately by the current Active Dataset cache and is never written into this static schema.
+The manifest supplies deterministic command completion, ${Object.keys(manifest.completion.commandSubcommands).length} command-specific subcommand vocabularies, and ${manifest.completion.keywords.length} contextual keywords. The local registry in \`src/language/completionTemplates.ts\` supplies the minimal command and function templates. Variable names can come from the current Active Dataset or earlier declarations in the active document.
 
 ## Macro coverage
 

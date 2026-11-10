@@ -1,5 +1,5 @@
 (() => {
-  window.createSpssAiModule = ({ root, postMessage, getState, setState }) => {
+  window.createSpssAiModule = ({ root, postMessage, getState, setState, showSettings, showingSettings }) => {
   const vscode = { postMessage, getState, setState };
   const byId = (id) => root.querySelector(`#${id}`);
   const elements = {
@@ -8,17 +8,20 @@
     apiKey: byId('api-key'),
     apiKeyLabel: byId('api-key-label'),
     banner: byId('banner'),
+    settingsBanner: byId('settings-banner'),
+    codingEnabled: byId('coding-enabled'),
+    codingEnabledLabel: byId('coding-enabled-label'),
+    codingHint: byId('coding-hint'),
+    testProfile: byId('test-profile'),
+    profileTestStatus: byId('profile-test-status'),
     baseUrl: byId('base-url'),
     baseUrlLabel: byId('base-url-label'),
     clearHistory: byId('clear-history'),
-    deleteKey: byId('delete-key'),
     deleteProfile: byId('delete-profile'),
-    duplicateProfile: byId('duplicate-profile'),
     historyHeading: byId('history-heading'),
     historyList: byId('history-list'),
     keyStatus: byId('key-status'),
     makeActive: byId('make-active'),
-    manageProfiles: byId('manage-profiles'),
     messages: byId('messages'),
     model: byId('model'),
     modelLabel: byId('model-label'),
@@ -50,7 +53,7 @@
   };
 
   const restored = vscode.getState() || {};
-  let currentPage = ['chat', 'history', 'profiles'].includes(restored.page)
+  let currentPage = ['chat', 'history'].includes(restored.page)
     ? restored.page
     : 'chat';
   let selectedProfileId = typeof restored.selectedProfileId === 'string'
@@ -67,6 +70,17 @@
   let currentAssistant;
   let composerHeight = 112;
   let profileFormEnabled = false;
+  const drafts = new Map();
+  const testResults = new Map();
+  let nextTestId = 0;
+  let pendingTest;
+  let savingKey;
+  let renderedConversationKey;
+  const newProfileKey = Symbol('new profile');
+
+  function formKey() {
+    return creatingProfile ? newProfileKey : selectedProfileId;
+  }
 
   function persistUiState() {
     const next = { page: currentPage };
@@ -77,9 +91,10 @@
   }
 
   function setBanner(message, error = false) {
-    elements.banner.textContent = message;
-    elements.banner.classList.toggle('error', error);
-    elements.banner.hidden = !message;
+    const target = showingSettings() ? elements.settingsBanner : elements.banner;
+    target.textContent = message;
+    target.classList.toggle('error', error);
+    target.hidden = !message;
   }
 
   function setBusy(busy) {
@@ -95,11 +110,13 @@
   }
 
   function showPage(page) {
-    if (!['chat', 'history', 'profiles'].includes(page)) {
+    if (page === 'profiles') {
+      showSettings();
       return;
     }
+    if (!['chat', 'history'].includes(page)) return;
     currentPage = page;
-    for (const candidate of ['chat', 'history', 'profiles']) {
+    for (const candidate of ['chat', 'history']) {
       const active = candidate === page;
       const tab = byId(`tab-${candidate}`);
       const section = byId(`page-${candidate}`);
@@ -109,15 +126,12 @@
       }
       section.hidden = !active;
     }
-    elements.manageProfiles.classList.toggle('active', page === 'profiles');
-    elements.manageProfiles.setAttribute('aria-pressed', String(page === 'profiles'));
     persistUiState();
   }
 
   function applyStrings() {
     elements.activeProfileLabel.textContent = strings.activeProfile;
     elements.newChat.textContent = strings.newChat;
-    elements.manageProfiles.textContent = strings.configureModels;
     elements.tabChat.textContent = strings.currentChat;
     elements.tabHistory.textContent = strings.history;
     elements.question.placeholder = strings.questionPlaceholder;
@@ -132,14 +146,15 @@
     elements.responseLanguageZh.textContent = strings.responseLanguageChinese;
     elements.responseLanguageEn.textContent = strings.responseLanguageEnglish;
     elements.reasoningEnabledLabel.textContent = strings.enableReasoning;
+    elements.codingEnabledLabel.textContent = strings.coding;
+    elements.codingHint.textContent = strings.codingHint;
     elements.baseUrlLabel.textContent = strings.baseUrl;
     elements.modelLabel.textContent = strings.model;
     elements.apiKeyLabel.textContent = strings.apiKey;
     elements.apiKey.placeholder = strings.apiKeyPlaceholder;
     elements.saveProfile.textContent = strings.save;
-    elements.duplicateProfile.textContent = strings.duplicate;
+    renderTestStatus();
     elements.makeActive.textContent = strings.makeActive;
-    elements.deleteKey.textContent = strings.deleteKey;
     elements.deleteProfile.textContent = strings.delete;
     elements.providerHelp.textContent = strings.officialDocs;
   }
@@ -381,6 +396,13 @@
       empty.textContent = state.profiles.profiles.length === 0
         ? strings.profileEmpty
         : strings.chatEmpty;
+      if (state.profiles.profiles.length === 0) {
+        const configure = document.createElement('button');
+        configure.type = 'button';
+        configure.textContent = strings.configureModels;
+        configure.addEventListener('click', showSettings);
+        empty.append(document.createElement('br'), configure);
+      }
       elements.messages.append(empty);
       return;
     }
@@ -536,8 +558,10 @@
       elements.model.value = '';
       elements.apiKey.value = '';
       elements.reasoningEnabled.checked = false;
+      elements.codingEnabled.checked = false;
       elements.keyStatus.textContent = strings.profileEmpty;
       setProfileFormEnabled(false);
+      renderTestStatus();
       return;
     }
     setProfileFormEnabled(true);
@@ -549,6 +573,7 @@
       elements.model.value = '';
       elements.apiKey.value = '';
       elements.reasoningEnabled.checked = false;
+      elements.codingEnabled.checked = false;
       elements.keyStatus.textContent = strings.apiKeyMissing;
     } else {
       elements.profileName.value = profile.name;
@@ -557,35 +582,44 @@
       elements.model.value = profile.model;
       elements.apiKey.value = '';
       elements.reasoningEnabled.checked = profile.reasoningEnabled;
+      elements.codingEnabled.checked = state.profiles.codingProfileId === profile.id;
       elements.keyStatus.textContent = profile.hasApiKey
         ? strings.apiKeySaved
         : strings.apiKeyMissing;
+    }
+    const draft = drafts.get(formKey());
+    if (draft) {
+      elements.profileName.value = draft.name;
+      elements.provider.value = draft.providerId;
+      elements.baseUrl.value = draft.baseUrl;
+      elements.model.value = draft.model;
+      elements.apiKey.value = draft.apiKey;
+      elements.reasoningEnabled.checked = draft.reasoningEnabled;
+      elements.codingEnabled.checked = draft.codingEnabled;
     }
     const preset = presetById(elements.provider.value);
     elements.model.placeholder = preset?.modelPlaceholder || '';
     updateReasoningControl();
     const hasProfile = Boolean(profile) && !creatingProfile;
-    elements.duplicateProfile.disabled = state.busy || !hasProfile;
     elements.makeActive.disabled = state.busy
       || !hasProfile
       || state.profiles.activeProfileId === profile.id;
-    elements.deleteKey.disabled = state.busy || !hasProfile || !profile.hasApiKey;
     elements.deleteProfile.disabled = state.busy || !hasProfile;
+    elements.saveProfile.disabled = state.busy || savingKey !== undefined;
+    renderTestStatus();
   }
 
   function renderProfiles() {
     elements.profileList.replaceChildren();
-    for (const profile of state.profiles.profiles) {
+    for (const [index, profile] of state.profiles.profiles.entries()) {
       const button = document.createElement('button');
+      const selected = !creatingProfile && profile.id === selectedProfileId;
       button.type = 'button';
       button.className = 'profile-row';
-      button.classList.toggle('selected', !creatingProfile && profile.id === selectedProfileId);
+      button.classList.toggle('selected', selected);
       button.classList.toggle('active-profile', profile.id === state.profiles.activeProfileId);
-      const name = document.createElement('strong');
-      name.textContent = profile.name;
-      const details = document.createElement('span');
-      details.textContent = `${presetById(profile.providerId)?.label || profile.providerId} · ${profile.model}`;
-      button.append(name, details);
+      button.setAttribute('aria-pressed', String(selected));
+      button.textContent = strings.modelNumber.replace('{number}', String(index + 1));
       button.addEventListener('click', () => {
         creatingProfile = false;
         selectedProfileId = profile.id;
@@ -605,15 +639,19 @@
     populateProviderOptions();
     populateActiveProfile();
     elements.responseLanguage.value = state.responseLanguage || 'zh-CN';
-    renderConversation();
+    const conversation = state.currentConversation;
+    const conversationKey = JSON.stringify([
+      conversation?.id, conversation?.updatedAt, conversation?.messages.length,
+      conversation?.messages.at(-1)?.id, state.profiles.profiles.length > 0,
+    ]);
+    if (!currentAssistant && conversationKey !== renderedConversationKey) {
+      renderedConversationKey = conversationKey;
+      renderConversation();
+    }
     renderHistory();
     renderProfiles();
     setBusy(state.busy);
-    if (state.profiles.profiles.length === 0 && currentPage === 'chat') {
-      showPage('profiles');
-    } else {
-      showPage(currentPage);
-    }
+    showPage(currentPage);
   }
 
   function sendQuestion() {
@@ -625,30 +663,78 @@
     elements.question.value = '';
   }
 
-  function saveProfile() {
-    const payload = {
+  function profilePayload() {
+    return {
       name: elements.profileName.value.trim(),
       providerId: elements.provider.value,
       baseUrl: elements.baseUrl.value.trim(),
       model: elements.model.value.trim(),
       reasoningEnabled: elements.reasoningEnabled.checked,
+      codingEnabled: elements.codingEnabled.checked,
       apiKey: elements.apiKey.value,
     };
-    if (creatingProfile) {
-      vscode.postMessage({ type: 'createProfile', ...payload });
-    } else if (selectedProfileId) {
-      vscode.postMessage({ type: 'saveProfile', profileId: selectedProfileId, ...payload });
+  }
+
+  function renderTestStatus() {
+    const key = formKey();
+    const busy = pendingTest?.key === key && pendingTest !== undefined;
+    const result = testResults.get(key);
+    elements.testProfile.textContent = busy ? strings.testing : strings.test;
+    elements.profileTestStatus.textContent = result ? strings.testResults[result] : '';
+    elements.profileTestStatus.classList.toggle('test-error', Boolean(result && result !== 'ok'));
+  }
+
+  function recordDraft() {
+    const key = formKey();
+    if (key === undefined) return;
+    drafts.set(key, profilePayload());
+    testResults.delete(key);
+    if (pendingTest?.key === key) pendingTest = undefined;
+    renderTestStatus();
+  }
+
+  function saveProfile() {
+    const key = formKey();
+    const payload = profilePayload();
+    if (savingKey !== undefined || key === undefined) return;
+    if (!payload.baseUrl || !payload.model) {
+      setBanner(strings.testResults.configuration, true);
+      return;
     }
+    savingKey = key;
+    elements.saveProfile.disabled = true;
+    vscode.postMessage(creatingProfile
+      ? { type: 'createProfile', ...payload }
+      : { type: 'saveProfile', profileId: selectedProfileId, ...payload });
+  }
+
+  function testProfile() {
+    const key = formKey();
+    if (key === undefined) return;
+    const payload = profilePayload();
+    if (!payload.baseUrl || !payload.model) {
+      testResults.set(key, 'configuration');
+      renderTestStatus();
+      return;
+    }
+    pendingTest = { key, id: ++nextTestId };
+    testResults.delete(key);
+    renderTestStatus();
+    vscode.postMessage({
+      type: 'testProfile', requestId: pendingTest.id, ...payload,
+      ...(creatingProfile ? {} : { profileId: selectedProfileId }),
+    });
   }
 
   function maximumComposerHeight() {
-    const availableHeight = root.clientHeight > 0 ? root.clientHeight : window.innerHeight;
+    const chat = byId('spss-ai');
+    const availableHeight = chat.clientHeight > 0 ? chat.clientHeight : window.innerHeight;
     return Math.max(86, Math.min(600, availableHeight - 180));
   }
 
   function applyComposerHeight(height, persist = false) {
     composerHeight = Math.max(86, Math.min(maximumComposerHeight(), Math.round(height)));
-    root.style.setProperty('--composer-height', `${composerHeight}px`);
+    byId('spss-ai').style.setProperty('--composer-height', `${composerHeight}px`);
     elements.splitter.setAttribute('aria-valuemin', '86');
     elements.splitter.setAttribute('aria-valuemax', String(maximumComposerHeight()));
     elements.splitter.setAttribute('aria-valuenow', String(composerHeight));
@@ -708,7 +794,6 @@
       showPage(button.dataset.page);
     }
   });
-  elements.manageProfiles.addEventListener('click', () => showPage('profiles'));
   elements.newChat.addEventListener('click', () => {
     vscode.postMessage({ type: 'newChat' });
     showPage('chat');
@@ -746,7 +831,25 @@
     event.preventDefault();
     saveProfile();
   });
+  elements.testProfile.addEventListener('click', testProfile);
+  elements.profileForm.addEventListener('input', (event) => {
+    if (event.target === elements.baseUrl) elements.apiKey.value = '';
+    if (event.target !== elements.codingEnabled) recordDraft();
+  });
+  elements.codingEnabled.addEventListener('change', () => {
+    const profile = selectedProfile();
+    if (elements.codingEnabled.checked) vscode.postMessage({ type: 'scanCoding' });
+    if (!creatingProfile && profile && !elements.codingEnabled.checked && state.profiles.codingProfileId === profile.id) {
+      if (drafts.has(formKey())) recordDraft();
+      vscode.postMessage({ type: 'setCodingProfile', profileId: profile.id, enabled: false });
+    } else if (!creatingProfile && profile?.hasApiKey && elements.codingEnabled.checked && !drafts.has(formKey())) {
+      vscode.postMessage({ type: 'setCodingProfile', profileId: profile.id, enabled: true });
+    } else {
+      recordDraft();
+    }
+  });
   elements.provider.addEventListener('change', () => {
+    elements.apiKey.value = '';
     const preset = presetById(elements.provider.value);
     if (preset) {
       elements.baseUrl.value = preset.baseUrl;
@@ -756,20 +859,11 @@
       elements.reasoningEnabled.checked = false;
     }
     updateReasoningControl();
-  });
-  elements.duplicateProfile.addEventListener('click', () => {
-    if (selectedProfileId) {
-      vscode.postMessage({ type: 'duplicateProfile', profileId: selectedProfileId });
-    }
+    recordDraft();
   });
   elements.makeActive.addEventListener('click', () => {
     if (selectedProfileId) {
       vscode.postMessage({ type: 'selectProfile', profileId: selectedProfileId });
-    }
-  });
-  elements.deleteKey.addEventListener('click', () => {
-    if (selectedProfileId) {
-      vscode.postMessage({ type: 'deleteProfileKey', profileId: selectedProfileId });
     }
   });
   elements.deleteProfile.addEventListener('click', () => {
@@ -787,12 +881,28 @@
       strings = message.strings;
       state = message.state;
       composerHeight = message.composerHeight;
-      creatingProfile = false;
-      currentAssistant = undefined;
+      if (!state.busy) currentAssistant = undefined;
       applyStrings();
       applyComposerHeight(composerHeight);
       setBanner('');
       renderAll();
+    } else if (message.type === 'profileSaved') {
+      drafts.delete(savingKey);
+      if (savingKey === newProfileKey && testResults.has(savingKey)) {
+        testResults.set(message.profileId, testResults.get(savingKey));
+        testResults.delete(savingKey);
+      }
+      if (formKey() === savingKey) {
+        creatingProfile = false;
+        selectedProfileId = message.profileId;
+      }
+      savingKey = undefined;
+    } else if (message.type === 'profileTested') {
+      if (pendingTest?.id === message.requestId) {
+        testResults.set(pendingTest.key, message.result);
+        pendingTest = undefined;
+        renderTestStatus();
+      }
     } else if (message.type === 'showPage') {
       showPage(message.page);
     } else if (message.type === 'responseStarted') {
@@ -811,6 +921,7 @@
       }
     } else if (message.type === 'requestFailed') {
       currentAssistant = undefined;
+      renderConversation();
       setBusy(false);
       renderHistory();
       renderProfiles();
@@ -819,6 +930,8 @@
       }
       setBanner(message.message, !message.cancelled);
     } else if (message.type === 'operationMessage') {
+      savingKey = undefined;
+      if (showingSettings()) renderProfileForm();
       setBanner(message.message, message.error);
     }
   }

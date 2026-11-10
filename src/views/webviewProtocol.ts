@@ -19,6 +19,7 @@ export type ExtensionToWebviewMessage =
   | { type: 'showData' }
   | { type: 'showVariables' }
   | { type: 'showAi' }
+  | { type: 'showSettings' }
   | { type: 'outputCleared' }
   | { type: 'dataCleared' }
   | { type: 'dataActionState'; busy: boolean }
@@ -30,6 +31,7 @@ export type WebviewToExtensionMessage =
   | { type: 'showData' }
   | { type: 'showVariables' }
   | { type: 'showAi' }
+  | { type: 'showSettings' }
   | {
     type: 'requestDatasetPage';
     offset: number;
@@ -57,7 +59,7 @@ export function isWebviewMessage(value: unknown): value is WebviewToExtensionMes
   }
   const message = value;
   const type = String(message.type);
-  if (['showOutput', 'showData', 'showVariables', 'showAi', 'refreshData', 'refreshVariables', 'clearOutput', 'clearData'].includes(type)) {
+  if (['showOutput', 'showData', 'showVariables', 'showAi', 'showSettings', 'refreshData', 'refreshVariables', 'clearOutput', 'clearData'].includes(type)) {
     return true;
   }
   if (['explainOutput', 'exportOutput', 'printOutput'].includes(type)) {

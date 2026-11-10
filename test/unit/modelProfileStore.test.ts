@@ -155,6 +155,31 @@ describe('AI model profile storage', () => {
     await assert.rejects(store.resolve(profile.id), /Doubao/u);
   });
 
+  it('selects and clears the coding model independently of Chat', async () => {
+    const { store } = createStore();
+    const draft = { providerId: 'custom', baseUrl: 'https://example.com/v1', model: 'model' } as const;
+    const chat = await store.create(draft, 'chat-key');
+    const coding = await store.create(draft, 'coding-key');
+    await store.selectCoding(coding.id, true);
+    assert.equal((await store.state()).activeProfileId, chat.id);
+    assert.equal((await store.resolveCoding())?.profile.id, coding.id);
+    await store.delete(coding.id);
+    assert.equal(await store.resolveCoding(), undefined);
+    assert.equal((await store.resolve()).profile.id, chat.id);
+  });
+
+  it('requires a replacement key when the saved endpoint changes', async () => {
+    const { store } = createStore();
+    const profile = await store.create({
+      providerId: 'custom', baseUrl: 'https://old.example/v1', model: 'model',
+    }, 'old-key');
+    const draft = { providerId: 'custom', baseUrl: 'https://new.example/v1', model: 'model' } as const;
+    await assert.rejects(store.update(profile.id, draft, ' '), /new API Key/iu);
+    assert.equal((await store.resolve(profile.id)).configuration.baseUrl, 'https://old.example/v1');
+    await store.update(profile.id, draft, 'new-key');
+    assert.equal((await store.resolve(profile.id)).apiKey, 'new-key');
+  });
+
   it('rejects invalid stored indexes instead of presenting an empty form', async () => {
     const { store, values } = createStore();
     values.values.set(MODEL_PROFILE_INDEX_KEY, { schemaVersion: 2, profiles: [{ id: '../secret' }] });

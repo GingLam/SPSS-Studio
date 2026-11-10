@@ -17,17 +17,19 @@ export interface ModelProfile {
   baseUrl: string;
   model: string;
   reasoningEnabled: boolean;
+  credentialRevision?: string;
   createdAt: string;
   updatedAt: string;
 }
 
-export interface ModelProfileView extends ModelProfile {
+export interface ModelProfileView extends Omit<ModelProfile, 'credentialRevision'> {
   hasApiKey: boolean;
 }
 
 export interface ModelProfileIndex {
   schemaVersion: typeof MODEL_PROFILE_SCHEMA_VERSION;
   activeProfileId?: string;
+  codingProfileId?: string;
   profiles: ModelProfile[];
 }
 
@@ -38,6 +40,7 @@ export interface ModelProfileDraft extends AiProviderConfiguration {
 
 export interface ModelProfileState {
   activeProfileId?: string;
+  codingProfileId?: string;
   profiles: ModelProfileView[];
 }
 
@@ -66,11 +69,11 @@ export function validateModelProfileDraft(
   return { ...configuration, name, reasoningEnabled };
 }
 
-export function profileSecretKey(profileId: string): string {
-  if (!isProfileId(profileId)) {
+export function profileSecretKey(profileId: string, revision?: string): string {
+  if (!isProfileId(profileId) || (revision !== undefined && !isProfileId(revision))) {
     throw new Error('The AI model profile id is invalid.');
   }
-  return `${MODEL_PROFILE_SECRET_PREFIX}${profileId}.apiKey`;
+  return `${MODEL_PROFILE_SECRET_PREFIX}${profileId}.apiKey${revision ? `.${revision}` : ''}`;
 }
 
 export function isProfileId(value: unknown): value is string {
@@ -104,9 +107,15 @@ export function parseModelProfileIndex(value: unknown): ModelProfileIndex | unde
   if (activeProfileId !== undefined && (!isProfileId(activeProfileId) || !ids.has(activeProfileId))) {
     throw new Error('The active AI model profile is invalid.');
   }
-  return activeProfileId === undefined
-    ? { schemaVersion: MODEL_PROFILE_SCHEMA_VERSION, profiles }
-    : { schemaVersion: MODEL_PROFILE_SCHEMA_VERSION, activeProfileId, profiles };
+  const codingProfileId = candidate.codingProfileId;
+  if (codingProfileId !== undefined && (!isProfileId(codingProfileId) || !ids.has(codingProfileId))) {
+    throw new Error('The coding model profile is invalid.');
+  }
+  return {
+    schemaVersion: MODEL_PROFILE_SCHEMA_VERSION, profiles,
+    ...(activeProfileId === undefined ? {} : { activeProfileId }),
+    ...(codingProfileId === undefined ? {} : { codingProfileId }),
+  };
 }
 
 function parseModelProfile(
@@ -124,6 +133,7 @@ function parseModelProfile(
     || typeof candidate.baseUrl !== 'string'
     || typeof candidate.model !== 'string'
     || (schemaVersion === MODEL_PROFILE_SCHEMA_VERSION && typeof candidate.reasoningEnabled !== 'boolean')
+    || (candidate.credentialRevision !== undefined && !isProfileId(candidate.credentialRevision))
     || typeof candidate.createdAt !== 'string'
     || typeof candidate.updatedAt !== 'string'
   ) {
@@ -148,6 +158,7 @@ function parseModelProfile(
     baseUrl: validated.baseUrl,
     model: validated.model,
     reasoningEnabled: validated.reasoningEnabled,
+    ...(candidate.credentialRevision === undefined ? {} : { credentialRevision: candidate.credentialRevision }),
     createdAt: candidate.createdAt,
     updatedAt: candidate.updatedAt,
   };

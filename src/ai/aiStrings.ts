@@ -1,3 +1,5 @@
+import type { AiConnectionResult } from './openAiCompatibleClient';
+
 export interface AiStrings {
   activeProfile: string;
   apiKey: string;
@@ -17,12 +19,16 @@ export interface AiStrings {
   currentChat: string;
   delete: string;
   deleteConversationConfirm: string;
-  deleteKey: string;
   deleteProfileConfirm: string;
-  duplicate: string;
   history: string;
   historyEmpty: string;
   enableReasoning: string;
+  coding: string;
+  codingHint: string;
+  modelNumber: string;
+  test: string;
+  testing: string;
+  testResults: Record<AiConnectionResult | 'configuration', string>;
   insert: string;
   insertRequiresEditor: string;
   inserted: string;
@@ -78,12 +84,29 @@ export const AI_STRINGS_EN: AiStrings = {
   currentChat: 'Current',
   delete: 'Delete',
   deleteConversationConfirm: 'Delete this SPSS AI conversation?',
-  deleteKey: 'Delete key',
   deleteProfileConfirm: 'Delete this AI model profile? Existing conversations will remain readable.',
-  duplicate: 'Duplicate',
   history: 'History',
   historyEmpty: 'No saved conversations yet.',
   enableReasoning: 'Reasoning',
+  coding: 'Coding',
+  codingHint: 'Uses this model for next-command suggestions from an anonymized summary of the active SPS file.',
+  modelNumber: 'Model {number}',
+  test: 'Test',
+  testing: 'Testing…',
+  testResults: {
+    ok: 'Connected. The model returned a reply.',
+    authentication: 'Authentication failed. Check the API Key and permissions.',
+    model: 'The endpoint or model was not found.',
+    rateLimit: 'Rate limit reached. Try again shortly.',
+    service: 'The model service returned an error.',
+    timeout: 'The model did not reply in time.',
+    network: 'Connection failed. Check the network and Base URL.',
+    redirect: 'The endpoint redirected. Enter the final Base URL.',
+    response: 'The endpoint did not return a compatible text reply.',
+    request: 'The provider rejected this request. Check the model and its options.',
+    cancelled: 'Test cancelled.',
+    configuration: 'Check the Base URL, model ID, and API Key. Enter a new key after changing the provider or URL.',
+  },
   insert: 'Insert',
   insertRequiresEditor: 'Open an SPSS syntax editor before inserting AI-generated code.',
   inserted: 'Inserted',
@@ -139,12 +162,29 @@ export const AI_STRINGS_ZH_CN: AiStrings = {
   currentChat: '当前',
   delete: '删除',
   deleteConversationConfirm: '删除这条 SPSS AI 对话？',
-  deleteKey: '删除密钥',
   deleteProfileConfirm: '删除这个 AI 模型配置？已有历史对话仍可查看。',
-  duplicate: '复制配置',
   history: '历史',
   historyEmpty: '尚无历史对话。',
   enableReasoning: '推理',
+  coding: '编程应用',
+  codingHint: '用此模型根据当前 SPS 的匿名化语法摘要建议下一条命令。',
+  modelNumber: '模型{number}',
+  test: '测试',
+  testing: '正在测试…',
+  testResults: {
+    ok: '连接成功，模型已回复。',
+    authentication: '验证失败，请检查 API 密钥和权限。',
+    model: '未找到接口或模型。',
+    rateLimit: '已达调用上限，请稍后重试。',
+    service: '模型服务返回错误。',
+    timeout: '等待模型回复超时。',
+    network: '连接失败，请检查网络和接口地址。',
+    redirect: '接口发生重定向，请填写最终地址。',
+    response: '接口未返回兼容的文本回复。',
+    request: '服务商拒绝了请求，请检查模型与选项。',
+    cancelled: '测试已取消。',
+    configuration: '请检查接口、模型及密钥。更换服务商或接口后请重新填写密钥。',
+  },
   insert: '插入',
   insertRequiresEditor: '请先打开 SPSS 语法编辑器，再插入 AI 生成的代码。',
   inserted: '已插入',

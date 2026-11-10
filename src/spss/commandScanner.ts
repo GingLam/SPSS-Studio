@@ -362,13 +362,17 @@ export function findCurrentCommand(text: string, offset: number): CurrentCommand
 }
 
 /** Returns the lexical region at an offset using the same command ranges as execution. */
+export function inOpaqueSyntaxBlock(text: string, offset: number): boolean {
+  return openBlockAt(text, offset)?.opaque === true;
+}
+
 export function lexicalRegionAt(text: string, offset: number): LexicalRegion {
   const safeOffset = Math.max(0, Math.min(offset, text.length));
   const openBlock = openBlockAt(text, safeOffset);
   if (openBlock?.type === 'data') {
     return 'begin-data';
   }
-  if (openBlock?.type === 'program') {
+  if (openBlock?.opaque && openBlock.type !== 'macro') {
     return 'embedded-program';
   }
   const range = scanCommands(text).find((candidate) => safeOffset >= candidate.start && safeOffset <= candidate.end);
@@ -385,7 +389,7 @@ export function lexicalRegionAt(text: string, offset: number): LexicalRegion {
       return 'begin-data';
     }
   }
-  if (range.type === 'block' && range.blockType === 'program') {
+  if (range.type === 'block' && BLOCKS.some((block) => block.opaque && block.type !== 'macro' && block.type === range.blockType)) {
     const firstLineEnd = text.indexOf('\n', range.start);
     const lastLineStart = text.lastIndexOf('\n', range.end) + 1;
     if (safeOffset > firstLineEnd && safeOffset < lastLineStart) {

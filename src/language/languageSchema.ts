@@ -1,17 +1,9 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-export interface SpssSnippetDefinition {
-  label: string;
-  body: string;
-  description: string;
-}
-
 export interface SpssCompletionSchema {
   keywords: string[];
   commandSubcommands: Record<string, string[]>;
-  functionSnippets: Record<string, string>;
-  snippets: SpssSnippetDefinition[];
 }
 
 export interface SpssLanguageSchema {
@@ -39,8 +31,7 @@ function isLanguageSchema(value: unknown): value is SpssLanguageSchema {
     && Array.isArray(candidate.functions)
     && Array.isArray(candidate.subcommands)
     && typeof candidate.completion === 'object'
-    && Array.isArray(candidate.completion.keywords)
-    && Array.isArray(candidate.completion.snippets);
+    && Array.isArray(candidate.completion.keywords);
 }
 
 export function loadLanguageSchema(extensionRoot: string): SpssLanguageSchema {
@@ -67,6 +58,5 @@ export function completionCommandNames(schema: SpssLanguageSchema): string[] {
     ...schema.commands,
     ...schema.controlCommands,
     ...Object.keys(schema.completion.commandSubcommands),
-    ...schema.completion.snippets.map((snippet) => snippet.label),
   ])];
 }

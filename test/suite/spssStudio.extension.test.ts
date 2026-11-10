@@ -117,7 +117,7 @@ describe('SPSS Studio Extension Host', () => {
     const packageJson = extension.packageJSON as {
       contributes: { keybindings: Array<{ command: string; key: string; mac: string; when: string }> };
     };
-    assert.deepEqual(packageJson.contributes.keybindings[0], {
+    assert.deepEqual(packageJson.contributes.keybindings.find(({ command }) => command === 'spssStudio.runSelection'), {
       command: 'spssStudio.runSelection',
       key: 'ctrl+enter',
       mac: 'cmd+enter',

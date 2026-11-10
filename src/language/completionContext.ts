@@ -1,3 +1,4 @@
+import { COMMAND_TEMPLATES } from './completionTemplates';
 import { lexicalRegionAt, scanCommands } from '../spss/commandScanner';
 import { allSchemaFunctions, completionCommandNames, type SpssLanguageSchema } from './languageSchema';
 
@@ -38,7 +39,7 @@ function commandAtStart(value: string, commands: string[]): string | undefined {
 }
 
 /** Keep positions while hiding strings and native line-local comments. */
-function visibleCode(text: string): string {
+export function visibleCode(text: string): string {
   let result = '';
   let quote: string | undefined;
   let comment = false;
@@ -86,12 +87,12 @@ export function analyzeCompletionContext(
   // Scan the prefix so a surrounding control block cannot hide its current
   // statement, and text after the caret cannot affect the completion context.
   const range = scanCommands(before).at(-1);
-  const commands = completionCommandNames(schema);
+  const commands = [...completionCommandNames(schema), ...COMMAND_TEMPLATES.map(({ command }) => command)];
   const code = visibleCode(range ? before.slice(range.start) : before);
   const commandName = commandAtStart(code, commands);
   const slash = code.lastIndexOf('/');
   const section = slash < 0 ? '' : code.slice(slash);
-  const fileArgument = ['GET FILE', 'GET DATA', 'INSERT', 'INCLUDE', 'SAVE', 'XSAVE', 'CD', 'FILE HANDLE'].includes(commandName ?? '')
+  const fileArgument = ['GET FILE', 'GET DATA', 'GET STATA', 'GET SAS', 'SAVE TRANSLATE', 'OUTPUT SAVE', 'INSERT', 'INCLUDE', 'SAVE', 'XSAVE', 'CD', 'FILE HANDLE'].includes(commandName ?? '')
     && (slash < 0 || /^\/\s*(?:FILE|OUTFILE|INFILE)\b/iu.test(section));
   const dottedFunction = prefix.includes('.') && allSchemaFunctions(schema)
     .some((name) => name.toUpperCase().startsWith(prefix.toUpperCase()));

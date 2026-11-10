@@ -191,3 +191,34 @@ describe('OpenAI-compatible HTTP client', () => {
     assert.deepEqual(providerReasoningFields('custom', false), {});
   });
 });
+
+describe('short AI requests', () => {
+  it('tests model generation with a fixed message and without following redirects', async () => {
+    const original = globalThis.fetch;
+    const received: RequestInit[] = [];
+    globalThis.fetch = (_input, init) => {
+      received.push(init ?? {});
+      return Promise.resolve(new Response(JSON.stringify({ choices: [{ message: { content: 'OK' } }] })));
+    };
+    const client = new OpenAiCompatibleClient();
+    const target = {
+      configuration: { providerId: 'custom', baseUrl: 'https://example.com/v1', model: 'test-model' } as const,
+      apiKey: 'test-only-key',
+      reasoningEnabled: false,
+    };
+    try {
+      await client.testConnection(target);
+      const request = received[0];
+      assert.equal(request?.redirect, 'manual');
+      assert.equal(typeof request.body, 'string');
+      const requestBody = JSON.parse(request.body as string) as { messages: unknown };
+      assert.deepEqual(requestBody.messages, [{ role: 'user', content: 'Reply with OK.' }]);
+      globalThis.fetch = () => Promise.resolve(new Response(null, { status: 302 }));
+      await assert.rejects(client.testConnection(target), /redirect/iu);
+      globalThis.fetch = () => Promise.resolve(new Response(JSON.stringify({ choices: [] })));
+      await assert.rejects(client.testConnection(target), /response/iu);
+    } finally {
+      globalThis.fetch = original;
+    }
+  });
+});

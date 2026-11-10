@@ -4,6 +4,8 @@ import {
   DEFAULT_AI_RESPONSE_LANGUAGE,
   type AiResponseLanguage,
 } from '../ai/chatProtocol';
+import type { ModelProfileStore } from '../ai/modelProfileStore';
+import { type OpenAiCompatibleClient, ShortCompletionError } from '../ai/openAiCompatibleClient';
 import { parseAssistantContent } from '../ai/fencedCode';
 import type { KeyValueStore } from '../ai/providerConfigurationStore';
 import { providerPreset, providerPresetsForLanguage } from '../ai/providerPresets';
@@ -30,7 +32,9 @@ type MutationMessage = Exclude<AiWebviewToExtensionMessage,
 | { type: 'openLink' }
 | { type: 'setComposerHeight' }
 | { type: 'setResponseLanguage' }
-| { type: 'sendQuestion' }>;
+| { type: 'sendQuestion' }
+| { type: 'testProfile' }
+| { type: 'scanCoding' }>;
 
 export interface SpssAiPanelPlatform {
   insertCode(code: string): Promise<boolean>;
@@ -43,6 +47,13 @@ export interface SpssAiPanelPlatform {
   requireExecutionTrust(): Promise<boolean>;
 }
 
+interface ProfileSettings {
+  profiles: ModelProfileStore;
+  client: OpenAiCompatibleClient;
+  scanCoding(): void;
+  invalidateCoding(): void;
+}
+
 type AiPostMessage = (message: ExtensionToAiWebviewMessage) => PromiseLike<boolean> | undefined;
 
 export class SpssAiPanelController {
@@ -50,6 +61,7 @@ export class SpssAiPanelController {
   private webviewReady = false;
   private pendingPage: AiPage | undefined;
   private pendingEditorQuestion: { question: string; kind: AiQuestionKind } | undefined;
+  private connectionTest: AbortController | undefined;
   private readonly strings: AiStrings;
   private readonly presets;
 
@@ -59,6 +71,7 @@ export class SpssAiPanelController {
     private readonly uiState: KeyValueStore,
     private readonly initialization: Promise<unknown> = Promise.resolve(),
     language = 'en',
+    private readonly settings?: ProfileSettings,
   ) {
     this.strings = aiStringsForLanguage(language);
     this.presets = providerPresetsForLanguage(language);
@@ -70,6 +83,7 @@ export class SpssAiPanelController {
   }
 
   public detach(): void {
+    this.connectionTest?.abort();
     this.postTarget = undefined;
     this.webviewReady = false;
     this.pendingEditorQuestion = undefined;
@@ -193,6 +207,14 @@ export class SpssAiPanelController {
       await this.sendQuestion(message.question.trim(), 'manual');
       return;
     }
+    if (message.type === 'testProfile') {
+      await this.testProfile(message);
+      return;
+    }
+    if (message.type === 'scanCoding') {
+      this.settings?.scanCoding();
+      return;
+    }
     await this.handleMutation(message);
   }
 
@@ -225,23 +247,33 @@ export class SpssAiPanelController {
         await this.controller.clearConversations();
       } else if (message.type === 'selectProfile') {
         await this.controller.selectProfile(message.profileId);
-      } else if (message.type === 'createProfile') {
-        await this.controller.createProfile(profileDraftFromMessage(message), message.apiKey);
-      } else if (message.type === 'saveProfile') {
-        await this.controller.updateProfile(
-          message.profileId,
-          profileDraftFromMessage(message),
-          message.apiKey,
-        );
-      } else if (message.type === 'duplicateProfile') {
-        await this.controller.duplicateProfile(message.profileId);
-      } else if (message.type === 'deleteProfile') {
+      } else if (message.type === 'createProfile' || message.type === 'saveProfile') {
+        const draft = profileDraftFromMessage(message);
+        if (message.codingEnabled && !message.apiKey?.trim()) {
+          await this.settings?.profiles.resolveDraft(draft, undefined,
+            message.type === 'saveProfile' ? message.profileId : undefined);
+        }
+        this.settings?.invalidateCoding();
+        let profileId: string;
+        if (message.type === 'createProfile') {
+          profileId = (await this.controller.createProfile(draft, message.apiKey)).id;
+        } else {
+          profileId = message.profileId;
+          await this.controller.updateProfile(profileId, draft, message.apiKey);
+        }
+        if (message.codingEnabled !== undefined) {
+          await this.settings?.profiles.selectCoding(profileId, message.codingEnabled);
+        }
+        await this.post({ type: 'profileSaved', profileId });
+      } else if (message.type === 'setCodingProfile') {
+        this.settings?.invalidateCoding();
+        await this.settings?.profiles.selectCoding(message.profileId, message.enabled);
+      } else {
         if (!await this.platform.confirm(this.strings.deleteProfileConfirm, this.strings.delete)) {
           return;
         }
+        this.settings?.invalidateCoding();
         await this.controller.deleteProfile(message.profileId);
-      } else {
-        await this.controller.deleteProfileKey(message.profileId);
       }
       await this.postRenderState();
       if (this.pendingPage) {
@@ -250,6 +282,37 @@ export class SpssAiPanelController {
       }
     } catch (error) {
       await this.postOperationError(error);
+    }
+  }
+
+  private async testProfile(message: Extract<AiWebviewToExtensionMessage, { type: 'testProfile' }>): Promise<void> {
+    if (!this.settings) return;
+    this.connectionTest?.abort();
+    const controller = new AbortController();
+    this.connectionTest = controller;
+    try {
+      await this.initialization;
+      if (!await this.platform.requireTrustedWorkspace(this.strings)) {
+        await this.post({ type: 'profileTested', requestId: message.requestId, result: 'cancelled' });
+        return;
+      }
+      const target = await this.settings.profiles.resolveDraft(
+        profileDraftFromMessage(message), message.apiKey, message.profileId,
+      );
+      await this.settings.client.testConnection(target, controller.signal);
+      if (this.connectionTest === controller && !controller.signal.aborted) {
+        await this.post({ type: 'profileTested', requestId: message.requestId, result: 'ok' });
+      }
+    } catch (error) {
+      if (this.connectionTest !== controller || controller.signal.aborted) return;
+      if (error instanceof ShortCompletionError) {
+        await this.post({ type: 'profileTested', requestId: message.requestId, result: error.code });
+      } else {
+        await this.post({ type: 'profileTested', requestId: message.requestId, result: 'configuration',
+          message: this.errorMessage(error) });
+      }
+    } finally {
+      if (this.connectionTest === controller) this.connectionTest = undefined;
     }
   }
 

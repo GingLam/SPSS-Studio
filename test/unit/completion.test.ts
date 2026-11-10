@@ -15,10 +15,18 @@ function labels(text: string): string[] {
 }
 
 describe('SPSS completion', () => {
-  it('keeps automatic completion quiet before two characters or after whitespace', () => {
-    for (const text of ['', 'g', 'r', 'GET FILE ', 'COMPUTE x=income ', 'COMPUTE x=MEAN(']) {
+  it('keeps automatic completion quiet on whitespace or in file arguments', () => {
+    for (const text of ['', 'GET FILE ', 'COMPUTE x=income ', 'COMPUTE x=MEAN(']) {
       assert.deepEqual(labels(text), [], text);
     }
+  });
+
+  it('ranks GET FILE first for one letter and keeps the filename outside the inserted syntax', () => {
+    const source = 'G';
+    const item = getCompletionCandidates(analyzeCompletionContext(source, 1, schema), schema, [])[0];
+    assert.equal(item?.label, 'GET FILE');
+    assert.equal(item.insertText, 'GET FILE "$1".');
+    assert.equal(item.snippet, true);
   });
 
   it('does not carry a completed command into the next empty line', () => {
@@ -50,13 +58,10 @@ describe('SPSS completion', () => {
     }
   });
 
-  it('keeps short prefixes and complete templates available only on explicit request', () => {
-    for (const text of ['', 'g', 'reg']) {
-      const context = analyzeCompletionContext(text, text.length, schema);
-      const manual = getCompletionCandidates(context, schema, [], 'manual');
-      assert.ok(manual.some((item) => item.kind === 'snippet'));
-      assert.ok(!getCompletionCandidates(context, schema, []).some((item) => item.kind === 'snippet'));
-    }
+  it('keeps explicit completion available on a blank line and shows command variants during typing', () => {
+    assert.equal(getCompletionCandidates(analyzeCompletionContext('', 0, schema), schema, [], 'manual')[0]?.label, 'GET FILE');
+    assert.ok(labels('get d').includes('GET DATA · CSV'));
+    assert.ok(labels('t').includes('T-TEST · Paired'));
     const pathContext = analyzeCompletionContext('GET FILE "reg', 13, schema);
     assert.deepEqual(getCompletionCandidates(pathContext, schema, [], 'manual'), []);
   });
@@ -66,12 +71,15 @@ describe('SPSS completion', () => {
     assert.ok(regression.includes('/DEPENDENT'));
     assert.ok(!regression.includes('/CELLS'));
     assert.ok(!regression.includes('/DESTINATION'));
-    assert.deepEqual(labels('EXAMINE\n /'), []);
+    assert.ok(labels('EXAMINE income BY gender\n /').includes('/PLOT'));
+    assert.ok(labels('GET FILE "survey.sav" /').includes('/KEEP'));
+    assert.ok(labels('GRAPH /').includes('/SCATTERPLOT'));
     assert.deepEqual(labels('/'), []);
   });
 
   it('preserves macro prefixes instead of offering unrelated ordinary commands', () => {
     assert.ok(labels('!IF').includes('!IF'));
+    assert.ok(labels('DEFINE !sample().\n!L').includes('!LET'));
     assert.ok(!labels('!IF').includes('IF'));
     assert.ok(labels('!LE').includes('!LET'));
     assert.ok(!labels('!LE').includes('LEAVE'));
@@ -90,7 +98,7 @@ describe('SPSS completion', () => {
   });
 
   it('completes Chinese variable prefixes with their original spelling', () => {
-    const text = 'DESCRIPTIVES VARIABLES=教育';
+    const text = 'DESCRIPTIVES VARIABLES=教';
     const candidates = getCompletionCandidates(analyzeCompletionContext(text, text.length, schema), schema, [
       { index: 0, name: '教育程度', label: 'Education', type: 'Numeric', format: 'F3.0', measurementLevel: 'scale' },
     ]);
@@ -171,9 +179,9 @@ describe('SPSS completion', () => {
   it('offers double-quoted string templates and omits the optional GET FILE equals sign', () => {
     const candidates = getCompletionCandidates(analyzeCompletionContext('', 0, schema), schema, [], 'manual');
     const expected = new Map([
-      ['GET FILE snippet', 'GET FILE "${1:path/to/data.sav}".'],
-      ['GET DATA snippet', 'GET DATA\n /TYPE=${1:TXT}\n /FILE="${2:path}".'],
-      ['RELIABILITY snippet', 'RELIABILITY\n /VARIABLES=${1:items}\n /SCALE("ALL VARIABLES") ALL\n /MODEL=ALPHA.'],
+      ['GET FILE', 'GET FILE "$1".'],
+      ['GET DATA', 'GET DATA /TYPE=XLSX /FILE="$1".'],
+      ['RELIABILITY', 'RELIABILITY /VARIABLES=$1.'],
     ]);
     for (const [label, insertText] of expected) {
       const candidate = candidates.find((item) => item.label === label);
@@ -181,20 +189,14 @@ describe('SPSS completion', () => {
       assert.equal(candidate.snippet, true);
       assert.equal(candidate.insertText, insertText);
     }
-    const getCandidates = getCompletionCandidates(analyzeCompletionContext('get', 3, schema), schema, [], 'manual');
-    assert.equal(
-      getCandidates.find((item) => item.label === 'GET FILE snippet')?.insertText,
-      expected.get('GET FILE snippet'),
-    );
   });
 
   it('keeps path apostrophes, doubled double quotes, and Windows separators inside the completed string', () => {
-    const candidate = getCompletionCandidates(analyzeCompletionContext('get', 3, schema), schema, [], 'manual')
-      .find((item) => item.label === 'GET FILE snippet');
+    const candidate = getCompletionCandidates(analyzeCompletionContext('get', 3, schema), schema, [])
+      .find((item) => item.label === 'GET FILE');
     assert.ok(candidate);
     for (const filePath of ["/data/O'Brien/study.sav", '/data/""quoted"" study.sav', String.raw`C:\data\O'Brien\study.sav`]) {
-      // Replace only the editable path, as typing into the snippet placeholder would.
-      const completed: string = candidate.insertText.replace(/\$\{1:[^}]*\}/u, () => filePath);
+      const completed: string = candidate.insertText.replace('$1', () => filePath);
       assert.equal(completed, `GET FILE "${filePath}".`);
       const context = analyzeCompletionContext(completed, completed.length - 2, schema);
       assert.equal(context.kind, 'STRING');
@@ -227,14 +229,14 @@ describe('SPSS completion', () => {
       schema,
       [],
     ).find((item) => item.label === 'MEAN');
-    assert.equal(mean?.insertText, 'MEAN(${1:variables})');
+    assert.equal(mean?.insertText, 'MEAN($1)');
 
     const date = getCompletionCandidates(
       analyzeCompletionContext('COMPUTE x=date.m', 16, schema),
       schema,
       [],
     ).find((item) => item.label === 'DATE.MDY');
-    assert.equal(date?.insertText, 'DATE.MDY(${1:month}, ${2:day}, ${3:year})');
+    assert.equal(date?.insertText, 'DATE.MDY($1, $2, $3)');
   });
 
   it('suppresses ordinary completion in strings, comments, data, and embedded programs', () => {

@@ -19,7 +19,7 @@ Dedicated block scopes cover BEGIN DATA, BEGIN PROGRAM, BEGIN GPL, BEGIN EXPR, M
 
 ## Completion schema
 
-The same manifest supplies deterministic command completion, 13 command-specific subcommand vocabularies, 13 contextual keywords, 4 verified function snippets, and 16 verified command snippets. Variable completion is supplied separately by the current Active Dataset cache and is never written into this static schema.
+The manifest supplies deterministic command completion, 24 command-specific subcommand vocabularies, and 13 contextual keywords. The local registry in `src/language/completionTemplates.ts` supplies the minimal command and function templates. Variable names can come from the current Active Dataset or earlier declarations in the active document.
 
 ## Macro coverage
 

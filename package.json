@@ -2,7 +2,7 @@
   "name": "spss-studio",
   "displayName": "SPSS Studio",
   "description": "An exceptionally powerful integrated SPSS Syntax development, execution, interpretation, data, output, and AI environment for researchers.",
-  "version": "1.5.1",
+  "version": "1.5.2",
   "publisher": "jinglin",
   "author": {
     "name": "Jing LIN (林景)",
@@ -238,12 +238,29 @@
     "configurationDefaults": {
       "[spss]": {
         "editor.acceptSuggestionOnEnter": "off",
-        "editor.suggest.selectionMode": "never",
+        "editor.suggest.selectionMode": "always",
+        "editor.suggestSelection": "first",
+        "editor.suggest.snippetsPreventQuickSuggestions": false,
         "editor.quickSuggestionsDelay": 300,
         "editor.tabCompletion": "off"
       }
     },
     "keybindings": [
+      {
+        "command": "spssStudio.acceptNextCommand",
+        "key": "tab",
+        "when": "editorTextFocus && editorLangId == spss && spssStudio.nextCommandVisible && !suggestWidgetVisible && !inlineSuggestionVisible && !inSnippetMode && !editorHasSelection && !editorHasMultipleSelections && !editorTabMovesFocus && !editorReadonly"
+      },
+      {
+        "command": "spssStudio.dismissNextCommand",
+        "key": "escape",
+        "when": "editorTextFocus && editorLangId == spss && spssStudio.nextCommandVisible && !suggestWidgetVisible && !inlineSuggestionVisible && !inSnippetMode"
+      },
+      {
+        "command": "spssStudio.finishCompletionSlot",
+        "key": "enter",
+        "when": "editorTextFocus && editorLangId == spss && spssStudio.canFinishCompletionSlot && !editorHasSelection && !editorHasMultipleSelections && !editorReadonly"
+      },
       {
         "command": "spssStudio.runSelection",
         "key": "ctrl+enter",

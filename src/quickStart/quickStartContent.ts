@@ -48,7 +48,7 @@ const ENGLISH_SECTIONS = `
   </section>
   <section>
     <h2>3. Edit and run Syntax</h2>
-    <p>Local completion starts after two characters; <code>/</code> offers the current command's covered subcommands. Press <kbd>Ctrl</kbd>+<kbd>Space</kbd> or use <strong>SPSS: Complete Syntax</strong> for full templates. By default, Enter inserts a newline; explicitly choose a suggestion before accepting it with Tab.</p>
+    <p>Local completion starts with one character. <code>/</code> offers the current command's covered subcommands. Press <kbd>Tab</kbd> to accept the selected minimal template, then fill the gray fields. <kbd>Ctrl</kbd>+<kbd>Space</kbd> opens the full local list.</p>
     <div class="feature-grid">
       <article><h3>Undo</h3><p>Uses the native VS Code undo stack and targets the most recently used SPSS editor.</p></article>
       <article><h3>Run</h3><p>Runs the selection. With no selection, it resolves the current SPSS command or structural block.</p></article>
@@ -71,7 +71,7 @@ const ENGLISH_SECTIONS = `
   <section>
     <h2>5. Configure and use Chat</h2>
     <ol>
-      <li>Open <strong>Chat → Settings</strong>.</li>
+      <li>Open <strong>Settings</strong> beside Chat. Use <strong>Test</strong> to check the connection. Enable <strong>Coding</strong> for optional next-command suggestions based on an anonymized syntax summary of the active SPS file.</li>
       <li>Create a DeepSeek, Zhipu GLM, Qwen, Doubao, or custom OpenAI-compatible profile.</li>
       <li>Confirm the Base URL, enter the provider's model identifier and API Key, choose Chinese or English, and optionally enable provider-supported reasoning.</li>
       <li>Select Syntax and use <strong>Explain in Chat</strong> from the editor context menu for a concise explanation.</li>
@@ -112,7 +112,7 @@ const CHINESE_SECTIONS = `
   </section>
   <section>
     <h2>3. 编辑和运行 Syntax</h2>
-    <p>本地自动补全从两个字符开始；输入 <code>/</code> 可查看当前命令已覆盖的子命令。按 <kbd>Ctrl</kbd>+<kbd>Space</kbd>，或在命令面板选择<strong>SPSS：补全语法</strong>，可调用完整模板。默认回车用于换行；请明确选择候选后再按 Tab 接受。</p>
+    <p>主命令、变量和函数从一个字符开始提示。输入 <code>/</code> 可查看当前命令的子命令。按 <kbd>Tab</kbd> 接受当前选中的最小模板，再填灰色提示。按 <kbd>Ctrl</kbd>+<kbd>Space</kbd> 可打开完整本地候选。</p>
     <div class="feature-grid">
       <article><h3>撤销</h3><p>调用 VS Code 原生撤销栈，并以最近使用的 SPSS 编辑器为目标。</p></article>
       <article><h3>运行</h3><p>存在选区时运行选中语法；没有选区时，识别并运行光标所在的完整 SPSS 命令或结构块。</p></article>
@@ -135,7 +135,7 @@ const CHINESE_SECTIONS = `
   <section>
     <h2>5. 配置和使用 Chat</h2>
     <ol>
-      <li>打开<strong>对话 → 设置</strong>。</li>
+      <li>打开「对话」右侧的<strong>设置</strong>。点击<strong>测试</strong>验证连接。勾选<strong>编程应用</strong>可根据当前 SPS 的匿名化语法摘要获得下一条命令建议。</li>
       <li>创建 DeepSeek、智谱 GLM、通义千问、豆包或自定义 OpenAI-compatible 模型配置。</li>
       <li>确认 Base URL，填写服务商提供的模型标识和 API Key，选择中文或英文，并按需开启模型支持的推理功能。</li>
       <li>在编辑器中选择语法，通过右键菜单<strong>在对话中解释</strong>获取简洁解释。</li>
@@ -157,7 +157,7 @@ function copyFor(language: QuickStartLanguage): QuickStartCopy {
   if (language === 'zh-cn') {
     return {
       title: '快速上手',
-      eyebrow: 'SPSS Studio 1.5.1',
+      eyebrow: 'SPSS Studio 1.5.2',
       introduction: '从打开第一个 .sps 文件开始，完成 Syntax 编辑、SPSS 本地执行、数据与变量查看，以及 AI 辅助解释。',
       preferenceTitle: '更新提醒',
       preferenceText: '此后版本更新时不再自动显示快速上手',
@@ -170,7 +170,7 @@ function copyFor(language: QuickStartLanguage): QuickStartCopy {
   }
   return {
     title: 'Quick Start',
-    eyebrow: 'SPSS Studio 1.5.1',
+    eyebrow: 'SPSS Studio 1.5.2',
     introduction: 'Open your first .sps file, edit and run Syntax locally, inspect data and variables, and use focused AI assistance.',
     preferenceTitle: 'Update reminder',
     preferenceText: 'Do not show Quick Start automatically after future updates',
@@ -209,7 +209,7 @@ export function buildQuickStartHtml(options: QuickStartHtmlOptions): string {
 >
   <main>
     <header class="hero">
-      <div class="eyebrow">SPSS Studio ${escapeAttribute(options.version ?? '1.5.1')}</div>
+      <div class="eyebrow">SPSS Studio ${escapeAttribute(options.version ?? '1.5.2')}</div>
       <h1>${copy.title}</h1>
       <p>${copy.introduction}</p>
     </header>

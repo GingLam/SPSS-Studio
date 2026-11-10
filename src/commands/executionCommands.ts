@@ -8,6 +8,15 @@ const strings = runtimeStringsForLanguage(vscode.env.language);
 
 export interface ExecutionCommandDependencies {
   studio: StudioSession;
+  hasIncompleteTemplate?: (document: vscode.TextDocument, start: number, end: number) => boolean;
+}
+
+function incomplete(dependencies: ExecutionCommandDependencies, document: vscode.TextDocument, start: number, end: number): boolean {
+  if (!dependencies.hasIncompleteTemplate?.(document, start, end)) return false;
+  void vscode.window.showInformationMessage(vscode.env.language.startsWith('zh')
+    ? '请先填完所运行命令中的灰色参数提示。'
+    : 'Fill the highlighted template fields before running this syntax.');
+  return true;
 }
 
 async function executeSyntax(
@@ -42,6 +51,8 @@ export async function runSelectionOrCurrentCommand(
     return;
   }
   if (!editor.selection.isEmpty) {
+    if (incomplete(dependencies, editor.document,
+      editor.document.offsetAt(editor.selection.start), editor.document.offsetAt(editor.selection.end))) return;
     const selectionText = editor.document.getText(editor.selection);
     await executeSyntax(dependencies, selectionText, 'Run Selection');
     return;
@@ -57,6 +68,7 @@ export async function runSelectionOrCurrentCommand(
     void vscode.window.showInformationMessage(message);
     return;
   }
+  if (incomplete(dependencies, editor.document, current.start, current.end)) return;
   await executeSyntax(dependencies, current.text, 'Run Current Command');
 }
 
@@ -65,5 +77,7 @@ export async function runFile(dependencies: ExecutionCommandDependencies): Promi
   if (!editor) {
     return;
   }
-  await executeSyntax(dependencies, editor.document.getText(), 'Run File');
+  const text = editor.document.getText();
+  if (incomplete(dependencies, editor.document, 0, text.length)) return;
+  await executeSyntax(dependencies, text, 'Run File');
 }

@@ -9,7 +9,7 @@ import {
   type WebviewToExtensionMessage,
 } from './webviewProtocol';
 
-export type StudioTab = 'output' | 'data' | 'variables' | 'ai';
+export type StudioTab = 'output' | 'data' | 'variables' | 'ai' | 'settings';
 
 export type StudioShellToExtensionMessage =
   | { scope: 'shell'; type: 'ready' }

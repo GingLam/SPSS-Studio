@@ -12,7 +12,7 @@ import type {
   StoredConversation,
   StoredConversationMessage,
 } from './conversation';
-import type { ModelProfileDraft } from './modelProfile';
+import type { ModelProfile, ModelProfileDraft } from './modelProfile';
 import type { ModelProfileStore } from './modelProfileStore';
 import type { StreamChatOptions } from './openAiCompatibleClient';
 import type { AiRenderState, AiSendCallbacks, AiSendResult } from './aiRenderState';
@@ -244,11 +244,9 @@ export class AiSessionController {
     return this.renderState();
   }
 
-  public async createProfile(draft: ModelProfileDraft, apiKey?: string): Promise<AiRenderState> {
+  public async createProfile(draft: ModelProfileDraft, apiKey?: string): Promise<ModelProfile> {
     this.requireIdle();
-    const profile = await this.profiles.create(draft, apiKey);
-    await this.profiles.select(profile.id);
-    return this.renderState();
+    return this.profiles.create(draft, apiKey);
   }
 
   public async updateProfile(

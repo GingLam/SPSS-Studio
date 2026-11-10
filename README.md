@@ -16,7 +16,7 @@ Contact：[linjing@nufe.edu.cn](mailto:linjing@nufe.edu.cn)
 
 - Generated TextMate highlighting based on a 309-command IBM SPSS Statistics syntax inventory, with distinct command, subcommand, variable, function, format, literal, operator, macro, and comment families.
 - Optional **SPSS Studio Light** and **SPSS Studio Dark** color themes for a complete, contrast-checked syntax palette; installation never changes the user's active theme.
-- Local context-aware completion with quieter automatic suggestions, verified command-specific subcommands, cached variables, and explicit access to complete syntax templates.
+- One-character local completion with ranked commands, minimal templates, gray input hints, and optional AI suggestions for the next SPSS command.
 - Editor-title actions for Undo, Run, and Run All.
 - A standard **File → New File… → SPSS File** entry that opens an empty SPSS editor beside Studio without running syntax.
 - A persistent, serialized local SPSS backend.
@@ -35,7 +35,7 @@ Contact：[linjing@nufe.edu.cn](mailto:linjing@nufe.edu.cn)
 - A locally installed and licensed IBM SPSS Statistics with the Python Integration Package.
 - A trusted VS Code workspace for execution and Active Dataset access.
 
-IBM SPSS Statistics 27 has been tested on macOS. Version 1.5.1 includes the finalized 1.5.0 fixes: bridge syntax and UTF-8 transport compatibility for the Python 3.4 runtime supplied with SPSS 26, native output-language control, compatible Windows CRLF syntax submission, and balanced local completion. Windows-specific command tests are included but skipped on macOS; execution against a real Windows SPSS installation, including SPSS 26, remains pending user acceptance. A passed mock or grammar test is not a real Windows acceptance result.
+IBM SPSS Statistics 27 has been tested on macOS. SPSS Studio includes bridge syntax and UTF-8 transport compatibility for the Python 3.4 runtime supplied with SPSS 26, native output-language control, compatible Windows CRLF syntax submission, and local completion. Windows-specific command tests are included but skipped on macOS; execution against a real Windows SPSS installation, including SPSS 26, remains pending user acceptance. A passed mock or grammar test is not a real Windows acceptance result.
 
 No separate Python installation is normally required. On Windows, SPSS Studio requires IBM's `statisticspython3.bat` launcher so that the Python runtime and SPSS installation remain version-matched; it does not silently fall back to a generic Python executable. On macOS, IBM's bundled Python remains available as a compatibility fallback when the IBM launcher is absent.
 
@@ -59,7 +59,9 @@ GET FILE completion recommends `GET FILE "path/to/data.sav".` without its option
 
 Current-command execution preserves blank lines inside a command until its terminating period, matching SPSS's Python Submit backend. Blank lines between complete commands remain intact. Use ASCII periods to terminate commands; blank lines do not repair a missing period in this execution mode.
 
-Automatic completion starts after two characters; `/` can request the current command's covered subcommands. Completed commands and empty lines do not trigger another full command list. Use **Ctrl+Space** or **SPSS: Complete Syntax** in the Command Palette for short prefixes and complete templates. Suggestions identify their source as **SPSS Studio**. By default in SPS editors, automatic lists do not preselect an item, Enter inserts a newline, and Tab accepts a suggestion after an explicit selection. These are language-specific defaults; explicit SPS editor settings can override them. Copilot and other providers remain independent.
+Local completion suggests commands, variables, and functions after one character. Typing `/` offers subcommands for the current procedure. Tab accepts the selected candidate. For example, typing `G` and pressing Tab inserts `GET FILE "".` with the cursor between the quotes. The gray filename hint is displayed in the editor only. Fill the last field and press Enter to move past the template's closing punctuation and start a new line. **Ctrl+Space** opens the full local list.
+
+For optional next-command suggestions, select **Coding** on a model in the Studio **Settings** tab. Enabling it scans the active SPS file locally. After a complete command and a new line, Studio either offers a local suggestion or sends the selected model an anonymized structural summary of the active file. Tab inserts the gray suggestion for review. Run it separately when ready.
 
 - macOS: `Cmd+Enter`
 - Windows/Linux: `Ctrl+Enter`
@@ -103,15 +105,15 @@ Variable Explore is measurement-aware. For one variable, Chat proposes descripti
 
 ## SPSS AI
 
-The reusable SPSS Studio panel opens beside the native `.sps` editor and contains four tabs in this order: **Variables**, **Data**, **Output**, and **Chat**. Opening a `.sps` file alone does not open the panel. Running syntax opens **Output**; the Show Data, Show Variables, Show AI Assistant, and Manage AI Model Profiles commands open their corresponding Studio location. The extension does not contribute or automatically reveal a native VS Code bottom-panel view. Editor menus, Studio tabs, controls, progress states, tooltips, and direct feedback follow the VS Code display language: Simplified Chinese (`zh-cn`) uses the Chinese catalog, while English and other locales use the English catalog. This interface language is independent of the model response-language preference.
+The reusable SPSS Studio panel opens beside the native `.sps` editor and contains **Variables**, **Data**, **Output**, **Chat**, and **Settings** in that order. Opening a `.sps` file alone does not open the panel. Running syntax opens **Output**; the Show Data, Show Variables, Show AI Assistant, and Manage AI Model Profiles commands open their corresponding Studio location. The extension does not contribute or automatically reveal a native VS Code bottom-panel view. Editor menus, Studio tabs, controls, progress states, tooltips, and direct feedback follow the VS Code display language: Simplified Chinese (`zh-cn`) uses the Chinese catalog, while English and other locales use the English catalog. This interface language is independent of the model response-language preference.
 
-The **Chat** tab is an SPSS AI question-and-answer tool. Its compact English header uses **Current**, **History**, **Active model**, **New**, and **Settings**; a Simplified Chinese VS Code interface displays the corresponding concise Chinese controls. The boundary between the transcript and question box can be dragged with the mouse or adjusted from the keyboard. Completed answers render common Markdown structures without accepting model-generated HTML. A concise built-in system instruction grounds replies in executable SPSS Syntax, applied social statistics, assumptions, key options, and result interpretation without claiming that generated syntax was run. Replies default to Simplified Chinese and stay concise unless the user explicitly asks for detail.
+The **Chat** tab is an SPSS AI question-and-answer tool. Its compact English header uses **Current**, **History**, **Active model**, and **New**. A Simplified Chinese VS Code interface displays the corresponding concise Chinese controls. The boundary between the transcript and question box can be dragged with the mouse or adjusted from the keyboard. Completed answers render common Markdown structures without accepting model-generated HTML. A concise built-in system instruction grounds replies in executable SPSS Syntax, applied social statistics, assumptions, key options, and result interpretation without claiming that generated syntax was run. Replies default to Simplified Chinese and stay concise unless the user explicitly asks for detail.
 
 Chat is deliberately scoped to SPSS Syntax, IBM SPSS Statistics use, statistical methods implemented in SPSS, and SPSS output interpretation. Clearly unrelated requests receive a short boundary notice rather than a general-purpose answer. This instruction-level boundary reduces off-topic responses but is not a security guarantee against every possible model behavior.
 
 In an `.sps` editor, right-click a selection and choose **Explain in Chat**. With no selection, the command scanner sends the complete SPSS command or structural block at the cursor. The Studio panel opens to Chat and submits a concise explanation request immediately; it never executes the selected syntax. If no usable model profile exists, the command opens **Settings** instead.
 
-Configure it from **Settings** or run **SPSS: Manage AI Model Profiles**:
+Open the Studio **Settings** tab beside **Chat**, or run **SPSS: Manage AI Model Profiles**.
 
 1. Create a profile and choose DeepSeek, Zhipu GLM, Qwen, Doubao, or Custom OpenAI-compatible.
 2. Confirm the prefilled Base URL.
@@ -120,7 +122,7 @@ Configure it from **Settings** or run **SPSS: Manage AI Model Profiles**:
 
 Each built-in provider profile also has a **Reasoning** checkbox, which is off by default. DeepSeek, Zhipu GLM, and Doubao receive their native `thinking.type` field; Qwen receives `enable_thinking`. Custom OpenAI-compatible profiles keep the checkbox disabled because the extension does not guess provider-specific fields. Whether a particular model supports the selected mode still depends on that provider and model.
 
-Profiles can be renamed, duplicated, deleted, and switched from the panel header. Multiple models—and multiple accounts for the same provider—can coexist. Reopening **Settings** always shows the saved non-secret values. The API Key field intentionally stays blank; the status below it indicates whether a key is saved. Switching profiles changes only later requests, while historical answers retain the profile name used to generate them.
+Settings lists profiles as **Model 1**, **Model 2**, and so on. Select a number to see and edit its details. **Test** checks the current connection using a fixed short message. **Activate** chooses the model for Chat. **Coding** can use a different profile. The API Key field stays blank for saved profiles and displays the saved status below. A changed provider or Base URL requires a new key.
 
 **Language** in **Settings** is shared by ordinary Chat questions, **Explain in Chat**, and Output **Explain**. It defaults to **Chinese (default)** and can be changed to **English**. The preference is stored in this extension's global VS Code state rather than in an `.sps` file or workspace folder.
 
@@ -226,12 +228,13 @@ Report reproducible defects through [GitHub Issues](https://github.com/GingLam/S
 
 ## Limitations
 
-SPSS Studio is not an LSP or a full semantic validator. It does not provide statistical menus, editable Data View cells, variable metadata editing, paper-table generation, or a general SPV viewer. Variables is intentionally read-only, and exported output is HTML rather than SPV. The AI client supports the common streamed OpenAI-compatible Chat Completions contract only; provider-specific tools, search, attachments, and advanced parameters are outside its scope.
+SPSS Studio is not an LSP or a full semantic validator. It does not provide statistical menus, editable Data View cells, variable metadata editing, paper-table generation, or a general SPV viewer. Variables is intentionally read-only, and exported output is HTML rather than SPV. The AI client supports the common OpenAI-compatible Chat Completions contract for streaming chat and short completion requests. Provider-specific tools, search, attachments, and advanced parameters are outside its scope.
 
 ## Version History
 
 | Version | Date | Update summary |
 | --- | --- | --- |
+| 1.5.2 | 2026-11-10 | Adds a dedicated Settings tab, connection testing, one-character minimal syntax templates, and opt-in AI next-command suggestions. |
 | 1.5.1 | 2026-11-06 | Repackages the finalized 1.5.0 behavior for Marketplace upload. Includes balanced local completion, explicit template selection, quieter automatic suggestions, and SPS-specific Enter/Tab defaults. |
 | 1.5.0 | 2026-11-05 | Native Chinese/English statistical output follows VS Code. Completion and Chat recommend double-quoted strings and GET FILE without optional equals. Fixed CRLF-triggered multiline RECODE errors and added protected character handling and native-engine regressions. |
 | 1.4.3 | 2026-10-30 | Fixed SPSS 26/Python 3.4 compatibility and setup diagnostics. October 31 revisions add cross-drive Windows setup fallbacks, a persistent Output action bar, selected-result export/print, concise editor labels, compact syntax-generation rules, and the standard SPSS File creation entry. Windows/SPSS 26 real-machine acceptance remains pending. |

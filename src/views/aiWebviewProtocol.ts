@@ -1,3 +1,4 @@
+import type { AiConnectionResult } from '../ai/openAiCompatibleClient';
 import type { AiStrings } from '../ai/aiStrings';
 import type { AiResponseLanguage } from '../ai/chatProtocol';
 import type { ConversationSummary } from '../ai/conversation';
@@ -47,6 +48,8 @@ export type ExtensionToAiWebviewMessage =
     strings: AiStrings;
   }
   | { type: 'showPage'; page: AiPage }
+  | { type: 'profileSaved'; profileId: string }
+  | { type: 'profileTested'; requestId: number; result: AiConnectionResult | 'configuration'; message?: string }
   | { type: 'responseStarted'; question: string; segments: AssistantContentSegment[] }
   | { type: 'responseDelta'; content: string }
   | { type: 'requestFailed'; message: string; cancelled: boolean; question: string }
@@ -59,6 +62,7 @@ interface ProfileFields {
   model: string;
   reasoningEnabled: boolean;
   apiKey?: string;
+  codingEnabled?: boolean;
 }
 
 export type AiWebviewToExtensionMessage =
@@ -73,9 +77,10 @@ export type AiWebviewToExtensionMessage =
   | { type: 'selectProfile'; profileId: string }
   | ({ type: 'createProfile' } & ProfileFields)
   | ({ type: 'saveProfile'; profileId: string } & ProfileFields)
-  | { type: 'duplicateProfile'; profileId: string }
   | { type: 'deleteProfile'; profileId: string }
-  | { type: 'deleteProfileKey'; profileId: string }
+  | { type: 'setCodingProfile'; profileId: string; enabled: boolean }
+  | { type: 'scanCoding' }
+  | ({ type: 'testProfile'; requestId: number; profileId?: string } & ProfileFields)
   | { type: 'openProviderHelp'; providerId: AiProviderId }
   | { type: 'openLink'; url: string }
   | { type: 'setComposerHeight'; height: number }
@@ -97,6 +102,7 @@ export function isAiWebviewMessage(value: unknown): value is AiWebviewToExtensio
     || value.type === 'stop'
     || value.type === 'newChat'
     || value.type === 'clearAllConversations'
+    || value.type === 'scanCoding'
   ) {
     return true;
   }
@@ -127,9 +133,7 @@ export function isAiWebviewMessage(value: unknown): value is AiWebviewToExtensio
   }
   if (
     value.type === 'selectProfile'
-    || value.type === 'duplicateProfile'
     || value.type === 'deleteProfile'
-    || value.type === 'deleteProfileKey'
   ) {
     return boundedString(value.profileId, 1, 128);
   }
@@ -138,6 +142,14 @@ export function isAiWebviewMessage(value: unknown): value is AiWebviewToExtensio
   }
   if (value.type === 'openLink') {
     return boundedString(value.url, 1, 4_096) && safeMarkdownUrl(value.url) !== undefined;
+  }
+  if (value.type === 'testProfile') {
+    return Number.isSafeInteger(value.requestId) && Number(value.requestId) >= 0
+      && (value.profileId === undefined || boundedString(value.profileId, 1, 128))
+      && validProfileFields(value);
+  }
+  if (value.type === 'setCodingProfile') {
+    return boundedString(value.profileId, 1, 128) && typeof value.enabled === 'boolean';
   }
   if (value.type === 'createProfile') {
     return validProfileFields(value);
@@ -149,7 +161,7 @@ export function isAiWebviewMessage(value: unknown): value is AiWebviewToExtensio
 }
 
 export function profileDraftFromMessage(
-  message: Extract<AiWebviewToExtensionMessage, { type: 'createProfile' | 'saveProfile' }>,
+  message: Extract<AiWebviewToExtensionMessage, { type: 'createProfile' | 'saveProfile' | 'testProfile' }>,
 ): ModelProfileDraft {
   return {
     providerId: message.providerId,
@@ -166,6 +178,7 @@ function validProfileFields(value: Record<string, unknown>): boolean {
     && boundedString(value.baseUrl, 1, 4_096)
     && boundedString(value.model, 1, 1_024)
     && typeof value.reasoningEnabled === 'boolean'
+    && (value.codingEnabled === undefined || typeof value.codingEnabled === 'boolean')
     && (value.apiKey === undefined || boundedString(value.apiKey, 0, 16_384));
 }
 

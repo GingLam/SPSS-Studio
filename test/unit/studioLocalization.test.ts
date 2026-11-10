@@ -34,8 +34,9 @@ describe('SPSS Studio interface localization', () => {
         STUDIO_STRINGS_ZH_CN.tabData,
         STUDIO_STRINGS_ZH_CN.tabOutput,
         STUDIO_STRINGS_ZH_CN.tabChat,
+        STUDIO_STRINGS_ZH_CN.tabSettings,
       ],
-      ['变量', '数据', '输出', '对话'],
+      ['变量', '数据', '输出', '对话', '设置'],
     );
     assert.equal(STUDIO_STRINGS_ZH_CN.measure, '测量层次');
     assert.equal(STUDIO_STRINGS_ZH_CN.exploring, '正在探索……');
