@@ -24,7 +24,9 @@ describe('SPSS Studio interface localization', () => {
     assert.equal(studioStringsForLanguage('zh-cn'), STUDIO_STRINGS_ZH_CN);
     assert.equal(studioStringsForLanguage('ZH-CN'), STUDIO_STRINGS_ZH_CN);
     assert.equal(studioStringsForLanguage('zh-tw'), STUDIO_STRINGS_ZH_CN);
+    assert.equal(runtimeStringsForLanguage('zh-tw'), RUNTIME_STRINGS_ZH_CN);
     assert.equal(runtimeStringsForLanguage('fr'), RUNTIME_STRINGS_EN);
+    assert.equal(studioStringsForLanguage('fr'), STUDIO_STRINGS_EN);
   });
 
   it('uses the approved concise Chinese Studio terminology', () => {
@@ -46,6 +48,9 @@ describe('SPSS Studio interface localization', () => {
   it('localizes provider presentation without changing operational settings', () => {
     const english = providerPresetsForLanguage('en');
     const chinese = providerPresetsForLanguage('zh-cn');
+    assert.deepEqual(providerPresetsForLanguage('zh-tw'), chinese);
+    assert.deepEqual(providerPresetsForLanguage('fr'), english);
+    for (const preset of english) assert.doesNotMatch(preset.label, /\p{Script=Han}/u);
     assert.deepEqual(chinese.map((preset) => preset.id), english.map((preset) => preset.id));
     assert.deepEqual(chinese.map((preset) => preset.baseUrl), english.map((preset) => preset.baseUrl));
     assert.deepEqual(chinese.map((preset) => preset.reasoningControl), english.map((preset) => preset.reasoningControl));
@@ -60,7 +65,7 @@ describe('SPSS Studio interface localization', () => {
       contributes: { commands: Array<{ command: string; title: string }> };
     };
     const english = JSON.parse(fs.readFileSync(path.join(root, 'package.nls.json'), 'utf8')) as Record<string, string>;
-    const chinese = JSON.parse(fs.readFileSync(path.join(root, 'package.nls.zh-cn.json'), 'utf8')) as Record<string, string>;
+    const chinese = JSON.parse(fs.readFileSync(path.join(root, 'package.nls.zh.json'), 'utf8')) as Record<string, string>;
     assert.ok(manifest.contributes.commands.length > 0);
     for (const command of manifest.contributes.commands) {
       assert.match(command.title, /^%spssStudio\.command\.[A-Za-z]+%$/u);

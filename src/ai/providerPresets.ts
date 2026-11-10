@@ -26,7 +26,7 @@ export const AI_PROVIDER_PRESETS: readonly AiProviderPreset[] = [
   },
   {
     id: 'zhipu',
-    label: 'Zhipu GLM (智谱)',
+    label: 'Zhipu GLM',
     baseUrl: 'https://open.bigmodel.cn/api/paas/v4',
     modelPlaceholder: 'Enter a GLM model ID',
     helpUrl: 'https://docs.bigmodel.cn/',
@@ -34,7 +34,7 @@ export const AI_PROVIDER_PRESETS: readonly AiProviderPreset[] = [
   },
   {
     id: 'qwen',
-    label: 'Qwen (通义千问)',
+    label: 'Qwen',
     baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
     modelPlaceholder: 'For example: qwen-plus',
     helpUrl: 'https://help.aliyun.com/zh/model-studio/base-url',
@@ -42,7 +42,7 @@ export const AI_PROVIDER_PRESETS: readonly AiProviderPreset[] = [
   },
   {
     id: 'doubao',
-    label: 'Doubao (豆包)',
+    label: 'Doubao',
     baseUrl: 'https://ark.cn-beijing.volces.com/api/v3',
     modelPlaceholder: 'Enter a ModelArk model or endpoint ID',
     helpUrl: 'https://docs.volcengine.com/docs/ark/compatible-with-openai-sdk',
@@ -82,7 +82,7 @@ const AI_PROVIDER_PRESENTATION_ZH_CN: Readonly<Record<AiProviderId, Pick<AiProvi
 };
 
 export function providerPresetsForLanguage(language: string): AiProviderPreset[] {
-  if (language.toLowerCase() !== 'zh-cn') {
+  if (!/^zh(?:[-_]|$)/iu.test(language)) {
     return AI_PROVIDER_PRESETS.map((preset) => ({ ...preset }));
   }
   return AI_PROVIDER_PRESETS.map((preset) => ({

@@ -647,9 +647,16 @@ export class SpssStudioPanel implements vscode.Disposable {
 
   private fontControls(id: 'spss-editor' | 'studio', label: string): string {
     const fallback = escapeHtmlText(this.studioStrings.defaultFontSize);
+    const presets = escapeHtmlText(this.studioStrings.fontSizePresets);
+    const options = [10, 11, 12, 13, 14, 16, 18, 20, 22, 24, 26, 28]
+      .map((size) => `<option value="${String(size)}">${String(size)}</option>`).join('');
     return `<label for="${id}-font-size">${escapeHtmlText(label)}</label>
       <div class="font-control">
-        <input id="${id}-font-size" type="text" inputmode="numeric" list="studio-font-sizes" maxlength="2" placeholder="${fallback}" autocomplete="off">
+        <input id="${id}-font-size" type="text" inputmode="numeric" maxlength="2" placeholder="${fallback}" autocomplete="off">
+        <select id="${id}-font-presets" aria-label="${escapeHtmlText(label)} · ${presets}">
+          <option value="" disabled selected hidden>${presets}</option>
+          ${options}
+        </select>
         <button id="reset-${id}-font" type="button">${fallback}</button>
       </div>`;
   }
@@ -752,12 +759,12 @@ export class SpssStudioPanel implements vscode.Disposable {
             <button id="open-quick-start" type="button">${text(strings.quickStart)}</button>
             <label for="studio-theme">${text(strings.theme)}</label>
             <select id="studio-theme">
-              ${STUDIO_THEMES.map((theme) => `<option>${theme}</option>`).join('')}
+              <option value="${STUDIO_THEMES[0]}">${text(strings.lightTheme)}</option>
+              <option value="${STUDIO_THEMES[1]}">${text(strings.darkTheme)}</option>
               <option value="other">${text(strings.otherThemes)}</option>
             </select>
             ${this.fontControls('spss-editor', strings.spssEditorFontSize)}
             ${this.fontControls('studio', strings.studioFontSize)}
-            <datalist id="studio-font-sizes">${[10, 11, 12, 13, 14, 16, 18, 20, 22, 24, 26, 28].map((size) => `<option value="${String(size)}"></option>`).join('')}</datalist>
             <label for="response-language" id="response-language-label"></label>
             <select id="response-language">
               <option value="zh-CN" id="response-language-zh"></option>

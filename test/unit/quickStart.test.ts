@@ -50,6 +50,7 @@ describe('Quick Start', () => {
       scriptUri: 'vscode-resource://quick-start.js',
       nonce: 'test-nonce',
       cspSource: 'vscode-webview:',
+      version: '1.5.3',
     };
     const english = buildQuickStartHtml({
       ...common,
@@ -63,14 +64,22 @@ describe('Quick Start', () => {
     });
 
     assert.match(english, /<h1>Quick Start<\/h1>/u);
+    assert.match(english, /SPSS Studio 1\.5\.3/u);
+    assert.match(english, /File → New File… → SPSS File/u);
+    assert.match(english, /Settings → System → AI chat language/u);
+    assert.doesNotMatch(english, /Open a <code>\.sps<\/code> file/u);
     assert.match(english, /Do not show Quick Start automatically after future updates/u);
     assert.match(english, /Variables[\s\S]*Data[\s\S]*Output[\s\S]*Chat/u);
     assert.match(english, /id="suppress-after-updates" type="checkbox">/u);
     assert.match(chinese, /<h1>快速上手<\/h1>/u);
     assert.match(chinese, /此后版本更新时不再自动显示快速上手/u);
     assert.match(chinese, /id="suppress-after-updates" type="checkbox" checked>/u);
-    assert.match(chinese, /至少准备一个 <code>\.sps<\/code> 文件/u);
-    assert.match(chinese, /第一次执行时[\s\S]*SPSS Studio/u);
+    assert.match(chinese, /SPSS Studio 1\.5\.3/u);
+    assert.match(chinese, /文件 → 新建文件… → SPSS 文件/u);
+    assert.match(chinese, /设置 → 系统 → AI 对话语言/u);
+    assert.match(chinese, /SPSS：查看状态/u);
+    assert.doesNotMatch(chinese, /打开一个 <code>\.sps|全部运行|SPSS: Show Status|SPSS: Restart Engine/u);
+    assert.match(chinese, /第一次执行时[\s\S]*<strong>输出<\/strong>/u);
     assert.match(chinese, /default-src 'none'/u);
     assert.match(chinese, /script-src 'nonce-test-nonce'/u);
     assert.doesNotMatch(chinese, /id="configure-runtime"/u);

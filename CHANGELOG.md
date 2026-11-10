@@ -5,6 +5,8 @@
 - Add a System section to Studio Settings with Quick Start, VS Code theme selection, separate SPS editor and Studio font sizes, and the shared Chat response language.
 - Explain checked output or explore checked variables together with an explicit SPS selection. Explain in Chat can include both checked sources in one request. Failed runs expose a selectable diagnostic even when native HTML is unavailable.
 
+- Refresh both Quick Start guides for the File menu entry. Keep font presets available with an existing value, match system controls to the theme, and align Chinese and English labels.
+
 ## 1.5.2 — 2026-11-10
 
 - Move model profiles to a dedicated Settings tab with compact numbering, a connection test, and an independent coding model.

@@ -9,10 +9,13 @@ export interface StudioStrings {
   systemSettings: string;
   quickStart: string;
   theme: string;
+  lightTheme: string;
+  darkTheme: string;
   otherThemes: string;
   studioFontSize: string;
   spssEditorFontSize: string;
   defaultFontSize: string;
+  fontSizePresets: string;
   settingsError: string;
   enginePrefix: string;
   engineStates: Record<EngineState, string>;
@@ -92,10 +95,13 @@ export const STUDIO_STRINGS_EN: StudioStrings = {
   systemSettings: 'System',
   quickStart: 'Quick Start',
   theme: 'VS Code theme',
+  lightTheme: 'SPSS Studio Light',
+  darkTheme: 'SPSS Studio Dark',
   otherThemes: 'More themes…',
   studioFontSize: 'Studio font size',
   spssEditorFontSize: 'SPSS editor font size',
   defaultFontSize: 'Default',
+  fontSizePresets: 'Presets',
   settingsError: 'Could not update the setting',
   enginePrefix: 'SPSS',
   engineStates: {
@@ -189,10 +195,13 @@ export const STUDIO_STRINGS_ZH_CN: StudioStrings = {
   systemSettings: '系统',
   quickStart: '快速上手',
   theme: 'VS Code 主题',
+  lightTheme: 'SPSS Studio 浅色',
+  darkTheme: 'SPSS Studio 深色',
   otherThemes: '更多主题…',
   studioFontSize: 'Studio 字号',
   spssEditorFontSize: 'SPS 编辑器字号',
   defaultFontSize: '默认',
+  fontSizePresets: '预设',
   settingsError: '无法更新设置',
   enginePrefix: 'SPSS',
   engineStates: {

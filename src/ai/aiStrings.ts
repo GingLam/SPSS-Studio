@@ -121,7 +121,7 @@ export const AI_STRINGS_EN: AiStrings = {
   open: 'Open',
   profileEmpty: 'Create a model profile to start using SPSS AI.',
   provider: 'Provider',
-  responseLanguage: 'Response language',
+  responseLanguage: 'AI chat language',
   responseLanguageChinese: 'Chinese (default)',
   responseLanguageEnglish: 'English',
   reasoningUnavailable: 'Automatic reasoning control is unavailable for custom providers.',
@@ -146,9 +146,9 @@ export const AI_STRINGS_EN: AiStrings = {
 export const AI_STRINGS_ZH_CN: AiStrings = {
   activeProfile: '当前模型',
   apiKey: 'API 密钥',
-  apiKeyMissing: '尚未保存 API Key。',
+  apiKeyMissing: '尚未保存 API 密钥。',
   apiKeyPlaceholder: '留空以保留已保存密钥；输入新密钥可替换',
-  apiKeySaved: 'API Key 已安全保存。',
+  apiKeySaved: 'API 密钥已安全保存。',
   baseUrl: '接口地址',
   busyWarning: '请等待当前 AI 回复完成，或先停止生成，再发送其他问题。',
   cancel: '取消',
@@ -199,7 +199,7 @@ export const AI_STRINGS_ZH_CN: AiStrings = {
   open: '打开',
   profileEmpty: '请先创建模型配置，然后使用 SPSS AI。',
   provider: '服务商',
-  responseLanguage: '回答语言',
+  responseLanguage: 'AI 对话语言',
   responseLanguageChinese: '中文（默认）',
   responseLanguageEnglish: '英文',
   reasoningUnavailable: '自定义服务商不支持自动配置推理参数。',
@@ -222,5 +222,5 @@ export const AI_STRINGS_ZH_CN: AiStrings = {
 };
 
 export function aiStringsForLanguage(language: string): AiStrings {
-  return language.toLowerCase() === 'zh-cn' ? AI_STRINGS_ZH_CN : AI_STRINGS_EN;
+  return /^zh(?:[-_]|$)/iu.test(language) ? AI_STRINGS_ZH_CN : AI_STRINGS_EN;
 }

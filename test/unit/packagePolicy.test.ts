@@ -20,7 +20,7 @@ describe('VSIX package policy', () => {
     const allowed = [
       'package.json',
       'README.md',
-      'package.nls.zh-cn.json',
+      'package.nls.zh.json',
       'images/plugin.png',
       'media/ai.js',
       'media/spss-highlighter.js',

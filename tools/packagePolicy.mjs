@@ -7,7 +7,7 @@ const ROOT_FILES = new Set([
   'language-configuration.json',
   'package.json',
   'package.nls.json',
-  'package.nls.zh-cn.json',
+  'package.nls.zh.json',
 ]);
 
 const ASSET_PATTERNS = [

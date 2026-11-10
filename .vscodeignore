@@ -5,7 +5,7 @@
 !language-configuration.json
 !package.json
 !package.nls.json
-!package.nls.zh-cn.json
+!package.nls.zh.json
 !images/**
 !media/**
 !syntax/**

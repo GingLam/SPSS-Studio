@@ -12,6 +12,7 @@ describe('SPSS AI localization', () => {
     assert.deepEqual(Object.keys(AI_STRINGS_ZH_CN).sort(), Object.keys(AI_STRINGS_EN).sort());
     assert.equal(aiStringsForLanguage('zh-cn'), AI_STRINGS_ZH_CN);
     assert.equal(aiStringsForLanguage('ZH-CN'), AI_STRINGS_ZH_CN);
+    assert.equal(aiStringsForLanguage('zh-tw'), AI_STRINGS_ZH_CN);
     assert.equal(aiStringsForLanguage('fr'), AI_STRINGS_EN);
   });
 
@@ -25,7 +26,7 @@ describe('SPSS AI localization', () => {
       newProfile: 'New',
       name: 'Name',
       provider: 'Provider',
-      responseLanguage: 'Response language',
+      responseLanguage: 'AI chat language',
       enableReasoning: 'Reasoning',
       coding: 'Coding',
       test: 'Test',
@@ -50,7 +51,7 @@ describe('SPSS AI localization', () => {
       newProfile: '新建',
       name: '名称',
       provider: '服务商',
-      responseLanguage: '回答语言',
+      responseLanguage: 'AI 对话语言',
       enableReasoning: '推理',
       coding: '编程应用',
       test: '测试',
@@ -78,7 +79,7 @@ describe('SPSS AI localization', () => {
   it('keeps package contribution localization keys in parity', () => {
     const root = path.resolve(__dirname, '../../..');
     const english = JSON.parse(fs.readFileSync(path.join(root, 'package.nls.json'), 'utf8')) as Record<string, string>;
-    const chinese = JSON.parse(fs.readFileSync(path.join(root, 'package.nls.zh-cn.json'), 'utf8')) as Record<string, string>;
+    const chinese = JSON.parse(fs.readFileSync(path.join(root, 'package.nls.zh.json'), 'utf8')) as Record<string, string>;
     assert.deepEqual(Object.keys(chinese).sort(), Object.keys(english).sort());
     for (const value of Object.values({ ...english, ...chinese })) {
       assert.ok(value.trim());

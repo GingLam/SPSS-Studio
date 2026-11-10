@@ -477,6 +477,11 @@
   overflow: auto;
 }
 
+body.vscode-light .system-form,
+body.vscode-high-contrast-light .system-form { color-scheme: light; }
+body.vscode-dark .system-form,
+body.vscode-high-contrast:not(.vscode-high-contrast-light) .system-form { color-scheme: dark; }
+
 .system-form label { margin-top: 6px; font-weight: 600; }
 .system-form select, .system-form input {
   max-width: 100%;
@@ -485,8 +490,12 @@
   background: var(--vscode-input-background);
   border: 1px solid var(--vscode-input-border, transparent);
 }
+.system-form option {
+  color: var(--vscode-input-foreground);
+  background-color: var(--vscode-input-background);
+}
 .font-control { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
-.font-control input { width: 7em; }
+.font-control input { width: 4.5em; }
 .system-form #open-quick-start { margin-bottom: 6px; }
 
 .profiles-sidebar {
@@ -530,7 +539,8 @@
   background: transparent;
 }
 
-.profile-row.active-profile {
+.profile-row.active-profile,
+#system-settings.selected {
   border-color: var(--vscode-focusBorder);
 }
 

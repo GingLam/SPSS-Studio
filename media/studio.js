@@ -103,6 +103,7 @@
 
   function bindFontControl(id, type, preview) {
     const input = byId(`${id}-font-size`);
+    const presets = byId(`${id}-font-presets`);
     let savedSize = null;
     let pendingSave;
     const read = () => {
@@ -131,12 +132,18 @@
     input.addEventListener('keydown', (event) => {
       if (event.key === 'Enter') input.blur();
     });
-    byId(`reset-${id}-font`).addEventListener('click', () => {
+    function applyPreset(fontSize) {
       window.clearTimeout(pendingSave);
-      input.value = '';
-      preview?.(null);
-      postStudio({ type, fontSize: null });
+      input.value = fontSize ?? '';
+      preview?.(fontSize);
+      postStudio({ type, fontSize });
+    }
+    presets.addEventListener('change', () => {
+      if (!presets.value) return;
+      applyPreset(Number(presets.value));
+      presets.selectedIndex = 0;
     });
+    byId(`reset-${id}-font`).addEventListener('click', () => applyPreset(null));
     return (size) => {
       savedSize = size;
       if (document.activeElement !== input) {

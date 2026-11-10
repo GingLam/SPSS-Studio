@@ -43,7 +43,7 @@ describe('SPSS editor title actions', () => {
     assert.ok(manifest.contributes.commands.some((command) => command.command === 'spssStudio.newFile'));
     for (const [filename, labels] of [
       ['package.nls.json', ['Run', 'Run All', 'AI Assistant']],
-      ['package.nls.zh-cn.json', ['运行', '运行全部', 'AI助手']],
+      ['package.nls.zh.json', ['运行', '运行全部', 'AI助手']],
     ] as const) {
       const strings = JSON.parse(fs.readFileSync(path.join(root, filename), 'utf8')) as Record<string, string>;
       assert.deepEqual(['runSelection', 'runFile', 'showAi'].map((id) => strings[`spssStudio.command.${id}`]), labels);
@@ -101,7 +101,7 @@ describe('SPSS editor title actions', () => {
       fs.readFileSync(path.resolve(__dirname, '../../../package.nls.json'), 'utf8'),
     ) as Record<string, string>;
     const chinese = JSON.parse(
-      fs.readFileSync(path.resolve(__dirname, '../../../package.nls.zh-cn.json'), 'utf8'),
+      fs.readFileSync(path.resolve(__dirname, '../../../package.nls.zh.json'), 'utf8'),
     ) as Record<string, string>;
     assert.equal(english['spssStudio.command.explainSyntaxInChat'], 'Explain in Chat');
     assert.equal(chinese['spssStudio.command.explainSyntaxInChat'], '在对话中解释');
@@ -161,7 +161,7 @@ describe('SPSS editor title actions', () => {
       fs.readFileSync(path.resolve(__dirname, '../../../package.nls.json'), 'utf8'),
     ) as Record<string, string>;
     const chinese = JSON.parse(
-      fs.readFileSync(path.resolve(__dirname, '../../../package.nls.zh-cn.json'), 'utf8'),
+      fs.readFileSync(path.resolve(__dirname, '../../../package.nls.zh.json'), 'utf8'),
     ) as Record<string, string>;
     assert.equal(english['spssStudio.command.showQuickStart'], 'Quick Start');
     assert.equal(chinese['spssStudio.command.showQuickStart'], '快速上手');

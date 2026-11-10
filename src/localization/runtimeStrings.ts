@@ -119,7 +119,7 @@ export const RUNTIME_STRINGS_ZH_CN: RuntimeStrings = {
 };
 
 export function runtimeStringsForLanguage(language: string): RuntimeStrings {
-  return language.toLowerCase() === 'zh-cn' ? RUNTIME_STRINGS_ZH_CN : RUNTIME_STRINGS_EN;
+  return /^zh(?:[-_]|$)/iu.test(language) ? RUNTIME_STRINGS_ZH_CN : RUNTIME_STRINGS_EN;
 }
 
 export function formatLocalized(template: string, values: Readonly<Record<string, string>>): string {

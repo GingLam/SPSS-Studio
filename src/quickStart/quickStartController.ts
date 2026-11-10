@@ -19,13 +19,14 @@ export class QuickStartController implements vscode.Disposable {
     private readonly extensionUri: vscode.Uri,
     private readonly globalState: vscode.Memento,
     uiLanguage: string,
+    private readonly version: string,
     private readonly configureRuntime?: () => void,
     private readonly exampleStorageRoot?: string,
   ) {
     this.language = quickStartLanguage(uiLanguage);
   }
 
-  public async maybeShowForVersion(currentVersion: string): Promise<void> {
+  public async maybeShowForVersion(): Promise<void> {
     const lastObservedVersion = this.globalState.get<string>(QUICK_START_LAST_VERSION_KEY);
     const suppressAfterUpdates = this.globalState.get<boolean>(
       QUICK_START_SUPPRESS_UPDATES_KEY,
@@ -34,10 +35,10 @@ export class QuickStartController implements vscode.Disposable {
     const displayState = lastObservedVersion === undefined
       ? { suppressAfterUpdates }
       : { lastObservedVersion, suppressAfterUpdates };
-    if (shouldShowQuickStart(currentVersion, displayState)) {
+    if (shouldShowQuickStart(this.version, displayState)) {
       this.show();
     }
-    await this.globalState.update(QUICK_START_LAST_VERSION_KEY, currentVersion);
+    await this.globalState.update(QUICK_START_LAST_VERSION_KEY, this.version);
   }
 
   public show(): void {
@@ -106,6 +107,7 @@ export class QuickStartController implements vscode.Disposable {
     );
     panel.webview.html = buildQuickStartHtml({
       language: this.language,
+      version: this.version,
       suppressAfterUpdates: this.globalState.get<boolean>(
         QUICK_START_SUPPRESS_UPDATES_KEY,
         false,

@@ -71,7 +71,7 @@ function renderPrompt(
 ): string {
   const english = language === 'en';
   const lines = [
-    '## Variable Explore',
+    english ? '## Variable Explore' : '## 变量探索',
     '',
     `${english ? 'Dataset' : '数据集'}: ${safeText(profiles.datasetName)}`,
     `${english ? 'Selected variables' : '所选变量数'}: ${String(profiles.profiles.length)}`,

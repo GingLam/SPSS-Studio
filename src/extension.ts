@@ -114,6 +114,7 @@ export function activate(context: vscode.ExtensionContext): SpssStudioExtensionA
     context.extensionUri,
     context.globalState,
     vscode.env.language,
+    extensionVersion(context.extension.packageJSON),
     () => { void runtimeSetup.run(); },
     context.globalStorageUri.fsPath,
   );
@@ -310,7 +311,7 @@ export function activate(context: vscode.ExtensionContext): SpssStudioExtensionA
     vscode.commands.registerCommand('spssStudio.configureRuntime', () => runtimeSetup.show()),
   );
 
-  void quickStart.maybeShowForVersion(extensionVersion(context.extension.packageJSON))
+  void quickStart.maybeShowForVersion()
     .catch((error: unknown) => {
       const message = error instanceof Error ? error.message : String(error);
       output.appendLine(`[Quick Start] ${message}`);

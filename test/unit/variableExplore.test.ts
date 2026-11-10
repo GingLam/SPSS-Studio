@@ -40,7 +40,7 @@ const fixture: VariableProfiles = {
 describe('Variable Explore prompt', () => {
   it('formats bounded readable Markdown in the shared response language', () => {
     const chinese = buildVariableExploreQuestion(fixture);
-    assert.match(chinese, /## Variable Explore/u);
+    assert.match(chinese, /## 变量探索/u);
     assert.match(chinese, /所选变量数: 1/u);
     assert.match(chinese, /### education/u);
     assert.match(chinese, /2 = 中学; N=60/u);
@@ -48,6 +48,7 @@ describe('Variable Explore prompt', () => {
     assert.ok(chinese.length < 30_000);
 
     const english = buildVariableExploreQuestion(fixture, 'en');
+    assert.match(english, /## Variable Explore/u);
     assert.match(english, /Selected variables: 1/u);
     assert.match(english, /Observed values/u);
   });
