@@ -6,6 +6,7 @@
 - Start local completion after one character. Tab accepts ranked minimal syntax with gray input hints.
 - Offer opt-in next-command suggestions from local SPSS workflows and anonymized context validated against built-in templates.
 - Put the active model first in Chat, followed by New, Current, and History. Show complex completion templates on separate lines and localize gray field hints.
+- Fix repeated rows when paging back through CSV and other text imports. Cache data after a directly submitted `GET DATA /TYPE=TXT` so SPSS can return the requested rows in order.
 
 ## 1.5.1 — 2026-11-06
 

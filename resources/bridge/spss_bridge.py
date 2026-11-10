@@ -56,6 +56,24 @@ _PROTECTED_BLOCKS = (
 )
 
 
+_VIRTUAL_TEXT_IMPORT = re.compile(
+    r"^GET\s+DATA(?:\s*/\s*|\s+)TYPE(?:\s*=\s*|\s+)TXT(?=[\s/.]|$)", re.IGNORECASE,
+)
+_IMMEDIATE_EXECUTE = re.compile(r"\s*EXECUTE\s*\.(?=\s|/\*|$)", re.IGNORECASE)
+_IMMEDIATE_CACHE = re.compile(r"\s*CACHE\s*\.(?=\s|/\*|$)", re.IGNORECASE)
+
+
+def _text_import_cache_commands(syntax: str, next_line: int) -> str:
+    # CACHE schedules a pass; EXECUTE is necessary unless the user already
+    # starts a pass here. Never postpone it beyond later user transformations.
+    cache = _IMMEDIATE_CACHE.match(syntax, next_line)
+    if cache and _IMMEDIATE_EXECUTE.match(syntax, cache.end()):
+        return ""
+    if _IMMEDIATE_EXECUTE.match(syntax, next_line):
+        return "CACHE.\n"
+    return "CACHE.\nEXECUTE.\n"
+
+
 def _syntax_character_location(character: str, line: int, column: int) -> str:
     name = {"\r": "CARRIAGE RETURN", "\t": "CHARACTER TABULATION"}.get(character)
     return "U+{0:04X} {1} at line {2}, column {3}".format(
@@ -69,7 +87,7 @@ def _is_command_end(line: str, index: int) -> bool:
     return (not tail or tail.startswith("/*")) and bool(previous) and previous[-1] not in "=,(+-*/<>&|~"
 
 
-def _prepare_syntax_for_submit(syntax: str) -> tuple:
+def _prepare_syntax_for_submit(syntax: str, cache_text_imports: bool = False) -> tuple:
     """Normalize verified Submit separators without changing literal payloads.
 
     CRLF is a physical line ending in every region. A lone CR inside a quoted
@@ -88,6 +106,17 @@ def _prepare_syntax_for_submit(syntax: str) -> tuple:
     command_comment = False
     command_start = True
     macro_reference = False
+    visible_prefix = ""
+
+    def remember(character: str) -> None:
+        nonlocal visible_prefix
+        if not cache_text_imports or len(visible_prefix) >= 128:
+            return
+        if character.isspace():
+            if visible_prefix and not visible_prefix.endswith(" "):
+                visible_prefix += " "
+        else:
+            visible_prefix += character
 
     def record(collection: dict, character: str, line: int, column: int) -> None:
         collection["count"] += 1
@@ -107,6 +136,7 @@ def _prepare_syntax_for_submit(syntax: str) -> tuple:
         index = 0
         line_tabs = 0
         indentation = True
+        cache_commands = ""
         if protected_end is not None and protected_end.match(line):
             protected_end = None
             command_start = True
@@ -136,9 +166,11 @@ def _prepare_syntax_for_submit(syntax: str) -> tuple:
                 if character == "." and not line[index + 1:].strip(" \t\u00a0\u3000"):
                     command_comment = False
                     command_start = True
+                    visible_prefix = ""
                 index += 1
                 continue
             if character == "/" and following == "*":
+                remember(" ")
                 output.extend((character, following))
                 block_comment = True
                 index += 2
@@ -147,6 +179,7 @@ def _prepare_syntax_for_submit(syntax: str) -> tuple:
                 command_comment = True
                 continue
             if character in " \t\u00a0\u3000":
+                remember(" ")
                 if character != " " and not macro_reference:
                     # Preserve the historical four-column command indentation;
                     # an internal TAB is a single token separator.
@@ -182,16 +215,21 @@ def _prepare_syntax_for_submit(syntax: str) -> tuple:
                                     output.append(item)
                         index = opening.end()
                         protected_end = block_end
+                        visible_prefix = ""
                         break
                 if protected_end is not None:
                     break
             command_start = False
+            remember("?" if character in ("'", '"') else character)
             if character in ("'", '"'):
                 quote = character
             elif character == "!":
                 # Macro arguments can consume whitespace as literal text.
                 macro_reference = True
             elif character == "." and _is_command_end(line, index):
+                if not macro_reference and _VIRTUAL_TEXT_IMPORT.match(visible_prefix):
+                    cache_commands = _text_import_cache_commands(syntax, match.end())
+                visible_prefix = ""
                 command_start = True
                 macro_reference = False
             elif not macro_reference and (character.isspace() or character in "\u200b\u200c\u200d\u2060\ufeff\u2018\u2019\u201c\u201d" or ("\uff01" <= character <= "\uff65" and unicodedata.category(character)[0] in "PS")):
@@ -206,6 +244,12 @@ def _prepare_syntax_for_submit(syntax: str) -> tuple:
             normalized_endings += 1
             ending = "\n"
         normalized_lines.append("".join(output) + ending)
+        if cache_commands:
+            if not ending:
+                normalized_lines.append("\n")
+            normalized_lines.append(cache_commands)
+        if protected_end is None and quote is None and not command_comment:
+            remember(" ")
         # SPSS /* comments end at */ or the physical line ending. Unlike
         # COMMENT and * command comments, they never consume the following line.
         block_comment = False
@@ -790,7 +834,9 @@ class SpssBridge(object):
             " IMAGES=YES IMAGEFORMAT=PNG."
         ).format(tag=_quote_spss_string(tag), outfile=_quote_spss_string(output_path))
         oms_end = "OMSEND TAG=[{}].".format(_quote_spss_string(tag))
-        submitted_syntax, unused_tabs, unused_lines, normalization_warnings, normalized_endings = _prepare_syntax_for_submit(syntax)
+        submitted_syntax, unused_tabs, unused_lines, normalization_warnings, normalized_endings = _prepare_syntax_for_submit(
+            syntax, cache_text_imports=True,
+        )
         warnings.extend(normalization_warnings)
         if normalized_endings:
             self._diagnostic("Normalized {} physical CR/CRLF line endings before SPSS submission".format(normalized_endings))
@@ -805,6 +851,7 @@ class SpssBridge(object):
 
             try:
                 # Normalize the in-memory copy once; never retry user commands.
+                # Keep virtual text imports seekable before later user commands.
                 # Preserve literal payloads while making physical CRLF lines safe.
                 self._invoke(self.spss.Submit, submitted_syntax)
                 error_level, error_message = self._last_error()

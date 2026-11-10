@@ -145,5 +145,45 @@ class SyntaxNormalizationTests(unittest.TestCase):
         self.assertNotIn("line 3", warnings[0])
 
 
+class TextImportCachingTests(unittest.TestCase):
+    def submit(self, syntax: str) -> str:
+        fake = FakeSpss()
+        with tempfile.TemporaryDirectory() as output_root:
+            response = BRIDGE_MODULE.SpssBridge(fake).run(syntax, output_root, "text-import")
+        self.assertTrue(response["ok"])
+        self.assertEqual(len(fake.submissions), 3)
+        return fake.submissions[1]
+
+    def test_materializes_each_text_import_before_the_following_user_command(self) -> None:
+        first = 'get data\r\n /type = TXT\r\n /file="a.csv"\r\n /variables=id A10.0. /* source comment */'
+        second = 'GET DATA /TYPE=TXT /FILE="b.csv" /VARIABLES=id F8.0.'
+        user_syntax = first + "\r\nTEMPORARY.\r\nSELECT IF (id=\"1\").\r\n" + second
+        expected = (
+            first.replace("\r\n", "\n") + "\nCACHE.\nEXECUTE.\nTEMPORARY.\nSELECT IF (id=\"1\").\n"
+            + second + "\nCACHE.\nEXECUTE.\n"
+        )
+        self.assertEqual(self.submit(user_syntax), expected)
+
+    def test_ignores_quoted_commented_embedded_and_nontext_imports(self) -> None:
+        text = (
+            'TITLE "GET DATA /TYPE=TXT".\n'
+            '* GET DATA /TYPE=TXT /FILE="comment.csv".\n'
+            'GET DATA /TYPE=XLSX /FILE="GET DATA /TYPE=TXT.xlsx".\n'
+            'BEGIN PROGRAM PYTHON3.\n'
+            'spss.Submit(\'GET DATA /TYPE=TXT /FILE="example.csv".\')\n'
+            'END PROGRAM.\n'
+            'DEFINE !example().\n'
+            'GET DATA /TYPE=TXT /FILE="macro.csv" /VARIABLES=id A10.0.\n'
+            '!ENDDEFINE.\n'
+            'GET FILE "other.sav".'
+        )
+        self.assertEqual(self.submit(text), text)
+
+    def test_reuses_an_explicit_immediate_cache_and_execute(self) -> None:
+        load = 'GET DATA /TYPE=TXT /FILE="a.csv" /VARIABLES=id A10.0.\n'
+        self.assertEqual(self.submit(load + "CACHE.\nEXECUTE."), load + "CACHE.\nEXECUTE.")
+        self.assertEqual(self.submit(load + "EXECUTE."), load + "CACHE.\nEXECUTE.")
+
+
 if __name__ == "__main__":
     unittest.main()
