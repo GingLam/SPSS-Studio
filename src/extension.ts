@@ -216,7 +216,9 @@ export function activate(context: vscode.ExtensionContext): SpssStudioExtensionA
     },
     clearOutput: () => studioHolder.current?.clearOutput(),
     clearData: async () => studioHolder.current?.clearData(),
-  }, aiPanelController);
+    selectedSyntax: () => editorTarget.selectedSyntax(),
+    openQuickStart: () => quickStart.show(),
+  }, aiPanelController, context.globalState);
   const studio = new StudioSession(
     engineService,
     variableCache,
@@ -278,6 +280,7 @@ export function activate(context: vscode.ExtensionContext): SpssStudioExtensionA
         showChat: () => studioPanel?.showAi('chat'),
         sendQuestion: (question) => aiPanelController.sendQuestionFromEditor(question, 'syntaxExplain'),
         responseLanguage: () => aiPanelController.responseLanguage,
+        sendJointQuestion: async (syntax) => await studioPanel?.explainSyntaxWithSelection(syntax) ?? false,
       });
     }),
     vscode.commands.registerCommand('spssStudio.startEngine', async () => startEngine(engineDependencies)),

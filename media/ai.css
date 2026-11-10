@@ -2,7 +2,7 @@
   --composer-height: 112px;
   color-scheme: light dark;
   font-family: var(--vscode-font-family);
-  font-size: var(--vscode-font-size);
+  font-size: var(--studio-font-size);
   color: var(--vscode-foreground);
   background: var(--vscode-panel-background, var(--vscode-editor-background));
   display: grid;
@@ -349,7 +349,7 @@
 
 .code-block code {
   font-family: var(--vscode-editor-font-family);
-  font-size: var(--vscode-editor-font-size);
+  font-size: var(--studio-font-override, var(--vscode-editor-font-size));
 }
 
 .splitter {
@@ -458,37 +458,38 @@
 
 .profiles-page {
   display: grid;
-  grid-template-columns: 80px minmax(0, 1fr);
+  grid-template-columns: max(80px, 5em) minmax(0, 1fr);
   flex: 1;
   min-height: 0;
-  grid-template-rows: auto minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
   overflow: auto;
 }
 
-.response-language-setting {
-  grid-column: 1 / -1;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 9px 12px;
-  border-bottom: 1px solid var(--vscode-panel-border);
+#settings-view :is(.profile-form, .system-form)[hidden] { display: none; }
+.system-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-content: start;
+  justify-items: start;
+  gap: 8px;
+  padding: 14px;
+  min-width: 0;
+  overflow: auto;
 }
 
-.response-language-setting label {
-  font-weight: 600;
-}
-
-.response-language-setting select {
-  min-width: 150px;
-  height: 30px;
+.system-form label { margin-top: 6px; font-weight: 600; }
+.system-form select, .system-form input {
+  max-width: 100%;
   padding: 4px 7px;
   color: var(--vscode-input-foreground);
   background: var(--vscode-input-background);
   border: 1px solid var(--vscode-input-border, transparent);
 }
+.font-control { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.font-control input { width: 7em; }
+.system-form #open-quick-start { margin-bottom: 6px; }
 
 .profiles-sidebar {
-  grid-row: 2;
   min-height: 0;
   padding: 8px 6px;
   overflow: auto;
@@ -524,12 +525,16 @@
   background: var(--vscode-list-activeSelectionBackground);
 }
 
+#settings-view:has(#system-settings[aria-pressed="true"]) .profile-list .profile-row.selected {
+  color: var(--vscode-foreground);
+  background: transparent;
+}
+
 .profile-row.active-profile {
   border-color: var(--vscode-focusBorder);
 }
 
 .profile-form {
-  grid-row: 2;
   display: grid;
   grid-template-columns: minmax(150px, 1fr) minmax(150px, 1fr);
   align-content: start;
@@ -570,7 +575,7 @@
 }
 
 #settings-view.active { flex-direction: column; min-height: 0; overflow: hidden; }
-#settings-view { font: var(--vscode-font-size) var(--vscode-font-family); }
+#settings-view { font: var(--studio-font-size) var(--vscode-font-family); }
 #settings-view button, #settings-view input, #settings-view select { font: inherit; }
 #settings-banner { flex: none; }
 .profile-options { display: flex; gap: 12px; flex-wrap: wrap; }
@@ -578,11 +583,11 @@
 .profile-actions { flex-wrap: wrap; }
 
 @media (max-width: 300px) {
-  .profiles-page { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto auto minmax(0, 1fr); }
-  .profiles-sidebar { grid-row: 2; display: flex; align-items: center; gap: 5px; border-right: 0; }
+  .profiles-page { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); }
+  .profiles-sidebar { display: flex; align-items: center; gap: 5px; border-right: 0; }
   .profiles-sidebar > button { width: auto; margin: 0; }
   .profile-list { display: flex; }
-  .profile-form { grid-row: 3; }
+  .profile-form, .system-form { grid-row: 2; }
 }
 
 @media (max-width: 520px) {

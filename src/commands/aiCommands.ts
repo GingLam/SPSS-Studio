@@ -10,6 +10,7 @@ export interface AiSyntaxCommandDependencies {
   showChat: () => void;
   sendQuestion: (question: string) => Promise<void>;
   responseLanguage: () => AiResponseLanguage;
+  sendJointQuestion: (syntax: string) => Promise<boolean>;
 }
 
 function activeSpssEditor(): vscode.TextEditor | undefined {
@@ -34,12 +35,14 @@ export async function explainSelectionOrCurrentCommand(
   }
 
   let syntax: string;
-  if (!editor.selection.isEmpty) {
-    syntax = editor.document.getText(editor.selection);
+  const selections = editor.selections.filter((selection) => !selection.isEmpty);
+  if (selections.length) {
+    syntax = selections.map((selection) => editor.document.getText(selection)).join('\n\n');
     if (!syntax.trim()) {
       void vscode.window.showInformationMessage(strings.selectedSyntaxEmpty);
       return;
     }
+    if (await dependencies.sendJointQuestion(syntax)) { return; }
   } else {
     const documentText = editor.document.getText();
     const offset = editor.document.offsetAt(editor.selection.active);

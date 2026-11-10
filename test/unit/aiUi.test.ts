@@ -144,7 +144,7 @@ describe('SPSS AI Webview contract', () => {
     assert.match(panel, /id="settings-view"[\s\S]*id="page-profiles"/u);
     assert.match(panel, /id="test-profile"[\s\S]*id="make-active"/u);
     assert.match(panel, /id="reasoning-enabled"[\s\S]*id="coding-enabled"/u);
-    assert.match(style, /grid-template-columns: 80px minmax\(0, 1fr\)/u);
+    assert.match(style, /grid-template-columns: max\(80px, 5em\) minmax\(0, 1fr\)/u);
     assert.match(panel, /id="page-profiles"/u);
     assert.match(panel, /id="response-language"/u);
     assert.match(panel, /id="reasoning-enabled"/u);

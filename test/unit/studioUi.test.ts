@@ -12,7 +12,7 @@ describe('SPSS Studio Webview UI contract', () => {
     assert.equal(isWebviewMessage({ type: 'insertVariable', name: 'HouseholdIncome' }), true);
     assert.equal(isWebviewMessage({ type: 'copyVariables', names: ['Age', 'Income'] }), true);
     assert.equal(isWebviewMessage({ type: 'insertVariables', names: ['Age', 'Income'] }), true);
-    assert.equal(isWebviewMessage({ type: 'exploreVariables', names: ['Age'] }), true);
+    assert.equal(isWebviewMessage({ type: 'exploreVariables', names: ['Age'], revision: 1, checked: true }), true);
     assert.equal(isWebviewMessage({ type: 'explainOutput', id: 'run-1' }), true);
     assert.equal(isWebviewMessage({ type: 'exportOutput', id: 'run-1' }), true);
     assert.equal(isWebviewMessage({ type: 'printOutput', id: 'run-1' }), true);
@@ -24,9 +24,23 @@ describe('SPSS Studio Webview UI contract', () => {
     assert.equal(isWebviewMessage({ type: 'explainOutput', id: '' }), false);
     assert.equal(isWebviewMessage({ type: 'insertVariable', name: '' }), false);
     assert.equal(isWebviewMessage({ type: 'insertVariable', name: 'x'.repeat(65) }), false);
-    assert.equal(isWebviewMessage({ type: 'exploreVariables', names: [] }), false);
+    assert.equal(isWebviewMessage({ type: 'exploreVariables', names: [], revision: 1, checked: true }), false);
     assert.equal(isWebviewMessage({ type: 'requestDatasetPage', offset: -1 }), false);
     assert.equal(isWebviewMessage({ type: 'arbitraryCommand' }), false);
+  });
+
+  it('bounds checked analysis context and system preference updates', () => {
+    assert.equal(isWebviewMessage({ type: 'outputSelectionChanged', id: 'run-1', blockIds: ['block-2', 'block-3'] }), true);
+    assert.equal(isWebviewMessage({ type: 'outputSelectionChanged', id: 'run-1', blockIds: ['block-2', 'block-2'] }), false);
+    assert.equal(isWebviewMessage({ type: 'variableSelectionChanged', revision: 2, names: [] }), true);
+    assert.equal(isWebviewMessage({ type: 'variableSelectionChanged', revision: -1, names: ['Age'] }), false);
+    assert.equal(isWebviewMessage({ type: 'openQuickStart' }), true);
+    assert.equal(isWebviewMessage({ type: 'setStudioTheme', theme: 'SPSS Studio Dark' }), true);
+    assert.equal(isWebviewMessage({ type: 'setStudioTheme', theme: 'unknown' }), false);
+    assert.equal(isWebviewMessage({ type: 'setStudioFontSize', fontSize: 18 }), true);
+    assert.equal(isWebviewMessage({ type: 'setSpssEditorFontSize', fontSize: null }), true);
+    assert.equal(isWebviewMessage({ type: 'setStudioFontSize', fontSize: 18.2 }), false);
+    assert.equal(isWebviewMessage({ type: 'setSpssEditorFontSize', fontSize: '18' }), false);
   });
 
   it('declares Variables, Data, Output, Chat in order and places output before history', () => {

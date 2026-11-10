@@ -5,7 +5,10 @@ import * as vscode from 'vscode';
 import {
   buildOutputExplanationQuestion,
   extractSpssOutputForAi,
+  redactOutputPaths,
 } from '../ai/outputExplanation';
+import type { AiResponseLanguage } from '../ai/chatProtocol';
+import { buildJointQuestion } from '../ai/syntaxExplanation';
 import { buildVariableExploreQuestion } from '../ai/variableExplore';
 import {
   formatLocalized,
@@ -30,6 +33,9 @@ import {
   type StudioTab,
 } from './studioShellProtocol';
 import {
+  isStudioFontSize,
+  STUDIO_THEMES,
+  type StudioTheme,
   type DatasetPageUiRequest,
   type ExtensionToWebviewMessage,
 } from './webviewProtocol';
@@ -44,7 +50,11 @@ export interface SpssStudioPanelCallbacks {
   exploreVariables: (names: string[]) => Promise<VariableProfiles>;
   clearOutput: () => void;
   clearData: () => Promise<void>;
+  selectedSyntax: () => string | undefined;
+  openQuickStart: () => void;
 }
+
+const STUDIO_FONT_KEY = 'spssStudio.fontSize';
 
 export class SpssStudioPanel implements vscode.Disposable {
   private panel: vscode.WebviewPanel | undefined;
@@ -57,6 +67,8 @@ export class SpssStudioPanel implements vscode.Disposable {
   private page: DatasetPage | undefined;
   private pageRequest = { requestId: 0, generation: 0 };
   private selectedHtmlLength = 0;
+  private outputSelection: { id: string; blockIds: string[] } | undefined;
+  private variableSelection: { revision: number; names: string[] } | undefined;
   private readonly studioStrings = studioStringsForLanguage(vscode.env.language);
   private readonly runtimeStrings = runtimeStringsForLanguage(vscode.env.language);
 
@@ -65,6 +77,7 @@ export class SpssStudioPanel implements vscode.Disposable {
     private readonly outputStore: OutputStore,
     private readonly callbacks: SpssStudioPanelCallbacks,
     private readonly aiController: SpssAiPanelController,
+    private readonly preferences: vscode.Memento,
   ) {}
 
   public get dataVisible(): boolean {
@@ -153,6 +166,7 @@ export class SpssStudioPanel implements vscode.Disposable {
   }
 
   public outputCleared(): void {
+    this.outputSelection = undefined;
     void this.postStudio({ type: 'outputCleared' });
   }
 
@@ -162,6 +176,7 @@ export class SpssStudioPanel implements vscode.Disposable {
   }
 
   public dataCleared(): void {
+    this.variableSelection = undefined;
     void this.postStudio({ type: 'dataCleared' });
   }
 
@@ -177,6 +192,32 @@ export class SpssStudioPanel implements vscode.Disposable {
     this.panel = undefined;
     this.webviewReady = false;
     this.aiController.detach();
+  }
+
+  public async explainSyntaxWithSelection(syntax: string): Promise<boolean> {
+    if (!this.panel?.visible) { return false; }
+    const output = this.outputSelection?.id === this.outputStore.selected?.id ? this.outputSelection : undefined;
+    const variables = this.variableSelection?.revision === this.datasetRevision ? this.variableSelection : undefined;
+    const hasOutput = Boolean(output?.blockIds.length);
+    const hasVariables = Boolean(variables?.names.length);
+    if (!hasOutput && !hasVariables) { return false; }
+
+    const language = this.aiController.responseLanguage;
+    const outputQuestion = output?.blockIds.length ? this.outputQuestion(output.id, output.blockIds, language) : undefined;
+    if (hasOutput && !outputQuestion) { return true; }
+    const variableQuestion = variables?.names.length
+      ? await this.variableQuestion(variables.names, variables.revision, language)
+      : undefined;
+    if (hasVariables && !variableQuestion) { return true; }
+    if (output?.blockIds.length && output.id !== this.outputStore.selected?.id) {
+      void vscode.window.showInformationMessage(this.studioStrings.outputSelectionInvalid);
+      return true;
+    }
+    const attachment = [outputQuestion, variableQuestion].filter(Boolean).join('\n\n');
+    const kind = outputQuestion && variableQuestion ? 'both' : variableQuestion ? 'variables' : 'output';
+    await this.sendAnalysisQuestion(buildJointQuestion(syntax, attachment, kind, language),
+      variableQuestion ? 'variableExplore' : 'outputExplain');
+    return true;
   }
 
   private ensurePanel(): vscode.WebviewPanel {
@@ -198,10 +239,18 @@ export class SpssStudioPanel implements vscode.Disposable {
     this.aiController.attach((message: ExtensionToAiWebviewMessage) => (
       panel.webview.postMessage({ scope: 'ai', message })
     ));
+    const configurationListener = vscode.workspace.onDidChangeConfiguration((event) => {
+      if (event.affectsConfiguration('workbench.colorTheme') || event.affectsConfiguration('editor.fontSize')) {
+        void this.postSystemSettings();
+      }
+    });
     panel.onDidDispose(() => {
+      configurationListener.dispose();
       if (this.panel === panel) {
         this.panel = undefined;
         this.webviewReady = false;
+        this.outputSelection = undefined;
+        this.variableSelection = undefined;
         this.aiController.detach();
       }
     });
@@ -262,7 +311,12 @@ export class SpssStudioPanel implements vscode.Disposable {
       } else if (message.type === 'refreshVariables') {
         void this.callbacks.refreshVariables();
       } else if (message.type === 'explainOutput') {
-        void this.explainOutput(message.id, message.blockIds);
+        void this.explainOutput(message.id, message.blockIds,
+          message.blockIds?.length ? this.callbacks.selectedSyntax() : undefined);
+      } else if (message.type === 'outputSelectionChanged') {
+        if (message.id === this.outputStore.selected?.id) { this.outputSelection = message; }
+      } else if (message.type === 'variableSelectionChanged') {
+        if (message.revision === this.datasetRevision) { this.variableSelection = message; }
       } else if (message.type === 'exportOutput') {
         void this.exportOutput(message.id, message.blockIds);
       } else if (message.type === 'printOutput') {
@@ -280,7 +334,17 @@ export class SpssStudioPanel implements vscode.Disposable {
           this.runtimeStrings.insertVariablesFailed,
         );
       } else if (message.type === 'exploreVariables') {
-        void this.exploreVariables(message.names);
+        void this.exploreVariables(message.names, message.revision,
+          message.checked ? this.callbacks.selectedSyntax() : undefined);
+      } else if (message.type === 'openQuickStart') {
+        this.callbacks.openQuickStart();
+      } else if (message.type === 'setStudioTheme') {
+        void this.updateSystemSetting(() => this.setStudioTheme(message.theme));
+      } else if (message.type === 'setStudioFontSize') {
+        void this.updateSystemSetting(() => this.preferences.update(STUDIO_FONT_KEY, message.fontSize));
+      } else if (message.type === 'setSpssEditorFontSize') {
+        void this.updateSystemSetting(() => vscode.workspace.getConfiguration('editor', { languageId: 'spss' })
+          .update('fontSize', message.fontSize ?? undefined, vscode.ConfigurationTarget.Global, true));
       } else if (message.type === 'clearData') {
         void this.confirmClearData();
       } else {
@@ -292,7 +356,39 @@ export class SpssStudioPanel implements vscode.Disposable {
     return panel;
   }
 
+  private postSystemSettings(): Thenable<boolean> | undefined {
+    const fontSize = this.preferences.get(STUDIO_FONT_KEY);
+    const editorFontSize = vscode.workspace.getConfiguration('editor', { languageId: 'spss' })
+      .inspect<number>('fontSize')?.globalLanguageValue;
+    return this.postStudio({
+      type: 'systemSettings',
+      theme: vscode.workspace.getConfiguration('workbench').get('colorTheme', ''),
+      fontSize: isStudioFontSize(fontSize) ? fontSize : null,
+      editorFontSize: isStudioFontSize(editorFontSize) ? editorFontSize : null,
+    });
+  }
+
+  private async setStudioTheme(theme: StudioTheme): Promise<void> {
+    if (theme === 'other') {
+      await vscode.commands.executeCommand('workbench.action.selectTheme');
+    } else {
+      await vscode.workspace.getConfiguration('workbench').update('colorTheme', theme, vscode.ConfigurationTarget.Global);
+    }
+  }
+
+  private async updateSystemSetting(update: () => Thenable<void>): Promise<void> {
+    try {
+      await update();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      void vscode.window.showErrorMessage(`${this.studioStrings.settingsError}: ${message}`);
+    } finally {
+      await this.postSystemSettings();
+    }
+  }
+
   private async postInitialState(): Promise<void> {
+    await this.postSystemSettings();
     await this.postStudio({ type: 'engineState', state: this.engineState });
     await this.postStudio({ type: 'dataActionState', busy: this.dataActionsBusy });
     await this.postStudio({
@@ -321,19 +417,19 @@ export class SpssStudioPanel implements vscode.Disposable {
 
   private async selectExecution(id: string): Promise<void> {
     const panel = this.panel;
-    if (!panel) {
+    if (!panel || !this.outputStore.get(id)) {
       return;
     }
     const record = this.outputStore.select(id);
-    const rawHtml = this.outputStore.readHtml(id) ?? '';
-    const presentation = createSpssOutputBlocks(rawHtml, vscode.env.language.toLowerCase() === 'zh-cn' ? 'zh-CN' : 'en');
-    const html = record.htmlPath
+    const language = vscode.env.language.toLowerCase().startsWith('zh') ? 'zh-CN' : 'en';
+    const { presentation, diagnostic } = this.explainableOutput(record, language);
+    const html = presentation.html
       ? sanitizeSpssHtml(presentation.html, (source) => this.resolveImage(panel.webview, record, source))
       : '';
     this.selectedHtmlLength = html.length;
     const metadata = this.outputStore.metadata.find((item) => item.id === id);
     if (metadata) {
-      await this.postStudio({ type: 'executionSelected', record: metadata, html, blocks: presentation.blocks.map(({ id, title }) => ({ id, title })) });
+      await this.postStudio({ type: 'executionSelected', record: metadata, html, diagnostic, blocks: presentation.blocks.map(({ id, title }) => ({ id, title })) });
     }
   }
 
@@ -377,32 +473,52 @@ export class SpssStudioPanel implements vscode.Disposable {
     }
   }
 
-  private async explainOutput(id: string, blockIds?: string[]): Promise<void> {
-    const source = this.outputSource(id);
-    if (!source) {
-      return;
+  private explainableOutput(record: ExecutionRecord, language: AiResponseLanguage) {
+    const rawHtml = this.outputStore.readHtml(record.id) ?? '';
+    if (!record.errorMessage || !['ERROR', 'ENGINE_ERROR', 'TIMEOUT'].includes(record.status)) {
+      return { rawHtml, presentation: createSpssOutputBlocks(rawHtml, language), diagnostic: false };
     }
-    let question: string;
-    if (blockIds?.length) {
-      const { blocks } = createSpssOutputBlocks(source.rawHtml, this.aiController.responseLanguage);
-      try {
-        question = buildSelectedOutputQuestion(blocks, blockIds, this.aiController.responseLanguage);
-      } catch {
-        void vscode.window.showInformationMessage(this.studioStrings.outputSelectionInvalid);
-        return;
+    const label = language === 'en' ? 'SPSS error' : 'SPSS 报错';
+    const error = redactOutputPaths(record.errorMessage.slice(0, 4000), language);
+    const diagnostic = `<p>${label} (${String(record.errorLevel)}): ${escapeHtmlText(error)}</p>`;
+    const withError = /<\/body>/iu.test(rawHtml) ? rawHtml.replace(/<\/body>/iu, () => `${diagnostic}</body>`) : rawHtml + diagnostic;
+    return { rawHtml: withError, presentation: createSpssOutputBlocks(withError, language), diagnostic: true };
+  }
+
+  private outputQuestion(id: string, blockIds: string[] | undefined, language: AiResponseLanguage): string | undefined {
+    const record = this.outputStore.selected;
+    if (record?.id !== id || record.status === 'RUNNING') {
+      void vscode.window.showInformationMessage(this.studioStrings.outputSelectionInvalid);
+      return undefined;
+    }
+    try {
+      const { rawHtml, presentation } = this.explainableOutput(record, language);
+      if (blockIds?.length) {
+        return buildSelectedOutputQuestion(presentation.blocks, blockIds, language);
       }
-    } else {
-      const extracted = extractSpssOutputForAi(source.rawHtml, this.aiController.responseLanguage);
+      const extracted = extractSpssOutputForAi(rawHtml, language);
       if (!extracted.content) {
         void vscode.window.showInformationMessage(this.runtimeStrings.noExplainableOutput);
-        return;
+        return undefined;
       }
-      question = buildOutputExplanationQuestion(
-        extracted.content, this.aiController.responseLanguage,
-      );
+      return buildOutputExplanationQuestion(extracted.content, language);
+    } catch {
+      void vscode.window.showInformationMessage(this.studioStrings.outputSelectionInvalid);
+      return undefined;
     }
+  }
+
+  private async explainOutput(id: string, blockIds?: string[], syntax?: string): Promise<void> {
+    const language = this.aiController.responseLanguage;
+    const question = this.outputQuestion(id, blockIds, language);
+    if (question) {
+      await this.sendAnalysisQuestion(syntax ? buildJointQuestion(syntax, question, 'output', language) : question, 'outputExplain');
+    }
+  }
+
+  private async sendAnalysisQuestion(question: string, kind: 'outputExplain' | 'variableExplore'): Promise<void> {
     this.showAi('chat');
-    await this.aiController.sendQuestionFromEditor(question, 'outputExplain');
+    await this.aiController.sendQuestionFromEditor(question, kind);
   }
 
   private async runVariableAction(action: () => Promise<void>, failureMessage: string): Promise<void> {
@@ -414,22 +530,40 @@ export class SpssStudioPanel implements vscode.Disposable {
     }
   }
 
-  private async exploreVariables(names: string[]): Promise<void> {
+  private async variableQuestion(names: string[], revision: number, language: AiResponseLanguage): Promise<string | undefined> {
+    if (names.length > 20) {
+      void vscode.window.showWarningMessage(this.runtimeStrings.exploreLimit);
+      return undefined;
+    }
+    const available = new Set(this.dataset?.variables.map((variable) => variable.name));
+    if (revision !== this.datasetRevision || names.some((name) => !available.has(name))) {
+      void vscode.window.showInformationMessage(this.studioStrings.variableReselect);
+      return undefined;
+    }
     try {
-      if (names.length > 20) {
-        void vscode.window.showWarningMessage(this.runtimeStrings.exploreLimit);
-        return;
-      }
       const profiles = await vscode.window.withProgress({
         location: vscode.ProgressLocation.Window,
         title: this.runtimeStrings.preparingVariableSummaries,
       }, () => this.callbacks.exploreVariables(names));
-      const question = buildVariableExploreQuestion(profiles, this.aiController.responseLanguage);
-      this.showAi('chat');
-      await this.aiController.sendQuestionFromEditor(question, 'variableExplore');
+      if (revision !== this.datasetRevision) {
+        void vscode.window.showInformationMessage(this.studioStrings.variableReselect);
+        return undefined;
+      }
+      return buildVariableExploreQuestion(profiles, language);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       void vscode.window.showErrorMessage(`${this.runtimeStrings.exploreVariablesFailed}: ${message}`);
+      return undefined;
+    }
+  }
+
+  private async exploreVariables(names: string[], revision: number, syntax?: string): Promise<void> {
+    try {
+      const language = this.aiController.responseLanguage;
+      const question = await this.variableQuestion(names, revision, language);
+      if (question) {
+        await this.sendAnalysisQuestion(syntax ? buildJointQuestion(syntax, question, 'variables', language) : question, 'variableExplore');
+      }
     } finally {
       void this.postStudio({ type: 'variableExploreFinished' });
     }
@@ -472,7 +606,8 @@ export class SpssStudioPanel implements vscode.Disposable {
     }
     if (blockIds?.length) {
       try {
-        rawHtml = buildSelectedOutputHtml(rawHtml, blockIds, vscode.env.language.startsWith('zh') ? 'zh-CN' : 'en');
+        const language = vscode.env.language.startsWith('zh') ? 'zh-CN' : 'en';
+        rawHtml = buildSelectedOutputHtml(this.explainableOutput(record, language).rawHtml, blockIds, language);
       } catch {
         void vscode.window.showInformationMessage(this.studioStrings.outputSelectionInvalid);
         return undefined;
@@ -508,6 +643,15 @@ export class SpssStudioPanel implements vscode.Disposable {
       return undefined;
     }
     return this.panel?.webview.postMessage({ scope: 'studio', message });
+  }
+
+  private fontControls(id: 'spss-editor' | 'studio', label: string): string {
+    const fallback = escapeHtmlText(this.studioStrings.defaultFontSize);
+    return `<label for="${id}-font-size">${escapeHtmlText(label)}</label>
+      <div class="font-control">
+        <input id="${id}-font-size" type="text" inputmode="numeric" list="studio-font-sizes" maxlength="2" placeholder="${fallback}" autocomplete="off">
+        <button id="reset-${id}-font" type="button">${fallback}</button>
+      </div>`;
   }
 
   private shellHtml(webview: vscode.Webview, mediaRoot: vscode.Uri): string {
@@ -599,17 +743,27 @@ export class SpssStudioPanel implements vscode.Disposable {
     <section id="settings-view" class="view">
       <div id="settings-banner" class="banner" role="status" hidden></div>
       <section id="page-profiles" class="profiles-page">
-          <div class="response-language-setting">
+          <aside class="profiles-sidebar">
+            <button id="system-settings" type="button" class="profile-row" aria-controls="system-form" aria-pressed="false">${text(strings.systemSettings)}</button>
+            <button id="new-profile" type="button"></button>
+            <div id="profile-list" class="profile-list"></div>
+          </aside>
+          <section id="system-form" class="system-form" hidden>
+            <button id="open-quick-start" type="button">${text(strings.quickStart)}</button>
+            <label for="studio-theme">${text(strings.theme)}</label>
+            <select id="studio-theme">
+              ${STUDIO_THEMES.map((theme) => `<option>${theme}</option>`).join('')}
+              <option value="other">${text(strings.otherThemes)}</option>
+            </select>
+            ${this.fontControls('spss-editor', strings.spssEditorFontSize)}
+            ${this.fontControls('studio', strings.studioFontSize)}
+            <datalist id="studio-font-sizes">${[10, 11, 12, 13, 14, 16, 18, 20, 22, 24, 26, 28].map((size) => `<option value="${String(size)}"></option>`).join('')}</datalist>
             <label for="response-language" id="response-language-label"></label>
             <select id="response-language">
               <option value="zh-CN" id="response-language-zh"></option>
               <option value="en" id="response-language-en"></option>
             </select>
-          </div>
-          <aside class="profiles-sidebar">
-            <button id="new-profile" type="button"></button>
-            <div id="profile-list" class="profile-list"></div>
-          </aside>
+          </section>
           <form id="profile-form" class="profile-form">
             <label><span id="profile-name-label"></span><input id="profile-name" type="text" maxlength="120" autocomplete="off"></label>
             <label><span id="provider-label"></span><select id="provider"></select></label>

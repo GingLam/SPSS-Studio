@@ -121,7 +121,7 @@ export const AI_STRINGS_EN: AiStrings = {
   open: 'Open',
   profileEmpty: 'Create a model profile to start using SPSS AI.',
   provider: 'Provider',
-  responseLanguage: 'Language',
+  responseLanguage: 'Response language',
   responseLanguageChinese: 'Chinese (default)',
   responseLanguageEnglish: 'English',
   reasoningUnavailable: 'Automatic reasoning control is unavailable for custom providers.',

@@ -4,9 +4,11 @@ import path from 'node:path';
 import os from 'node:os';
 import vm from 'node:vm';
 import { createRequire } from 'node:module';
+import type { ActiveDatasetInfo } from '../../src/spss/types';
+import type { SpssStudioPanel } from '../../src/views/spssStudioPanel';
 
 interface Envelope { scope: string; message?: { type: string; html?: string; blocks?: Array<{ id: string; title: string }> } }
-function fixture(rawOverride?: string, outputDirectory = '/runs') {
+function fixture(rawOverride?: string, outputDirectory = '/runs', errorMessage?: string) {
   const filename = path.resolve(__dirname, '../../src/views/spssStudioPanel.js');
   const compiledRequire = createRequire(filename);
   let raw = rawOverride ?? fs.readFileSync(path.resolve(__dirname, '../../../test/fixtures/output-multiple-tables.html'), 'utf8');
@@ -14,10 +16,14 @@ function fixture(rawOverride?: string, outputDirectory = '/runs') {
   const writes = new Map<string, string>();
   const opened: string[] = [];
   let dialogs = 0;
+  let selectedSyntax: string | undefined;
   let onSave: () => void = () => undefined;
   let receiver: (message: unknown) => void = () => undefined;
   const uri = (value: string) => ({ fsPath: value, toString: () => value });
-  const record = { id: 'one', sequence: 1, timestamp: '2026-10-31T00:00:00Z', htmlPath: path.join(outputDirectory, 'output.html'), outputDirectory, status: 'SUCCESS' };
+  const record = { id: 'one', sequence: 1, timestamp: '2026-10-31T00:00:00Z', outputDirectory,
+    ...(errorMessage ? { status: 'ERROR', errorLevel: 3, errorMessage }
+      : { status: 'SUCCESS', htmlPath: path.join(outputDirectory, 'output.html') }),
+  };
   const panel = {
     visible: true, viewColumn: 2,
     webview: { html: '', cspSource: 'vscode-webview:', asWebviewUri: (value: unknown) => value,
@@ -32,7 +38,7 @@ function fixture(rawOverride?: string, outputDirectory = '/runs') {
     sendQuestionFromEditor: (question: string) => { questions.push(question); return Promise.resolve(); },
   };
   const store = {
-    sessionRoot: '/runs', selected: record, metadata: [{ ...record, hasHtml: true }],
+    sessionRoot: '/runs', selected: record, metadata: [{ ...record, hasHtml: !errorMessage }],
     get: (id: string) => id === 'one' ? record : undefined, select: () => record, readHtml: () => raw,
   };
   const module = { exports: {} };
@@ -41,14 +47,28 @@ function fixture(rawOverride?: string, outputDirectory = '/runs') {
     require: (name: string): unknown => name === 'vscode' ? {
       env: { language: 'en', openExternal: (target: { fsPath: string }) => { opened.push(target.fsPath); return Promise.resolve(true); } }, ViewColumn: { Beside: -2 },
       Uri: { file: uri, joinPath: (base: { fsPath: string }, ...parts: string[]) => uri(path.join(base.fsPath, ...parts)) },
-      window: { createWebviewPanel: () => panel, showInformationMessage: (message: string) => notices.push(message), showErrorMessage: (message: string) => notices.push(message),
+      ProgressLocation: { Window: 10 },
+      window: { withProgress: (_options: unknown, task: () => unknown) => task(), createWebviewPanel: () => panel, showInformationMessage: (message: string) => notices.push(message), showErrorMessage: (message: string) => notices.push(message),
         showSaveDialog: () => { dialogs += 1; onSave(); return Promise.resolve(uri('/export/result.html')); } },
-      workspace: { fs: { writeFile: (target: { fsPath: string }, bytes: Buffer) => { writes.set(target.fsPath, bytes.toString('utf8')); return Promise.resolve(); } } },
+      workspace: { onDidChangeConfiguration: () => ({ dispose: () => undefined }),
+        getConfiguration: () => ({ get: () => '', inspect: () => ({}) }), fs: { writeFile: (target: { fsPath: string }, bytes: Buffer) => { writes.set(target.fsPath, bytes.toString('utf8')); return Promise.resolve(); } } },
     } : name === 'node:fs' ? { ...fs, promises: { ...fs.promises, writeFile: (target: string, text: string) => { writes.set(target, text); return Promise.resolve(); } } } : compiledRequire(name),
   }, { filename });
-  const Constructor = (module.exports as { SpssStudioPanel: new (...args: unknown[]) => { showOutput(): void } }).SpssStudioPanel;
-  const instance = new Constructor(uri('/extension'), store, {}, ai);
-  return { instance, posted, questions, notices, writes, opened, dialogCount: () => dialogs,
+  const Constructor = (module.exports as { SpssStudioPanel: new (...args: unknown[]) => SpssStudioPanel }).SpssStudioPanel;
+  const dataset: ActiveDatasetInfo = {
+    active: true, datasetName: 'Demo', caseCount: 2, variableCount: 2,
+    variables: ['age', 'income'].map((name, index) => ({ name, index, label: name, type: 'Numeric', format: 'F8.0' })),
+  };
+  const callbacks = {
+    selectedSyntax: () => selectedSyntax,
+    exploreVariables: (names: string[]) => Promise.resolve({
+      datasetName: 'Demo', caseCount: 2, profiles: dataset.variables.filter((variable) => names.includes(variable.name))
+        .map((variable) => ({ ...variable, valueLabels: [], summary: { kind: 'continuous', validN: 2, missingN: 0, mean: 12 } })),
+    }),
+  };
+  const instance = new Constructor(uri('/extension'), store, callbacks, ai, { get: () => null });
+  return { instance, posted, questions, notices, writes, opened, dataset,
+    setSyntax: (syntax: string) => { selectedSyntax = syntax; }, dialogCount: () => dialogs,
     markup: () => panel.webview.html,
     onSave: (callback: () => void) => { onSave = callback; }, replaceRaw: (value: string) => { raw = value; },
     receive: (value: unknown) => receiver(value) };
@@ -135,4 +155,37 @@ describe('SPSS selected output to Chat integration', () => {
     ui.receive({ scope: 'studio', message: { type: 'explainOutput', id: 'one', blockIds: ['<script>'] } }); await flush();
     assert.equal(ui.questions.length, 0);
   });
+
+  it('combines selected syntax with checked output and variables through one editor action', async () => {
+    const ui = fixture();
+    ui.instance.setDatasetMetadata(ui.dataset);
+    ui.instance.showOutput();
+    ui.receive({ scope: 'shell', type: 'ready' });
+    await flush();
+    const selected = ui.posted.find((item) => item.message?.type === 'executionSelected')?.message;
+    const coefficients = selected?.blocks?.find((block) => block.title === 'Regression · Coefficients');
+    assert.ok(coefficients);
+    ui.receive({ scope: 'studio', message: { type: 'outputSelectionChanged', id: 'one', blockIds: [coefficients.id] } });
+    ui.receive({ scope: 'studio', message: { type: 'variableSelectionChanged', revision: 1, names: ['age'] } });
+    assert.equal(await ui.instance.explainSyntaxWithSelection('DESCRIPTIVES age.'), true);
+    assert.equal(ui.questions.length, 1);
+    assert.match(ui.questions[0] ?? '', /DESCRIPTIVES age[\s\S]*1598\.992[\s\S]*### age/u);
+    assert.doesNotMatch(ui.questions[0] ?? '', /7846492\.510|### income/u);
+  });
+
+  it('sends a selectable error with explicit syntax even when the run has no HTML file', async () => {
+    const ui = fixture('', '/runs', 'Variable not found in "/Users/person/private.sav"');
+    ui.setSyntax('DESCRIPTIVES notfound.');
+    ui.instance.showOutput();
+    ui.receive({ scope: 'shell', type: 'ready' });
+    await flush();
+    const selected = ui.posted.find((item) => item.message?.type === 'executionSelected')?.message;
+    assert.equal(selected?.blocks?.length, 1);
+    ui.receive({ scope: 'studio', message: { type: 'explainOutput', id: 'one', blockIds: ['block-1'] } });
+    await flush();
+    assert.equal(ui.questions.length, 1);
+    assert.match(ui.questions[0] ?? '', /DESCRIPTIVES notfound[\s\S]*Variable not found/u);
+    assert.doesNotMatch(ui.questions[0] ?? '', /private\.sav/u);
+  });
+
 });

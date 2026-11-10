@@ -25,7 +25,7 @@ describe('SPSS AI localization', () => {
       newProfile: 'New',
       name: 'Name',
       provider: 'Provider',
-      responseLanguage: 'Language',
+      responseLanguage: 'Response language',
       enableReasoning: 'Reasoning',
       coding: 'Coding',
       test: 'Test',

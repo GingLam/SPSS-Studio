@@ -27,6 +27,18 @@ export class SpssEditorTargetTracker implements vscode.Disposable {
     return this.isSpssEditor(vscode.window.activeTextEditor) || this.target !== undefined;
   }
 
+  public selectedSyntax(): string | undefined {
+    const active = vscode.window.activeTextEditor;
+    const target = this.target;
+    const editor = active ?? vscode.window.visibleTextEditors.find((candidate) =>
+      target?.uri.toString() === candidate.document.uri.toString() && target.viewColumn === candidate.viewColumn,
+    );
+    if (!this.isSpssEditor(editor)) { return undefined; }
+    const syntax = editor.selections.filter((selection) => !selection.isEmpty)
+      .map((selection) => editor.document.getText(selection)).join('\n\n').trim();
+    return syntax || undefined;
+  }
+
   public async insert(text: string): Promise<boolean> {
     const active = vscode.window.activeTextEditor;
     let editor: vscode.TextEditor | undefined;

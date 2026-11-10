@@ -19,6 +19,7 @@
     outputSelections: new Map(),
     invalidOutputSelections: new Set(),
     explainAvailable: false,
+    nativeOutputAvailable: false,
     dataset: undefined,
     datasetRevision: -1,
     page: undefined,
@@ -60,12 +61,90 @@
 
   const aiModule = window.createSpssAiModule({
     root: byId('studio-views'),
-    showSettings: () => showTab('settings'),
+    showSettings: () => {
+      showSystemSettings(false);
+      showTab('settings');
+    },
     showingSettings: () => state.activeTab === 'settings',
     postMessage: (message) => vscode.postMessage({ scope: 'ai', message }),
     getState: () => persistedState.ai || {},
     setState: (value) => updatePersistedState('ai', value),
   });
+
+  const themeSelect = byId('studio-theme');
+
+  function showSystemSettings(show) {
+    byId('system-form').hidden = !show;
+    byId('profile-form').hidden = show;
+    byId('system-settings').classList.toggle('selected', show);
+    byId('system-settings').setAttribute('aria-pressed', String(show));
+  }
+
+  function applyStudioFont(fontSize) {
+    const root = document.documentElement;
+    root.toggleAttribute('data-studio-font', fontSize !== null);
+    if (fontSize === null) root.style.removeProperty('--studio-font-override');
+    else root.style.setProperty('--studio-font-override', `${fontSize}px`);
+  }
+
+  function renderSystemSettings(message) {
+    themeSelect.querySelector('[data-current-theme]')?.remove();
+    if (message.theme && ![...themeSelect.options].some((option) => option.value === message.theme)) {
+      const option = document.createElement('option');
+      option.value = message.theme;
+      option.textContent = message.theme;
+      option.dataset.currentTheme = '';
+      themeSelect.prepend(option);
+    }
+    themeSelect.value = message.theme;
+    studioFontControl(message.fontSize);
+    spssFontControl(message.editorFontSize);
+  }
+
+  function bindFontControl(id, type, preview) {
+    const input = byId(`${id}-font-size`);
+    let savedSize = null;
+    let pendingSave;
+    const read = () => {
+      if (!input.value) return null;
+      const size = Number(input.value);
+      return /^\d{2}$/.test(input.value) && size >= 10 && size <= 28 ? size : undefined;
+    };
+    input.addEventListener('input', () => {
+      window.clearTimeout(pendingSave);
+      const fontSize = read();
+      if (fontSize !== undefined) preview?.(fontSize);
+      if (typeof fontSize === 'number') {
+        pendingSave = window.setTimeout(() => postStudio({ type, fontSize }), 100);
+      }
+    });
+    input.addEventListener('change', () => {
+      window.clearTimeout(pendingSave);
+      const fontSize = read();
+      if (fontSize === undefined) {
+        input.value = savedSize ?? '';
+        preview?.(savedSize);
+      } else {
+        postStudio({ type, fontSize });
+      }
+    });
+    input.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter') input.blur();
+    });
+    byId(`reset-${id}-font`).addEventListener('click', () => {
+      window.clearTimeout(pendingSave);
+      input.value = '';
+      preview?.(null);
+      postStudio({ type, fontSize: null });
+    });
+    return (size) => {
+      savedSize = size;
+      if (document.activeElement !== input) {
+        input.value = size ?? '';
+        preview?.(size);
+      }
+    };
+  }
 
   function showTab(tab, notify = true) {
     state.activeTab = tab;
@@ -117,12 +196,10 @@
     }
   }
 
-  function setOutputActions(record) {
+  function setOutputActions(record, diagnostic = false) {
     const enabled = Boolean(record?.hasHtml) && record.status !== 'RUNNING';
-    state.explainAvailable = enabled;
-    byId('explain-output').disabled = !enabled;
-    byId('export-output').disabled = !enabled;
-    byId('print-output').disabled = !enabled;
+    state.explainAvailable = enabled || diagnostic;
+    state.nativeOutputAvailable = enabled;
     updateOutputSelectionHint();
   }
 
@@ -150,7 +227,8 @@
       ['export-output', strings.outputExportSelected, strings.outputExportAll],
       ['print-output', strings.outputPrintSelected, strings.outputPrintAll],
     ]) {
-      byId(button).disabled = !state.explainAvailable || invalid || state.renderedOutputId !== state.selectedId;
+      const available = button === 'explain-output' ? state.explainAvailable : state.nativeOutputAvailable;
+      byId(button).disabled = !available || invalid || state.renderedOutputId !== state.selectedId;
       byId(button).title = invalid ? strings.outputReselect : count ? formatText(selected, { count: String(count) }) : all;
     }
   }
@@ -183,6 +261,7 @@
         state.invalidOutputSelections.delete(record.id);
         row.classList.toggle('output-block-selected', checkbox.checked);
         updateOutputSelectionHint();
+        publishOutputSelection();
       });
       label.append(checkbox);
       const content = document.createElement('div');
@@ -195,14 +274,25 @@
     updateOutputSelectionHint();
   }
 
-  function renderExecution(record, html, blocks) {
+  function publishOutputSelection() {
+    if (state.selectedId && state.selectedId === state.renderedOutputId) {
+      const blockIds = state.invalidOutputSelections.has(state.selectedId) ? [] : selectedOutputBlockIds();
+      postStudio({ type: 'outputSelectionChanged', id: state.selectedId, blockIds });
+    }
+  }
+
+  function publishVariableSelection() {
+    postStudio({ type: 'variableSelectionChanged', revision: state.datasetRevision, names: selectedVariableNames() });
+  }
+
+  function renderExecution(record, html, blocks, diagnostic) {
     state.selectedId = record.id;
     state.renderedOutputId = record.id;
     state.outputBlocks = [];
     renderHistory();
-    setOutputActions(record);
+    setOutputActions(record, diagnostic);
     const seconds = (record.durationMs / 1000).toFixed(2);
-    const error = record.errorMessage ? `\n${record.errorMessage}` : '';
+    const error = record.errorMessage && !diagnostic ? `\n${record.errorMessage}` : '';
     const runNumber = formatText(strings.runNumber, { number: String(record.sequence) });
     byId('run-summary').textContent = `${runNumber} · ${executionStatusLabel(record.status)}\n${strings.errorLevel}: ${record.errorLevel} · ${strings.duration}: ${seconds} s${error}`;
     if (record.datasetSummary) {
@@ -229,6 +319,7 @@
           : strings.executionNoHtmlOutput;
       output.append(empty);
     }
+    publishOutputSelection();
   }
 
   function renderDatasetSummary() {
@@ -281,6 +372,7 @@
         }
         row.classList.toggle('variable-selected', checkbox.checked);
         updateVariableActions();
+        publishVariableSelection();
       });
       selectionCell.append(checkbox);
       row.append(selectionCell);
@@ -476,6 +568,15 @@
   byId('variables-tab').addEventListener('click', () => showTab('variables'));
   byId('ai-tab').addEventListener('click', () => showTab('ai'));
   byId('settings-tab').addEventListener('click', () => showTab('settings'));
+  byId('system-settings').addEventListener('click', () => showSystemSettings(true));
+  byId('new-profile').addEventListener('click', () => showSystemSettings(false));
+  byId('profile-list').addEventListener('click', (event) => {
+    if (event.target.closest('button')) showSystemSettings(false);
+  });
+  byId('open-quick-start').addEventListener('click', () => postStudio({ type: 'openQuickStart' }));
+  themeSelect.addEventListener('change', () => postStudio({ type: 'setStudioTheme', theme: themeSelect.value }));
+  const studioFontControl = bindFontControl('studio', 'setStudioFontSize', applyStudioFont);
+  const spssFontControl = bindFontControl('spss-editor', 'setSpssEditorFontSize');
   byId('clear-output').addEventListener('click', () => postStudio({ type: 'clearOutput' }));
   byId('clear-data').addEventListener('click', () => {
     if (!byId('clear-data').disabled) postStudio({ type: 'clearData' });
@@ -517,7 +618,7 @@
     if (!names.length || state.exploringVariables) return;
     state.exploringVariables = true;
     updateVariableActions();
-    postStudio({ type: 'exploreVariables', names });
+    postStudio({ type: 'exploreVariables', names, revision: state.datasetRevision, checked: selected.length > 0 });
   });
   byId('explore-help').addEventListener('click', () => {
     const popover = byId('explore-help-popover');
@@ -604,17 +705,21 @@
       return;
     }
     const message = envelope.message;
-    if (message.type === 'executionStarted' || message.type === 'executionCompleted') {
+    if (message.type === 'systemSettings') {
+      renderSystemSettings(message);
+    } else if (message.type === 'executionStarted' || message.type === 'executionCompleted') {
       if (message.type === 'executionStarted') byId('data-notice').textContent = '';
       state.history = message.history;
       state.selectedId = message.selectedId;
       renderHistory();
       setOutputActions(state.history.find((record) => record.id === state.selectedId));
     } else if (message.type === 'executionSelected') {
-      renderExecution(message.record, message.html, message.blocks);
+      renderExecution(message.record, message.html, message.blocks, message.diagnostic);
     } else if (message.type === 'datasetMetadata') {
       const revisionChanged = message.revision !== state.datasetRevision;
-      state.dataset = message.dataset || undefined;
+      const nextDataset = message.dataset || undefined;
+      if (state.dataset?.datasetName !== nextDataset?.datasetName) state.selectedVariables.clear();
+      state.dataset = nextDataset;
       const availableVariables = new Set(state.dataset?.variables.map((variable) => variable.name) || []);
       state.selectedVariables = new Set(
         [...state.selectedVariables].filter((name) => availableVariables.has(name)),
@@ -627,6 +732,7 @@
       }
       renderDatasetSummary();
       renderVariables();
+      publishVariableSelection();
       if (state.activeTab === 'data') requestVisiblePage();
     } else if (message.type === 'datasetPage') {
       const key = dataKey(

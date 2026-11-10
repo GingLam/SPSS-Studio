@@ -6,7 +6,7 @@ import {
   SPSS_ASSISTANT_INSTRUCTION,
   type AiChatMessage,
 } from '../../src/ai/chatProtocol';
-import { buildSyntaxExplanationQuestion } from '../../src/ai/syntaxExplanation';
+import { buildJointQuestion, buildSyntaxExplanationQuestion } from '../../src/ai/syntaxExplanation';
 import { parseAssistantContent } from '../../src/ai/fencedCode';
 import {
   AI_PROVIDER_PRESETS,
@@ -86,6 +86,15 @@ describe('AI conversation request boundaries', () => {
       'Briefly explain this SPSS Syntax:\n\n```spss\nFREQUENCIES VARIABLES=age.\n```',
     );
     assert.throws(() => buildSyntaxExplanationQuestion('  \n '), /empty/iu);
+  });
+
+  it('puts selected syntax, results and profiles into one localized analysis request', () => {
+    const prompt = buildJointQuestion('REGRESSION.\n* Example ```. ', '## Output\nError #12\n\n## Variable Explore\nAge', 'both', 'en');
+    assert.match(prompt, /likely cause/u);
+    assert.match(prompt, /checked variables/u);
+    assert.match(prompt, /````spss\nREGRESSION[\s\S]*\n````/u);
+    assert.match(prompt, /Error #12[\s\S]*Age/u);
+    assert.match(buildJointQuestion('LIST age.', '## 结果', 'output', 'zh-CN'), /所选 SPSS 语法/u);
   });
 
   it('recommends double-quoted strings and limits equals omission to GET FILE in both contexts', () => {

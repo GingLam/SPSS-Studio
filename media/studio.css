@@ -1,5 +1,6 @@
 :root {
   --history-width: 240px;
+  --studio-font-size: var(--studio-font-override, var(--vscode-font-size, 13px));
   color-scheme: light dark;
   font-family: var(--vscode-font-family);
   color: var(--vscode-foreground);
@@ -7,7 +8,8 @@
 }
 
 * { box-sizing: border-box; }
-body { margin: 0; height: 100vh; overflow: hidden; }
+body { font-size: var(--studio-font-size); margin: 0; height: 100vh; overflow: hidden; }
+button, select, input { font: inherit; }
 button, select { color: var(--vscode-button-foreground); background: var(--vscode-button-background); border: 1px solid var(--vscode-button-border, transparent); padding: 4px 9px; }
 button:hover { background: var(--vscode-button-hoverBackground); }
 button:disabled { cursor: default; opacity: 0.55; }
@@ -34,6 +36,7 @@ main { height: calc(100vh - 42px); }
 .spss-output { overflow: auto; }
 .spss-output table { border-collapse: collapse; margin: 8px 0; }
 .spss-output th, .spss-output td { border: 1px solid var(--vscode-panel-border); padding: 4px 7px; }
+html[data-studio-font] .spss-output :is(p, table, th, td, caption, span) { font-size: var(--studio-font-size) !important; }
 .spss-output img { max-width: 100%; height: auto; }
 .output-block { display: grid; grid-template-columns: 26px minmax(0, 1fr); align-items: start; margin: 6px 0; border-left: 2px solid transparent; }
 .output-block-selected { border-left-color: var(--vscode-focusBorder); background: var(--vscode-list-hoverBackground); }

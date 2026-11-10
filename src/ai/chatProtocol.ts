@@ -34,7 +34,7 @@ export function buildAssistantInstruction(
       'Ask essential questions. State uncertainty. Never claim verification or invent syntax.',
     ].join(' ');
     return context === 'variableExplore'
-      ? `${base} VARIABLE_EXPLORE: For one variable, give measurement-appropriate descriptive syntax, a brief explanation, and next steps. For two or three variables, only when statistically appropriate, give two- or three-way crosstabs, relationship plots, correlation, or regression syntax; state variable-role assumptions and next steps. For more than three variables, propose exploration themes and ask for the intended analysis; do not generate syntax before clarification. Do not treat profile summaries as formal results or infer absent case-level relationships. If Filter, Weight, or Split is reported, tell the user to confirm results with an appropriate formal SPSS procedure.`
+      ? `${base} VARIABLE_EXPLORE: If the selected syntax establishes a clear analysis goal, use that goal and the checked variables to revise the code, regardless of variable count. Otherwise, for one variable, give measurement-appropriate descriptive syntax, a brief explanation, and next steps. For two or three variables, only when statistically appropriate, give two- or three-way crosstabs, relationship plots, correlation, or regression syntax; state variable-role assumptions and next steps. For more than three variables, propose exploration themes and ask for the intended analysis; do not generate syntax before clarification. Do not treat profile summaries as formal results or infer absent case-level relationships. If Filter, Weight, or Split is reported, tell the user to confirm results with an appropriate formal SPSS procedure.`
       : base;
   }
   const base = [
@@ -49,7 +49,7 @@ export function buildAssistantInstruction(
     '不得声称已执行或验证语法；命令或版本细节不确定时须明确说明，不得编造。',
   ].join('');
   return context === 'variableExplore'
-    ? `${base} VARIABLE_EXPLORE：1个变量时，按测量层次给出描述性统计语法、简释和下一步；2至3个变量时，仅在统计上适用时给出二维或三维列联表、关系图、相关或回归语法，并说明变量角色假设和下一步；超过3个变量时，只提出可探索主题并询问分析意图，澄清前不生成语法。不得把变量摘要当作正式结果，也不得推断未提供的个案级关系。若提示中存在筛选、加权或拆分设置，须提醒用户用适当的正式 SPSS 命令确认结果。`
+    ? `${base} VARIABLE_EXPLORE：如果所选语法给出了明确的分析目标，请结合勾选变量修订语法，变量数量不受以下分组规则约束。其他情况下，1个变量时，按测量层次给出描述性统计语法、简释和下一步；2至3个变量时，仅在统计上适用时给出二维或三维列联表、关系图、相关或回归语法，并说明变量角色假设和下一步；超过3个变量时，只提出可探索主题并询问分析意图，澄清前不生成语法。不得把变量摘要当作正式结果，也不得推断未提供的个案级关系。若提示中存在筛选、加权或拆分设置，须提醒用户用适当的正式 SPSS 命令确认结果。`
     : base;
 }
 

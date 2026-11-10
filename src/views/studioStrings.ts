@@ -6,6 +6,14 @@ export interface StudioStrings {
   tabOutput: string;
   tabChat: string;
   tabSettings: string;
+  systemSettings: string;
+  quickStart: string;
+  theme: string;
+  otherThemes: string;
+  studioFontSize: string;
+  spssEditorFontSize: string;
+  defaultFontSize: string;
+  settingsError: string;
   enginePrefix: string;
   engineStates: Record<EngineState, string>;
   executionStatuses: Record<ExecutionStatus | 'RUNNING', string>;
@@ -60,6 +68,7 @@ export interface StudioStrings {
   exploring: string;
   exploreHelp: string;
   variableSelection: string;
+  variableReselect: string;
   name: string;
   label: string;
   type: string;
@@ -80,6 +89,14 @@ export const STUDIO_STRINGS_EN: StudioStrings = {
   tabOutput: 'Output',
   tabChat: 'Chat',
   tabSettings: 'Settings',
+  systemSettings: 'System',
+  quickStart: 'Quick Start',
+  theme: 'VS Code theme',
+  otherThemes: 'More themes…',
+  studioFontSize: 'Studio font size',
+  spssEditorFontSize: 'SPSS editor font size',
+  defaultFontSize: 'Default',
+  settingsError: 'Could not update the setting',
   enginePrefix: 'SPSS',
   engineStates: {
     stopped: 'Stopped',
@@ -148,6 +165,7 @@ export const STUDIO_STRINGS_EN: StudioStrings = {
   exploring: 'Exploring…',
   exploreHelp: 'Send selected variables’ metadata and bounded summaries to Chat. With no selection, the first 10 filtered variables are used.',
   variableSelection: 'Variable selection',
+  variableReselect: 'The dataset changed. Select the variables again.',
   name: 'Name',
   label: 'Label',
   type: 'Type',
@@ -168,6 +186,14 @@ export const STUDIO_STRINGS_ZH_CN: StudioStrings = {
   tabOutput: '输出',
   tabChat: '对话',
   tabSettings: '设置',
+  systemSettings: '系统',
+  quickStart: '快速上手',
+  theme: 'VS Code 主题',
+  otherThemes: '更多主题…',
+  studioFontSize: 'Studio 字号',
+  spssEditorFontSize: 'SPS 编辑器字号',
+  defaultFontSize: '默认',
+  settingsError: '无法更新设置',
   enginePrefix: 'SPSS',
   engineStates: {
     stopped: '已停止',
@@ -236,6 +262,7 @@ export const STUDIO_STRINGS_ZH_CN: StudioStrings = {
   exploring: '正在探索……',
   exploreHelp: '将所选变量的元数据与有限统计摘要发送至对话；未选择变量时，使用当前筛选结果的前 10 个变量。',
   variableSelection: '选择变量',
+  variableReselect: '数据集已变更，请重新勾选变量。',
   name: '名称',
   label: '标签',
   type: '类型',

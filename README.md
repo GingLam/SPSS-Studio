@@ -105,6 +105,10 @@ Variable Explore is measurement-aware. For one variable, Chat proposes descripti
 
 ## SPSS AI
 
+Under **Settings → System**, reopen Quick Start, switch the VS Code theme, set separate font sizes for the SPS editor and Studio panel, or change the Chat response language. Font sizes can be typed or picked from the list, and **Default** restores the inherited size.
+
+Select text in the SPS editor and check items in Studio before using **Explain** in Output or **Explore** in Variables. Each button sends the selected code with its checked items. **Explain in Chat** from the editor can send the selected code with both checked sources in one request. A failed run provides a selectable diagnostic even without native HTML. A cursor without a text selection retains the existing single-source actions.
+
 The reusable SPSS Studio panel opens beside the native `.sps` editor and contains **Variables**, **Data**, **Output**, **Chat**, and **Settings** in that order. Opening a `.sps` file alone does not open the panel. Running syntax opens **Output**; the Show Data, Show Variables, Show AI Assistant, and Manage AI Model Profiles commands open their corresponding Studio location. The extension does not contribute or automatically reveal a native VS Code bottom-panel view. Editor menus, Studio tabs, controls, progress states, tooltips, and direct feedback follow the VS Code display language: Simplified Chinese (`zh-cn`) uses the Chinese catalog, while English and other locales use the English catalog. This interface language is independent of the model response-language preference.
 
 The **Chat** tab is an SPSS AI question-and-answer tool. Its compact English header places **Active model** on the left, followed by **New**, **Current**, and **History**. A Simplified Chinese VS Code interface displays the corresponding concise Chinese controls. The boundary between the transcript and question box can be dragged with the mouse or adjusted from the keyboard. Completed answers render common Markdown structures without accepting model-generated HTML. A concise built-in system instruction grounds replies in executable SPSS Syntax, applied social statistics, assumptions, key options, and result interpretation without claiming that generated syntax was run. Replies default to Simplified Chinese and stay concise unless the user explicitly asks for detail.
@@ -234,6 +238,7 @@ SPSS Studio is not an LSP or a full semantic validator. It does not provide stat
 
 | Version | Date | Update summary |
 | --- | --- | --- |
+| 1.5.3 | 2026-11-10 | Adds system preferences, separate font controls, and joint Chat analysis of selected syntax, checked output, and checked variables. |
 | 1.5.2 | 2026-11-10 | Adds a dedicated Settings tab, connection testing, one-character minimal syntax templates, and opt-in AI next-command suggestions. |
 | 1.5.1 | 2026-11-06 | Repackages the finalized 1.5.0 behavior for Marketplace upload. Includes balanced local completion, explicit template selection, quieter automatic suggestions, and SPS-specific Enter/Tab defaults. |
 | 1.5.0 | 2026-11-05 | Native Chinese/English statistical output follows VS Code. Completion and Chat recommend double-quoted strings and GET FILE without optional equals. Fixed CRLF-triggered multiline RECODE errors and added protected character handling and native-engine regressions. |
